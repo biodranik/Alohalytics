@@ -1,0 +1,2 @@
+include ':alohastats'
+project(':alohastats').projectDir = new File(rootProject.projectDir, '../../src/android')

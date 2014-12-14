@@ -1,0 +1,23 @@
+apply plugin: 'com.android.library'
+
+// This one is needed to get Google Play advertising ID if Google Play Services are available on the device
+dependencies {
+  compile 'com.google.android.gms:play-services:+'
+}
+
+android {
+  compileSdkVersion 21
+  buildToolsVersion "21.1.2"
+
+  defaultConfig {
+
+    minSdkVersion 9
+    targetSdkVersion 21
+
+    ndk {
+      moduleName "alohastats"
+      stl "c++_static"
+      ldLibs "log", "atomic"
+    }
+  }
+}

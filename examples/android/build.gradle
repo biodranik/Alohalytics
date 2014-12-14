@@ -1,0 +1,38 @@
+buildscript {
+  repositories {
+    jcenter()
+  }
+  dependencies {
+    classpath 'com.android.tools.build:gradle:1.0.0'
+  }
+}
+
+allprojects {
+  repositories {
+    jcenter()
+  }
+}
+
+apply plugin: 'com.android.application'
+
+dependencies {
+  compile project(':alohastats')
+}
+
+android {
+  compileSdkVersion 21
+  buildToolsVersion "21.1.1"
+
+  defaultConfig {
+    applicationId "org.alohastats.demoapp"
+    minSdkVersion 9
+    targetSdkVersion 21
+    versionCode 1
+    versionName "1.0"
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_1_7
+    targetCompatibility JavaVersion.VERSION_1_7
+  }
+}
