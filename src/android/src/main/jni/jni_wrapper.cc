@@ -30,6 +30,7 @@ SOFTWARE.
 #include "../../../../make_scope_guard.h"
 
 using bricks::MakePointerScopeGuard;
+using std::string;
 
 #ifndef ANDROID
 #define PLATFORM_SPECIFIC_CAST (void**)
@@ -49,12 +50,14 @@ static jclass g_httpParamsClass = 0;
 static jmethodID g_httpParamsConstructor = 0;
 
 // JNI helper functions
-std::string ToStdString(JNIEnv* env, jstring str) {
-  std::string result;
-  char const* utfBuffer = env->GetStringUTFChars(str, 0);
-  if (utfBuffer) {
-    result = utfBuffer;
-    env->ReleaseStringUTFChars(str, utfBuffer);
+string ToStdString(JNIEnv* env, jstring str) {
+  string result;
+  if (str) {
+    char const* utfBuffer = env->GetStringUTFChars(str, 0);
+    if (utfBuffer) {
+      result = utfBuffer;
+      env->ReleaseStringUTFChars(str, utfBuffer);
+    }
   }
   return result;
 }
@@ -72,17 +75,38 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
   return JNI_VERSION_1_6;
 }
 
-JNIEXPORT bool JNICALL
+JNIEXPORT void JNICALL
     Java_org_alohastats_lib_Statistics_logEvent__Ljava_lang_String_2(JNIEnv* env, jclass, jstring eventName) {
-  return g_stats->LogEvent(ToStdString(env, eventName));
+  g_stats->LogEvent(ToStdString(env, eventName));
 }
 
-JNIEXPORT bool JNICALL
+JNIEXPORT void JNICALL
     Java_org_alohastats_lib_Statistics_logEvent__Ljava_lang_String_2Ljava_lang_String_2(JNIEnv* env,
                                                                                         jclass,
                                                                                         jstring eventName,
                                                                                         jstring eventValue) {
-  return g_stats->LogEvent(ToStdString(env, eventName), ToStdString(env, eventValue));
+  g_stats->LogEvent(ToStdString(env, eventName), ToStdString(env, eventValue));
+}
+
+JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_logEvent__Ljava_lang_String_2_3Ljava_lang_String_2(
+    JNIEnv* env,
+    jclass,
+    jstring eventName,
+    jobjectArray keyValuePairs) {
+  const jsize count = env->GetArrayLength(keyValuePairs);
+  aloha::TStringMap map;
+  string key;
+  for (jsize i = 0; i < count; ++i) {
+    const jstring jni_string = static_cast<jstring>(env->GetObjectArrayElement(keyValuePairs, i));
+    if ((i + 1) % 2) {
+      key = ToStdString(env, jni_string);
+      map[key] = "";
+    } else {
+      map[key] = ToStdString(env, jni_string);
+    }
+    if (jni_string) env->DeleteLocalRef(jni_string);
+  }
+  g_stats->LogEvent(ToStdString(env, eventName), map);
 }
 
 #define CLEAR_AND_RETURN_FALSE_ON_EXCEPTION \
@@ -132,7 +156,7 @@ namespace aloha {
 bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   // Attaching multiple times from the same thread is a no-op, which only gets good env for us.
   JNIEnv* env;
-  if (JNI_OK != ::GetJVM()->AttachCurrentThread(PLATFORM_SPECIFIC_CAST (& env), nullptr)) {
+  if (JNI_OK != ::GetJVM()->AttachCurrentThread(PLATFORM_SPECIFIC_CAST(&env), nullptr)) {
     // TODO(AlexZ): throw some critical exception.
     return false;
   }

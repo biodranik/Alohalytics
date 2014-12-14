@@ -24,6 +24,8 @@
 
 package org.alohastats.lib;
 
+import java.util.Map;
+
 public class Statistics {
   static {
     System.loadLibrary("alohastats");
@@ -40,4 +42,17 @@ public class Statistics {
   native static public void logEvent(String eventName);
 
   native static public void logEvent(String eventName, String eventValue);
+  // eventDictionary is a key,value,key,value array.
+  native static public void logEvent(String eventName, String[] eventDictionary);
+
+  static public void logEvent(String eventName, Map<String,String> eventDictionary) {
+    // For faster native processing pass array of strings instead of a map.
+    final String[] array = new String[eventDictionary.size() * 2];
+    int index = 0;
+    for (final Map.Entry<String, String> entry : eventDictionary.entrySet()) {
+      array[index++] = entry.getKey();
+      array[index++] = entry.getValue();
+    }
+    logEvent(eventName, array);
+  }
 }
