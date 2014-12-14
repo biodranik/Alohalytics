@@ -21,14 +21,18 @@ class Stats {
   }
 
   bool LogEvent(std::string const& event_name) const {
-    LOG("LogEvent:",  event_name);
+    if (debug_mode_) {
+      LOG("LogEvent:", event_name);
+    }
     // TODO(dkorolev): Insert real message queue + cereal here.
     std::thread(&SimpleSampleHttpPost, statistics_server_url_, event_name).detach();
     return true;
   }
 
   bool LogEvent(std::string const& event_name, std::string const& event_value) const {
-    LOG("LogEvent:", event_name, "with value:", event_value);
+    if (debug_mode_) {
+      LOG("LogEvent:", event_name, "=", event_value);
+    }
     // TODO(dkorolev): Insert real message queue + cereal here.
     std::thread(&SimpleSampleHttpPost, statistics_server_url_, event_name + "=" + event_value).detach();
     return true;
@@ -45,6 +49,9 @@ class Stats {
 
   // Forcedly tries to upload all stored records to the server.
   void Upload() {
+    if (debug_mode_) {
+      LOG("Alohalytics: Uploading data to", statistics_server_url_);
+     }
     // TODO
   }
 
@@ -52,7 +59,6 @@ class Stats {
   // TODO temporary stub function
   static void SimpleSampleHttpPost(const std::string& url, const std::string& post_data) {
     HTTPClientPlatformWrapper(url).set_post_body(post_data, "text/plain").RunHTTPRequest();
-    HTTPClientPlatformWrapper(url).set_post_body(post_data + post_data, "text/plain").RunHTTPRequest();
   }
 };
 
