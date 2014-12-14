@@ -23,25 +23,23 @@ class Stats {
       : statistics_server_url_(statistics_server_url), storage_path_(storage_path_with_a_slash_at_the_end) {
   }
 
-  bool LogEvent(std::string const& event_name) const {
+  void LogEvent(std::string const& event_name) const {
     if (debug_mode_) {
       LOG("LogEvent:", event_name);
     }
     // TODO(dkorolev): Insert real message queue + cereal here.
     std::thread(&SimpleSampleHttpPost, statistics_server_url_, event_name).detach();
-    return true;
   }
 
-  bool LogEvent(std::string const& event_name, std::string const& event_value) const {
+  void LogEvent(std::string const& event_name, std::string const& event_value) const {
     if (debug_mode_) {
       LOG("LogEvent:", event_name, "=", event_value);
     }
     // TODO(dkorolev): Insert real message queue + cereal here.
     std::thread(&SimpleSampleHttpPost, statistics_server_url_, event_name + "=" + event_value).detach();
-    return true;
   }
 
-  bool LogEvent(std::string const& event_name, TStringMap const& value_pairs) const {
+  void LogEvent(std::string const& event_name, TStringMap const& value_pairs) const {
     // TODO(dkorolev): Insert real message queue + cereal here.
     std::string merged = event_name + "{";
     for (const auto& it : value_pairs) {
@@ -52,7 +50,6 @@ class Stats {
     if (debug_mode_) {
       LOG("LogEvent:", event_name, "=", value_pairs);
     }
-    return true;
   }
 
   void DebugMode(bool enable) {
