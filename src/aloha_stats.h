@@ -69,6 +69,11 @@ class Stats {
     // TODO
   }
 
+  // TODO(dkorolev): Was needed for unit testing.
+  int UniversalDebugAnswer() const {
+    return 42;
+  }
+
  private:
   // TODO temporary stub function
   static void SimpleSampleHttpPost(const std::string& url, const std::string& post_data) {
