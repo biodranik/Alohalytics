@@ -127,6 +127,8 @@ class HTTPClientPlatformWrapper {
 
 #if defined(__APPLE__)
 #include "http_client_apple.mm"
+#elif defined(__linux)
+#include "http_client_curl.cc"
 #endif
 
 #endif  // HTTP_CLIENT_H
