@@ -129,4 +129,4 @@ class HTTPClientPlatformWrapper {
 #include "http_client_apple.mm"
 #endif
 
-#endif // HTTP_CLIENT_H
+#endif  // HTTP_CLIENT_H

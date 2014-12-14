@@ -20,7 +20,7 @@ run: all
 all: build ${BIN}
 
 indent:
-	(find . -name "*.cc" ; find . -name "*.h") | xargs clang-format-3.5 -i
+	(find . ../../src -name "*.cc" ; find . ../../src -name "*.h") | xargs clang-format-3.5 -i
 
 clean:
 	rm -rf build
