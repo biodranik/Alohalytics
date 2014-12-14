@@ -2,6 +2,7 @@
 #define ALOHA_STATS_H
 
 #include <string>
+#include <map>
 #include <thread>
 #include <iostream>
 
@@ -9,6 +10,8 @@
 #include "logger.h"
 
 namespace aloha {
+
+typedef std::map<std::string, std::string> TStringMap;
 
 class Stats {
   std::string statistics_server_url_;
@@ -38,6 +41,20 @@ class Stats {
     return true;
   }
 
+  bool LogEvent(std::string const& event_name, TStringMap const& value_pairs) const {
+    // TODO(dkorolev): Insert real message queue + cereal here.
+    std::string merged = event_name + "{";
+    for (const auto& it : value_pairs) {
+      merged += (it.first + "=" + it.second + ",");
+    }
+    *merged.rbegin() = '}';
+    std::thread(&SimpleSampleHttpPost, statistics_server_url_, merged).detach();
+    if (debug_mode_) {
+      LOG("LogEvent:", event_name, "=", value_pairs);
+    }
+    return true;
+  }
+
   void DebugMode(bool enable) {
     debug_mode_ = enable;
     if (enable) {
@@ -51,7 +68,7 @@ class Stats {
   void Upload() {
     if (debug_mode_) {
       LOG("Alohalytics: Uploading data to", statistics_server_url_);
-     }
+    }
     // TODO
   }
 
