@@ -8,19 +8,37 @@
 
 #include "http_client.h"
 #include "logger.h"
+#include "message_queue.h"
 
 namespace aloha {
+
+class StatsUploader {
+  public:
+   explicit StatsUploader(const std::string& url) : url_(url) {
+   }
+   void OnMessage(const std::string& message, size_t /*unused_dropped_events*/ = 0) const {
+     HTTPClientPlatformWrapper(url_).set_post_body(message, "text/plain").RunHTTPRequest();
+   }
+   const std::string& GetURL() const {
+     return url_;
+   }
+
+  private:
+   const std::string url_;
+};
 
 typedef std::map<std::string, std::string> TStringMap;
 
 class Stats {
-  std::string statistics_server_url_;
-  std::string storage_path_;
+  StatsUploader uploader_;
+  mutable MessageQueue<StatsUploader> message_queue_;
+  const std::string storage_path_;
+  const bool use_message_queue_;
   bool debug_mode_ = false;
 
  public:
-  Stats(std::string const& statistics_server_url, std::string const& storage_path_with_a_slash_at_the_end)
-      : statistics_server_url_(statistics_server_url), storage_path_(storage_path_with_a_slash_at_the_end) {
+  Stats(std::string const& statistics_server_url, std::string const& storage_path_with_a_slash_at_the_end, bool use_message_queue = true)
+      : uploader_(statistics_server_url), message_queue_(uploader_), storage_path_(storage_path_with_a_slash_at_the_end), use_message_queue_(use_message_queue) {
   }
 
   void LogEvent(std::string const& event_name) const {
@@ -56,7 +74,7 @@ class Stats {
     debug_mode_ = enable;
     if (enable) {
       LOG("Alohalytics: Enabled debug mode.");
-      LOG("Alohalytics: Server url:", statistics_server_url_);
+      LOG("Alohalytics: Server url:", uploader_.GetURL());
       LOG("Alohalytics: Storage path:", storage_path_);
     }
   }
@@ -64,7 +82,7 @@ class Stats {
   // Forcedly tries to upload all stored records to the server.
   void Upload() {
     if (debug_mode_) {
-      LOG("Alohalytics: Uploading data to", statistics_server_url_);
+      LOG("Alohalytics: Uploading data to", uploader_.GetURL());
     }
     // TODO
   }
@@ -76,12 +94,13 @@ class Stats {
 
  private:
   void PushMessageViaQueue(const std::string& message) const {
-    std::thread(&SimpleSampleHttpPost, statistics_server_url_, message).detach();
-  }
-
-  // TODO temporary stub function
-  static void SimpleSampleHttpPost(const std::string& url, const std::string& post_data) {
-    HTTPClientPlatformWrapper(url).set_post_body(post_data, "text/plain").RunHTTPRequest();
+    if (!use_message_queue_) {
+      // Blocking call, waiting in the calling thread to complete it.
+      uploader_.OnMessage(message);
+    } else {
+      // Asynchronous call, returns immediately.
+      message_queue_.PushMessage(message);
+    }
   }
 };
 
