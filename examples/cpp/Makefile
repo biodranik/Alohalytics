@@ -16,6 +16,7 @@ endif
 
 run: all
 	./build/example --help
+	echo "Or spawn a local server or set ALOHA_SERVER and then run ./test.sh"
 
 all: build ${BIN}
 

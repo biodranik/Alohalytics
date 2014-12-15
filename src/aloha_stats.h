@@ -28,7 +28,7 @@ class Stats {
       LOG("LogEvent:", event_name);
     }
     // TODO(dkorolev): Insert real message queue + cereal here.
-    std::thread(&SimpleSampleHttpPost, statistics_server_url_, event_name).detach();
+    PushMessageViaQueue(event_name);
   }
 
   void LogEvent(std::string const& event_name, std::string const& event_value) const {
@@ -36,7 +36,7 @@ class Stats {
       LOG("LogEvent:", event_name, "=", event_value);
     }
     // TODO(dkorolev): Insert real message queue + cereal here.
-    std::thread(&SimpleSampleHttpPost, statistics_server_url_, event_name + "=" + event_value).detach();
+    PushMessageViaQueue(event_name + "=" + event_value);
   }
 
   void LogEvent(std::string const& event_name, TStringMap const& value_pairs) const {
@@ -46,7 +46,7 @@ class Stats {
       merged += (it.first + "=" + it.second + ",");
     }
     merged.back() = '}';
-    std::thread(&SimpleSampleHttpPost, statistics_server_url_, merged).detach();
+    PushMessageViaQueue(merged);
     if (debug_mode_) {
       LOG("LogEvent:", event_name, "=", value_pairs);
     }
@@ -75,6 +75,10 @@ class Stats {
   }
 
  private:
+  void PushMessageViaQueue(const std::string& message) const {
+    std::thread(&SimpleSampleHttpPost, statistics_server_url_, message).detach();
+  }
+
   // TODO temporary stub function
   static void SimpleSampleHttpPost(const std::string& url, const std::string& post_data) {
     HTTPClientPlatformWrapper(url).set_post_body(post_data, "text/plain").RunHTTPRequest();
