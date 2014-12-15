@@ -45,7 +45,7 @@ class Stats {
     for (const auto& it : value_pairs) {
       merged += (it.first + "=" + it.second + ",");
     }
-    *merged.rbegin() = '}';
+    merged.back() = '}';
     std::thread(&SimpleSampleHttpPost, statistics_server_url_, merged).detach();
     if (debug_mode_) {
       LOG("LogEvent:", event_name, "=", value_pairs);

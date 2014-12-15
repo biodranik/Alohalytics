@@ -127,7 +127,9 @@ class HTTPClientPlatformWrapper {
 
 #if defined(__APPLE__)
 #include "http_client_apple.mm"
-#elif defined(__linux)
+#elif defined(ANDROID)
+// Android has it's own implementation in jni_wrapper.cc
+#else
 #include "http_client_curl.cc"
 #endif
 

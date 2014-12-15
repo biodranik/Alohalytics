@@ -32,12 +32,6 @@ SOFTWARE.
 using bricks::MakePointerScopeGuard;
 using std::string;
 
-#ifndef ANDROID
-#define PLATFORM_SPECIFIC_CAST (void**)
-#else
-#define PLATFORM_SPECIFIC_CAST
-#endif
-
 namespace {
 
 static std::unique_ptr<aloha::Stats> g_stats;
@@ -49,7 +43,7 @@ static jmethodID g_httpTransportClass_run = 0;
 static jclass g_httpParamsClass = 0;
 static jmethodID g_httpParamsConstructor = 0;
 
-// JNI helper functions
+// JNI helper, returns empty string if str == 0.
 string ToStdString(JNIEnv* env, jstring str) {
   string result;
   if (str) {
@@ -156,8 +150,16 @@ namespace aloha {
 bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   // Attaching multiple times from the same thread is a no-op, which only gets good env for us.
   JNIEnv* env;
-  if (JNI_OK != ::GetJVM()->AttachCurrentThread(PLATFORM_SPECIFIC_CAST(&env), nullptr)) {
-    // TODO(AlexZ): throw some critical exception.
+  if (JNI_OK !=
+      ::GetJVM()->AttachCurrentThread(
+#ifdef ANDROID
+          &env,
+#else
+          // Non-Android JAVA requires void** here.
+          reinterpret_cast<void**>(&env),
+#endif
+          nullptr)) {
+    LOG("Alohalytics: ERROR while trying to attach JNI thread");
     return false;
   }
 

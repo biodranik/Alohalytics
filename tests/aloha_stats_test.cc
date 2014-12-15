@@ -10,7 +10,7 @@ const char * TEST_PATH = "build/";
 
 TEST(AlohaStats, UniversalDebugAnswer) {
   aloha::Stats stats(TEST_SERVER, TEST_PATH);
-  stats.LogEvent("\nAloha!\n");
+  stats.LogEvent("Aloha!\n");
   EXPECT_EQ(42, stats.UniversalDebugAnswer());
   // TODO: aloha::Stats now for Android/iOS UI purposes posts async in detached thread.
   // It is temporary implementation and should be rewritten.

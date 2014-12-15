@@ -1,6 +1,6 @@
 #include "http_client.h"
 
-#include <stdio.h> // popen
+#include <stdio.h>  // popen
 #include <fstream>
 
 // Used as a test stub for basic HTTP client implementation.
@@ -8,11 +8,10 @@
 namespace aloha {
 
 std::string RunCurl(const std::string& cmd) {
-  //std::cout << "cmdline: " << cmd << std::endl;
   FILE* pipe = ::popen(cmd.c_str(), "r");
   assert(pipe);
   char s[8 * 1024];
-  ::fgets(s, sizeof(s)/sizeof(s[0]), pipe);
+  ::fgets(s, sizeof(s) / sizeof(s[0]), pipe);
   const int err = ::pclose(pipe);
   if (err) {
     std::cerr << "Error " << err << " while calling " << cmd << std::endl;
@@ -22,7 +21,6 @@ std::string RunCurl(const std::string& cmd) {
 
 // Not fully implemented.
 bool HTTPClientPlatformWrapper::RunHTTPRequest() {
-
   // Last 3 chars in server's response will be http status code
   std::string cmd = "curl -s -w '%{http_code}' ";
   if (!content_type_.empty()) {
@@ -58,4 +56,4 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   return error_code_ == 200;
 }
 
-} // namespace aloha
+}  // namespace aloha

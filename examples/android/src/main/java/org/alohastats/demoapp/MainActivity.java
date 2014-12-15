@@ -32,15 +32,13 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.widget.TextView;
 
-import org.alohastats.demoapp.R;
 import org.alohastats.lib.Statistics;
 
 import java.util.HashMap;
-import java.util.Map;
 
 public class MainActivity extends Activity
 {
-  private static final String STATISTICS_SERVER_URL = "http://httpbin.org/post";
+  private static final String STATISTICS_SERVER_URL = "http://localhost:8080/";
 
   @Override
   protected void onCreate(Bundle savedInstanceState)
@@ -79,20 +77,22 @@ public class MainActivity extends Activity
     // Event with parameter (key=value)
     Statistics.logEvent("device_manufacturer", Build.MANUFACTURER);
 
-    final Map<String,String> kv = new HashMap<String,String>();
+    final HashMap<String,String> kv = new HashMap<String,String>();
     kv.put("brand", Build.BRAND);
     kv.put("device", Build.DEVICE);
     kv.put("model", Build.MODEL);
     // Event with a key=value pairs.
     Statistics.logEvent("device", kv);
 
+    final String packageName = getPackageName();
+    // Last version null value will be replaced below.
+    final String[] arr = {"package", packageName, "demo_null_value", null, "version", null};
     try {
-      final String packageName = getPackageName();
-      final String[] arr = {"package", packageName, "version", getPackageManager().getPackageInfo(packageName, 0).versionName};
-      // Event with a key=value pairs but passed as an array.
-      Statistics.logEvent("app", arr);
+      arr[arr.length - 1] = getPackageManager().getPackageInfo(packageName, 0).versionName;
     } catch (PackageManager.NameNotFoundException ex) {
     }
+    // Event with a key=value pairs but passed as an array.
+    Statistics.logEvent("app", arr);
   }
 
   @Override

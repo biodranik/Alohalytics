@@ -6,18 +6,12 @@
 #include <iostream>
 #include <regex>
 
-// Just for command line parsing.
-using std::regex;
-using std::sregex_token_iterator;
-
-using namespace aloha;
-
-DEFINE_string(url, "http://httpbin.org/post", "Statistics server url.");
-DEFINE_string(event, "", "Records given event.");
-DEFINE_string(value, "", "Records event with specified value (event=value).");
-DEFINE_string(pairs,
-              "",
-              "Records event with pairs of values separated by comma (event{key1=value1,key2=value2}).");
+DEFINE_string(server_url, "http://localhost:8080/", "Statistics server url.");
+DEFINE_string(event, "TestEvent", "Records given event.");
+DEFINE_string(
+    values,
+    "",
+    "Records event with single value (--values singleValue) or value pairs (--values key1=value1,key2=value2).");
 DEFINE_string(storage,
               "build/",
               "Path to directory (with a slash at the end) to temporarily store recorded events.");
@@ -29,20 +23,18 @@ using namespace std;
 int main(int argc, char** argv) {
   ParseDFlags(&argc, &argv);
 
-  Stats stats(FLAGS_url, FLAGS_storage);
+  aloha::Stats stats(FLAGS_server_url, FLAGS_storage);
   if (FLAGS_debug) {
     stats.DebugMode(true);
   }
 
   if (!FLAGS_event.empty()) {
-    if (!FLAGS_value.empty()) {
-      stats.LogEvent(FLAGS_event, FLAGS_value);
-    } else if (!FLAGS_pairs.empty()) {
-      TStringMap map;
-      const regex re("[=,]+");
-      sregex_token_iterator reg_end;
-      string key;
-      for (auto it = sregex_token_iterator(FLAGS_pairs.begin(), FLAGS_pairs.end(), re, -1); it != reg_end;
+    if (!FLAGS_values.empty()) {
+      aloha::TStringMap map;
+      const std::regex re("[=,]+");
+      std::string key;
+      for (auto it = std::sregex_token_iterator(FLAGS_values.begin(), FLAGS_values.end(), re, -1);
+           it != std::sregex_token_iterator();
            ++it) {
         if (key.empty()) {
           key = *it;
@@ -52,8 +44,15 @@ int main(int argc, char** argv) {
           key.clear();
         }
       }
-      stats.LogEvent(FLAGS_event, map);
+      if (map.size() == 1 && map.begin()->second == "") {
+        // Event with one value.
+        stats.LogEvent(FLAGS_event, map.begin()->first);
+      } else {
+        // Event with many key=value pairs.
+        stats.LogEvent(FLAGS_event, map);
+      }
     } else {
+      // Simple event.
       stats.LogEvent(FLAGS_event);
     }
   }
