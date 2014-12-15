@@ -1,4 +1,4 @@
-.PHONY: run all indent clean
+.PHONY: test all indent clean
 
 CPP=g++
 CPPFLAGS=-std=c++11 -Wall -W
@@ -14,8 +14,8 @@ ifeq ($(OS),Darwin)
   LDFLAGS += -framework Foundation
 endif
 
-run: all
-	./build/example --help
+test: all
+	./build/aloha_stats_test
 
 all: build ${BIN}
 

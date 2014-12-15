@@ -58,4 +58,4 @@ ScopeGuard<F> MakeScopeGuard(F f) {
 
 }  // namespace bricks
 
-#endif // MAKE_SCOPE_GUARD_H
+#endif  // MAKE_SCOPE_GUARD_H

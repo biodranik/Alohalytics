@@ -25,17 +25,20 @@
 package org.alohastats.demoapp;
 
 import android.app.Activity;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.TextView;
 
-import org.alohastats.demoapp.R;
 import org.alohastats.lib.Statistics;
+
+import java.util.HashMap;
 
 public class MainActivity extends Activity
 {
-  private static final String STATISTICS_SERVER_URL = "http://httpbin.org/post";
+  private static final String STATISTICS_SERVER_URL = "http://localhost:8080/";
 
   @Override
   protected void onCreate(Bundle savedInstanceState)
@@ -67,7 +70,36 @@ public class MainActivity extends Activity
     super.onResume();
 
     // TODO: send detailed system info statistics automatically on startup
-    Statistics.logEvent("device_model", android.os.Build.MODEL);
+
+    // Very simple event.
+    Statistics.logEvent("app_has_resumed");
+
+    // Event with parameter (key=value)
+    Statistics.logEvent("device_manufacturer", Build.MANUFACTURER);
+
+    final HashMap<String,String> kv = new HashMap<String,String>();
+    kv.put("brand", Build.BRAND);
+    kv.put("device", Build.DEVICE);
+    kv.put("model", Build.MODEL);
+    // Event with a key=value pairs.
+    Statistics.logEvent("device", kv);
+
+    final String packageName = getPackageName();
+    // Last version null value will be replaced below.
+    final String[] arr = {"package", packageName, "demo_null_value", null, "version", null};
+    try {
+      arr[arr.length - 1] = getPackageManager().getPackageInfo(packageName, 0).versionName;
+    } catch (PackageManager.NameNotFoundException ex) {
+    }
+    // Event with a key=value pairs but passed as an array.
+    Statistics.logEvent("app", arr);
+  }
+
+  @Override
+  protected void onPause()
+  {
+    super.onPause();
+    Statistics.logEvent("app_has_paused");
   }
 
   public void onSendButtonClicked(View v)

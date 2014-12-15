@@ -2,6 +2,7 @@
 #define ALOHA_STATS_H
 
 #include <string>
+#include <map>
 #include <thread>
 #include <iostream>
 
@@ -9,6 +10,8 @@
 #include "logger.h"
 
 namespace aloha {
+
+typedef std::map<std::string, std::string> TStringMap;
 
 class Stats {
   std::string statistics_server_url_;
@@ -20,18 +23,33 @@ class Stats {
       : statistics_server_url_(statistics_server_url), storage_path_(storage_path_with_a_slash_at_the_end) {
   }
 
-  bool LogEvent(std::string const& event_name) const {
-    LOG("LogEvent:",  event_name);
+  void LogEvent(std::string const& event_name) const {
+    if (debug_mode_) {
+      LOG("LogEvent:", event_name);
+    }
     // TODO(dkorolev): Insert real message queue + cereal here.
     std::thread(&SimpleSampleHttpPost, statistics_server_url_, event_name).detach();
-    return true;
   }
 
-  bool LogEvent(std::string const& event_name, std::string const& event_value) const {
-    LOG("LogEvent:", event_name, "with value:", event_value);
+  void LogEvent(std::string const& event_name, std::string const& event_value) const {
+    if (debug_mode_) {
+      LOG("LogEvent:", event_name, "=", event_value);
+    }
     // TODO(dkorolev): Insert real message queue + cereal here.
     std::thread(&SimpleSampleHttpPost, statistics_server_url_, event_name + "=" + event_value).detach();
-    return true;
+  }
+
+  void LogEvent(std::string const& event_name, TStringMap const& value_pairs) const {
+    // TODO(dkorolev): Insert real message queue + cereal here.
+    std::string merged = event_name + "{";
+    for (const auto& it : value_pairs) {
+      merged += (it.first + "=" + it.second + ",");
+    }
+    merged.back() = '}';
+    std::thread(&SimpleSampleHttpPost, statistics_server_url_, merged).detach();
+    if (debug_mode_) {
+      LOG("LogEvent:", event_name, "=", value_pairs);
+    }
   }
 
   void DebugMode(bool enable) {
@@ -45,14 +63,21 @@ class Stats {
 
   // Forcedly tries to upload all stored records to the server.
   void Upload() {
+    if (debug_mode_) {
+      LOG("Alohalytics: Uploading data to", statistics_server_url_);
+    }
     // TODO
+  }
+
+  // TODO(dkorolev): Was needed for unit testing.
+  int UniversalDebugAnswer() const {
+    return 42;
   }
 
  private:
   // TODO temporary stub function
   static void SimpleSampleHttpPost(const std::string& url, const std::string& post_data) {
     HTTPClientPlatformWrapper(url).set_post_body(post_data, "text/plain").RunHTTPRequest();
-    HTTPClientPlatformWrapper(url).set_post_body(post_data + post_data, "text/plain").RunHTTPRequest();
   }
 };
 
