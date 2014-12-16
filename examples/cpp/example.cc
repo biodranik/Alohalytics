@@ -4,7 +4,8 @@
 #include "dflags.h"
 
 #include <iostream>
-#include <regex>
+#include <thread>
+#include <chrono>
 
 DEFINE_string(server_url, "http://localhost:8080/", "Statistics server url.");
 DEFINE_string(event, "TestEvent", "Records given event.");
@@ -17,30 +18,37 @@ DEFINE_string(storage,
               "Path to directory (with a slash at the end) to temporarily store recorded events.");
 DEFINE_bool(debug, true, "Enables debug mode for statistics engine.");
 DEFINE_bool(upload, false, "If true, triggers event to forcebly upload all statistics to the server.");
+DEFINE_double(sleep, 2.5, "The number of seconds to sleep before terminating.");
+DEFINE_bool(use_message_queue, true, "Whether the message queue should be used.");
 
 using namespace std;
 
 int main(int argc, char** argv) {
   ParseDFlags(&argc, &argv);
 
-  aloha::Stats stats(FLAGS_server_url, FLAGS_storage);
+  aloha::Stats stats(FLAGS_server_url, FLAGS_storage, FLAGS_use_message_queue);
   if (FLAGS_debug) {
     stats.DebugMode(true);
   }
 
   if (!FLAGS_event.empty()) {
     if (!FLAGS_values.empty()) {
-      aloha::TStringMap map;
-      const std::regex re("[=,]+");
+      std::string values = FLAGS_values;
+      for (auto& c : values) {
+        if (c == '=' || c == ',') {
+          c = ' ';
+        }
+      }
       std::string key;
-      for (auto it = std::sregex_token_iterator(FLAGS_values.begin(), FLAGS_values.end(), re, -1);
-           it != std::sregex_token_iterator();
-           ++it) {
+      aloha::TStringMap map;
+      std::istringstream is(values);
+      std::string it;
+      while (is >> it) {
         if (key.empty()) {
-          key = *it;
+          key = it;
           map[key] = "";
         } else {
-          map[key] = *it;
+          map[key] = it;
           key.clear();
         }
       }
@@ -60,6 +68,8 @@ int main(int argc, char** argv) {
   if (FLAGS_upload) {
     stats.Upload();
   }
+
+  this_thread::sleep_for(chrono::milliseconds(static_cast<uint32_t>(1e3 * FLAGS_sleep)));
 
   return 0;
 }
