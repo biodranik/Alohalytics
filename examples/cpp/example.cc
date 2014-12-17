@@ -9,10 +9,10 @@
 
 DEFINE_string(server_url, "http://localhost:8080/", "Statistics server url.");
 DEFINE_string(event, "TestEvent", "Records given event.");
-DEFINE_string(
-    values,
-    "",
-    "Records event with single value (--values singleValue) or value pairs (--values key1=value1,key2=value2).");
+DEFINE_string(values,
+              "",
+              "Records event with single value (--values singleValue) or value pairs (--values "
+              "key1=value1,key2=value2).");
 DEFINE_string(storage,
               "build/",
               "Path to directory (with a slash at the end) to temporarily store recorded events.");

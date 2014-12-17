@@ -36,26 +36,21 @@ import org.alohastats.lib.Statistics;
 
 import java.util.HashMap;
 
-public class MainActivity extends Activity
-{
+public class MainActivity extends Activity {
   private static final String STATISTICS_SERVER_URL = "http://localhost:8080/";
 
   @Override
-  protected void onCreate(Bundle savedInstanceState)
-  {
+  protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
     Statistics.setup(STATISTICS_SERVER_URL, this);
 
     // To handle Enter key for convenience testing on emulator
-    findViewById(R.id.eventNameEditor).setOnKeyListener(new View.OnKeyListener()
-    {
-      public boolean onKey(View v, int keyCode, KeyEvent event)
-      {
+    findViewById(R.id.eventNameEditor).setOnKeyListener(new View.OnKeyListener() {
+      public boolean onKey(View v, int keyCode, KeyEvent event) {
         // If the event is a key-down event on the "enter" button
-        if ((event.getAction() == KeyEvent.ACTION_DOWN) && (keyCode == KeyEvent.KEYCODE_ENTER))
-        {
+        if ((event.getAction() == KeyEvent.ACTION_DOWN) && (keyCode == KeyEvent.KEYCODE_ENTER)) {
           onSendButtonClicked(null);
           return true;
         }
@@ -65,8 +60,7 @@ public class MainActivity extends Activity
   }
 
   @Override
-  protected void onResume()
-  {
+  protected void onResume() {
     super.onResume();
 
     // Basic call to track user time spent in the app.
@@ -81,7 +75,7 @@ public class MainActivity extends Activity
     // Event with parameter (key=value)
     Statistics.logEvent("device_manufacturer", Build.MANUFACTURER);
 
-    final HashMap<String,String> kv = new HashMap<String,String>();
+    final HashMap<String, String> kv = new HashMap<String, String>();
     kv.put("brand", Build.BRAND);
     kv.put("device", Build.DEVICE);
     kv.put("model", Build.MODEL);
@@ -100,15 +94,13 @@ public class MainActivity extends Activity
   }
 
   @Override
-  protected void onPause()
-  {
+  protected void onPause() {
     super.onPause();
     Statistics.onPause(this);
   }
 
-  public void onSendButtonClicked(View v)
-  {
-    final String eventName = ((TextView) findViewById(R.id.eventNameEditor)).getText().toString();
-    Statistics.logEvent(eventName);
+  public void onSendButtonClicked(View v) {
+    final String eventValue = ((TextView) findViewById(R.id.eventNameEditor)).getText().toString();
+    Statistics.logEvent("send_button_clicked", eventValue);
   }
 }

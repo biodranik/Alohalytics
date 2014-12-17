@@ -13,18 +13,18 @@
 namespace aloha {
 
 class StatsUploader {
-  public:
-   explicit StatsUploader(const std::string& url) : url_(url) {
-   }
-   void OnMessage(const std::string& message, size_t /*unused_dropped_events*/ = 0) const {
-     HTTPClientPlatformWrapper(url_).set_post_body(message, "text/plain").RunHTTPRequest();
-   }
-   const std::string& GetURL() const {
-     return url_;
-   }
+ public:
+  explicit StatsUploader(const std::string& url) : url_(url) {
+  }
+  void OnMessage(const std::string& message, size_t /*unused_dropped_events*/ = 0) const {
+    HTTPClientPlatformWrapper(url_).set_post_body(message, "text/plain").RunHTTPRequest();
+  }
+  const std::string& GetURL() const {
+    return url_;
+  }
 
-  private:
-   const std::string url_;
+ private:
+  const std::string url_;
 };
 
 typedef std::map<std::string, std::string> TStringMap;
