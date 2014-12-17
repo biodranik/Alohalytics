@@ -26,7 +26,7 @@ using namespace std;
 int main(int argc, char** argv) {
   ParseDFlags(&argc, &argv);
 
-  aloha::Stats stats(FLAGS_server_url, FLAGS_storage, FLAGS_use_message_queue);
+  aloha::Stats stats(FLAGS_server_url, FLAGS_storage, "Some Unique ID here", FLAGS_use_message_queue);
   if (FLAGS_debug) {
     stats.DebugMode(true);
   }
