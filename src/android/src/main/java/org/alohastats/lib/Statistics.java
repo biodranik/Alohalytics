@@ -61,6 +61,14 @@ public class Statistics {
     logEvent(eventName, array);
   }
 
+  static public void onResume(Activity activity) {
+    logEvent("$onResume", activity.getLocalClassName());
+  }
+
+  static public void onPause(Activity activity) {
+    logEvent("$onPause", activity.getLocalClassName());
+  }
+
   // http://stackoverflow.com/a/7929810
   private static String uniqueID = null;
   private static final String PREF_UNIQUE_ID = "ALOHALYTICS_UNIQUE_ID";

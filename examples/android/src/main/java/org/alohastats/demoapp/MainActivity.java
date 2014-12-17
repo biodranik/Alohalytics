@@ -69,10 +69,14 @@ public class MainActivity extends Activity
   {
     super.onResume();
 
+    // Basic call to track user time spent in the app.
+    // Should be added to each activity you want to track together with Statistics.onPause().
+    Statistics.onResume(this);
+
     // TODO: send detailed system info statistics automatically on startup
 
     // Very simple event.
-    Statistics.logEvent("app_has_resumed");
+    Statistics.logEvent("simple_event");
 
     // Event with parameter (key=value)
     Statistics.logEvent("device_manufacturer", Build.MANUFACTURER);
@@ -99,7 +103,7 @@ public class MainActivity extends Activity
   protected void onPause()
   {
     super.onPause();
-    Statistics.logEvent("app_has_paused");
+    Statistics.onPause(this);
   }
 
   public void onSendButtonClicked(View v)
