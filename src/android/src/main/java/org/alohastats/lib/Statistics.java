@@ -79,7 +79,8 @@ public class Statistics {
           PREF_UNIQUE_ID, Context.MODE_PRIVATE);
       uniqueID = sharedPrefs.getString(PREF_UNIQUE_ID, null);
       if (uniqueID == null) {
-        uniqueID = UUID.randomUUID().toString();
+        // "A:" means Android. It will be different for other platforms, for convenience debugging.
+        uniqueID = "A:" + UUID.randomUUID().toString();
         final SharedPreferences.Editor editor = sharedPrefs.edit();
         editor.putString(PREF_UNIQUE_ID, uniqueID);
         editor.apply();
