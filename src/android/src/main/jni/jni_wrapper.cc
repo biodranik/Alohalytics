@@ -103,6 +103,11 @@ JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_logEvent__Ljava_lang_S
   g_stats->LogEvent(ToStdString(env, eventName), map);
 }
 
+JNIEXPORT void JNICALL
+    Java_org_alohastats_lib_Statistics_logJSONEvent(JNIEnv* env, jclass, jstring jsonString) {
+  g_stats->LogJSONEvent(ToStdString(env, jsonString));
+}
+
 #define CLEAR_AND_RETURN_FALSE_ON_EXCEPTION \
   if (env->ExceptionCheck()) {              \
     env->ExceptionDescribe();               \
@@ -142,11 +147,11 @@ JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_setupCPP(JNIEnv* env,
   RETURN_ON_EXCEPTION
 }
 
-JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_debugCPP(JNIEnv* env, jboolean enableDebug) {
+JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_debugCPP(JNIEnv* env, jclass, jboolean enableDebug) {
   if (g_stats)
-    g_stats.DebugMode(enableDebug);
+    g_stats->DebugMode(enableDebug);
   else
-    LOG("Alohalytics: Please call setup before enabling debug mode.")
+    LOG("Alohalytics: Please call setup before enabling debug mode.");
 }
 
 }  // extern "C"

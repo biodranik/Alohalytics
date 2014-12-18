@@ -27,6 +27,10 @@ package org.alohastats.lib;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.util.Map;
@@ -34,6 +38,7 @@ import java.util.UUID;
 
 public class Statistics {
 
+  private static final String TAG = "Alohalytics";
   private static boolean sDebugModeEnabled = false;
 
   public static void setDebugMode(boolean enable) {
@@ -52,6 +57,8 @@ public class Statistics {
     // Native code expects valid existing writable dir.
     (new File(storagePath)).mkdirs();
     setupCPP(HttpTransport.class, serverUrl, storagePath, getInstallationId(activity));
+
+    SystemInfo.getDeviceInfoAsync(activity);
   }
 
   native static public void logEvent(String eventName);
@@ -70,6 +77,22 @@ public class Statistics {
       array[index++] = entry.getValue();
     }
     logEvent(eventName, array);
+  }
+
+  public static native void logJSONEvent(final String cppClassInWrappedJSONFormat);
+
+  public static void logJSONEvent(JSONObject eventShouldMatchCPPClass) {
+    // Wrap event as C++ Cereal requires it.
+    try {
+      logJSONEvent((new JSONObject().put("value0", eventShouldMatchCPPClass)).toString());
+    } catch (JSONException ex) {
+      if (sDebugModeEnabled) {
+        if (ex.getMessage() != null) {
+          Log.e(TAG, ex.getMessage());
+        }
+        ex.printStackTrace();
+      }
+    }
   }
 
   static public void onResume(Activity activity) {
