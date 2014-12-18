@@ -51,9 +51,7 @@ public class Statistics {
   }
 
   public static void setup(final String serverUrl, final Activity activity) {
-    String storagePath = activity.getFilesDir().getAbsolutePath();
-    if (!storagePath.endsWith("/"))
-      storagePath += "/";
+    final String storagePath = activity.getFilesDir().getAbsolutePath() + "/Alohalytics/";
     // Native code expects valid existing writable dir.
     (new File(storagePath)).mkdirs();
     setupCPP(HttpTransport.class, serverUrl, storagePath, getInstallationId(activity));
