@@ -142,6 +142,13 @@ JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_setupCPP(JNIEnv* env,
   RETURN_ON_EXCEPTION
 }
 
+JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_debugCPP(JNIEnv* env, jboolean enableDebug) {
+  if (g_stats)
+    g_stats.DebugMode(enableDebug);
+  else
+    LOG("Alohalytics: Please call setup before enabling debug mode.")
+}
+
 }  // extern "C"
 
 //***********************************************************************

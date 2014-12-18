@@ -34,7 +34,18 @@ import java.util.UUID;
 
 public class Statistics {
 
-  static public void setup(final String serverUrl, Activity activity) {
+  private static boolean sDebugModeEnabled = false;
+
+  public static void setDebugMode(boolean enable) {
+    sDebugModeEnabled = enable;
+    debugCPP(enable);
+  }
+
+  public static boolean debugMode() {
+    return sDebugModeEnabled;
+  }
+
+  public static void setup(final String serverUrl, final Activity activity) {
     String storagePath = activity.getFilesDir().getAbsolutePath();
     if (!storagePath.endsWith("/"))
       storagePath += "/";
@@ -90,10 +101,12 @@ public class Statistics {
   }
 
   // Initialize internal C++ statistics engine.
-  native static private void setupCPP(final Class httpTransportClass,
+  private native static void setupCPP(final Class httpTransportClass,
                                       final String serverUrl,
                                       final String storagePath,
                                       final String installationId);
+
+  private native static void debugCPP(boolean enable);
 
   static {
     System.loadLibrary("alohastats");
