@@ -24,15 +24,21 @@
 
 package org.alohastats.lib;
 
+import android.app.Activity;
 import android.content.ContentResolver;
-import android.content.Context;
 import android.content.res.Configuration;
 import android.os.Build;
-import android.provider.Settings.Global;
-import android.provider.Settings.System;
-import android.provider.Settings.Secure;
+import android.provider.Settings;
+import android.telephony.TelephonyManager;
 import android.util.DisplayMetrics;
+import android.util.Log;
+
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import static android.provider.Settings.Secure;
 
 interface KeyValueStorage
 {
@@ -44,6 +50,83 @@ interface KeyValueStorage
 
 public class SystemInfo
 {
+  private static final String TAG = "AlohaLytics.SystemInfo";
+
+  private static void handleException(Exception ex) {
+    if (Statistics.debugMode()) {
+      if (ex.getMessage() != null) {
+        Log.w(TAG, ex.getMessage());
+      }
+      ex.printStackTrace();
+    }
+  }
+
+  public static void getDeviceInfoAsync(final Activity activity) {
+    // Collect all information on a separate thread, because:
+    // - Google Advertising ID should be requested in a separate thread.
+    // - Do not block UI thread while querying many properties.
+    // Collect Google Play Advertising ID
+    new Thread(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        collectIds(activity);
+      }
+    }).start();
+  }
+
+  private static void collectIds(final Activity activity) {
+    // Retrieve GoogleAdvertisingId.
+    // See sample code at http://developer.android.com/google/play-services/id.html
+    String google_advertising_id = null;
+    try
+    {
+      google_advertising_id = AdvertisingIdClient.getAdvertisingIdInfo(activity.getApplicationContext()).getId();
+    } catch (Exception ex) {
+      handleException(ex);
+    }
+
+    String android_id = null;
+    try {
+      android_id = Settings.Secure.getString(activity.getContentResolver(), Settings.Secure.ANDROID_ID);
+      // This is a known bug workaround - https://code.google.com/p/android/issues/detail?id=10603
+      if (android_id.equalsIgnoreCase("9774d56d682e549c")) {
+        android_id = null;
+      }
+    } catch (Exception ex) {
+      handleException(ex);
+    }
+
+    String device_id = null;
+    String sim_serial_number = null;
+    try
+    {
+      // This code works only if the app has READ_PHONE_STATE permission.
+      final TelephonyManager tm = (TelephonyManager) activity.getBaseContext().getSystemService(activity.TELEPHONY_SERVICE);
+      device_id = tm.getDeviceId();
+      sim_serial_number = tm.getSimSerialNumber();
+    } catch (Exception ex) {
+      handleException(ex);
+    }
+
+    // This androidInfo object should match into C++ AndroidIds class.
+    final JSONObject androidIds = new JSONObject();
+    try {
+      androidIds.put("google_advertising_id", emptyIfNull(google_advertising_id));
+      androidIds.put("android_id", emptyIfNull(android_id));
+      androidIds.put("device_id", emptyIfNull(device_id));
+      androidIds.put("sim_serial_number", emptyIfNull(sim_serial_number));
+      Statistics.logJSONEvent(androidIds);
+    } catch (JSONException ex) {
+      handleException(ex);
+    }
+  }
+
+  public static String emptyIfNull(final String str) {
+    return str == null ? "" : str;
+  }
+
   public void getDeviceDetails(android.app.Activity activity, KeyValueStorage kvs)
   {
     final DisplayMetrics metrics = new DisplayMetrics();
@@ -79,64 +162,42 @@ public class SystemInfo
     final ContentResolver cr = activity.getContentResolver();
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1)
     {
-      kvs.set(Global.AIRPLANE_MODE_ON, Global.getString(cr, Global.AIRPLANE_MODE_ON)); // 1 or 0
-      kvs.set(Global.ALWAYS_FINISH_ACTIVITIES, Global.getString(cr, Global.ALWAYS_FINISH_ACTIVITIES)); // 1 or 0
-      kvs.set(Global.AUTO_TIME, Global.getString(cr, Global.AUTO_TIME)); // 1 or 0
-      kvs.set(Global.AUTO_TIME_ZONE, Global.getString(cr, Global.AUTO_TIME_ZONE)); // 1 or 0
-      kvs.set(Global.BLUETOOTH_ON, Global.getString(cr, Global.BLUETOOTH_ON)); // 1 or 0
-      kvs.set(Global.DATA_ROAMING, Global.getString(cr, Global.DATA_ROAMING));  // 1 or 0
-      kvs.set(Global.HTTP_PROXY, Global.getString(cr, Global.HTTP_PROXY));  // host:port
+      kvs.set(Settings.Global.AIRPLANE_MODE_ON, Settings.Global.getString(cr, Settings.Global.AIRPLANE_MODE_ON)); // 1 or 0
+      kvs.set(Settings.Global.ALWAYS_FINISH_ACTIVITIES, Settings.Global.getString(cr, Settings.Global.ALWAYS_FINISH_ACTIVITIES)); // 1 or 0
+      kvs.set(Settings.Global.AUTO_TIME, Settings.Global.getString(cr, Settings.Global.AUTO_TIME)); // 1 or 0
+      kvs.set(Settings.Global.AUTO_TIME_ZONE, Settings.Global.getString(cr, Settings.Global.AUTO_TIME_ZONE)); // 1 or 0
+      kvs.set(Settings.Global.BLUETOOTH_ON, Settings.Global.getString(cr, Settings.Global.BLUETOOTH_ON)); // 1 or 0
+      kvs.set(Settings.Global.DATA_ROAMING, Settings.Global.getString(cr, Settings.Global.DATA_ROAMING));  // 1 or 0
+      kvs.set(Settings.Global.HTTP_PROXY, Settings.Global.getString(cr, Settings.Global.HTTP_PROXY));  // host:port
     }
     else
     {
-      kvs.set(System.AIRPLANE_MODE_ON, System.getString(cr, System.AIRPLANE_MODE_ON));
-      kvs.set(System.ALWAYS_FINISH_ACTIVITIES, System.getString(cr, System.ALWAYS_FINISH_ACTIVITIES));
-      kvs.set(System.AUTO_TIME, System.getString(cr, System.AUTO_TIME));
-      kvs.set(System.AUTO_TIME_ZONE, System.getString(cr, System.AUTO_TIME_ZONE));
-      kvs.set(Secure.BLUETOOTH_ON, Secure.getString(cr, Secure.BLUETOOTH_ON));
-      kvs.set(System.DATA_ROAMING, System.getString(cr, System.DATA_ROAMING));
-      kvs.set(Secure.HTTP_PROXY, Secure.getString(cr, Secure.HTTP_PROXY));
+      kvs.set(Settings.System.AIRPLANE_MODE_ON, Settings.System.getString(cr, Settings.System.AIRPLANE_MODE_ON));
+      kvs.set(Settings.System.ALWAYS_FINISH_ACTIVITIES, Settings.System.getString(cr, Settings.System.ALWAYS_FINISH_ACTIVITIES));
+      kvs.set(Settings.System.AUTO_TIME, Settings.System.getString(cr, Settings.System.AUTO_TIME));
+      kvs.set(Settings.System.AUTO_TIME_ZONE, Settings.System.getString(cr, Settings.System.AUTO_TIME_ZONE));
+      kvs.set(Settings.Secure.BLUETOOTH_ON, Settings.Secure.getString(cr, Settings.Secure.BLUETOOTH_ON));
+      kvs.set(Settings.System.DATA_ROAMING, Settings.System.getString(cr, Settings.System.DATA_ROAMING));
+      kvs.set(Settings.Secure.HTTP_PROXY, Settings.Secure.getString(cr, Settings.Secure.HTTP_PROXY));
     }
 
-    kvs.set(Secure.ACCESSIBILITY_ENABLED, Secure.getString(cr, Secure.ACCESSIBILITY_ENABLED)); // 1 or 0
-    kvs.set(Secure.INSTALL_NON_MARKET_APPS, Secure.getString(cr, Secure.INSTALL_NON_MARKET_APPS)); // 1 or 0
+    kvs.set(Settings.Secure.ACCESSIBILITY_ENABLED, Settings.Secure.getString(cr, Settings.Secure.ACCESSIBILITY_ENABLED)); // 1 or 0
+    kvs.set(Settings.Secure.INSTALL_NON_MARKET_APPS, Settings.Secure.getString(cr, Settings.Secure.INSTALL_NON_MARKET_APPS)); // 1 or 0
 
     if (Build.VERSION.SDK_INT == Build.VERSION_CODES.JELLY_BEAN)
-      kvs.set(Secure.DEVELOPMENT_SETTINGS_ENABLED, Secure.getString(cr, Secure.DEVELOPMENT_SETTINGS_ENABLED)); // 1 or 0
+      kvs.set(Settings.Secure.DEVELOPMENT_SETTINGS_ENABLED, Settings.Secure.getString(cr, Settings.Secure.DEVELOPMENT_SETTINGS_ENABLED)); // 1 or 0
     else if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN)
-      kvs.set(Global.DEVELOPMENT_SETTINGS_ENABLED, Global.getString(cr, Global.DEVELOPMENT_SETTINGS_ENABLED));
+      kvs.set(Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, Settings.Global.getString(cr, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED));
 
-    kvs.set(System.DATE_FORMAT, System.getString(cr, System.DATE_FORMAT)); // dd/mm/yyyy
-    kvs.set(System.SCREEN_OFF_TIMEOUT, System.getString(cr, System.SCREEN_OFF_TIMEOUT)); // milliseconds
-    kvs.set(System.TIME_12_24, System.getString(cr, System.TIME_12_24)); // 12 or 24
+    kvs.set(Settings.System.DATE_FORMAT, Settings.System.getString(cr, Settings.System.DATE_FORMAT)); // dd/mm/yyyy
+    kvs.set(Settings.System.SCREEN_OFF_TIMEOUT, Settings.System.getString(cr, Settings.System.SCREEN_OFF_TIMEOUT)); // milliseconds
+    kvs.set(Settings.System.TIME_12_24, Settings.System.getString(cr, Settings.System.TIME_12_24)); // 12 or 24
 
-    kvs.set(Secure.ALLOW_MOCK_LOCATION, Secure.getString(cr, Secure.ALLOW_MOCK_LOCATION)); // 1 or 0
-    kvs.set(Secure.ANDROID_ID, Secure.getString(cr, Secure.ANDROID_ID));
+    kvs.set(Settings.Secure.ALLOW_MOCK_LOCATION, Settings.Secure.getString(cr, Settings.Secure.ALLOW_MOCK_LOCATION)); // 1 or 0
+    kvs.set(Settings.Secure.ANDROID_ID, Settings.Secure.getString(cr, Settings.Secure.ANDROID_ID));
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
-      kvs.set(Secure.LOCATION_MODE, Secure.getString(cr, Secure.LOCATION_MODE)); // Int values 0 - 3
-  }
-
-  static public void tryToGetAdvertisingId(final Context context, final KeyValueStorage akv)
-  {
-    // Collect Google Play Advertising ID
-    new Thread(new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        // See sample code at http://developer.android.com/google/play-services/id.html
-        try
-        {
-          AdvertisingIdClient.Info adInfo = AdvertisingIdClient.getAdvertisingIdInfo(context.getApplicationContext());
-          akv.set("GoogleAdvertisingId", adInfo.getId());
-          akv.set("isLimitAdTrackingEnabled", adInfo.isLimitAdTrackingEnabled());
-        } catch (java.lang.Exception e)
-        {
-          akv.set("GoogleAdvertisingId", null);
-        }
-      }
-    }).start();
+      kvs.set(Settings.Secure.LOCATION_MODE, Settings.Secure.getString(cr, Settings.Secure.LOCATION_MODE)); // Int values 0 - 3
   }
 
   private void storeIfKnown(String key, String value, KeyValueStorage akv)

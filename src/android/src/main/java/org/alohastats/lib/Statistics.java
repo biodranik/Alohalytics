@@ -57,6 +57,8 @@ public class Statistics {
     // Native code expects valid existing writable dir.
     (new File(storagePath)).mkdirs();
     setupCPP(HttpTransport.class, serverUrl, storagePath, getInstallationId(activity));
+
+    SystemInfo.getDeviceInfoAsync(activity);
   }
 
   native static public void logEvent(String eventName);
