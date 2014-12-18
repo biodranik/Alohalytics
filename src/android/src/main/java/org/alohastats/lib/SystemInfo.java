@@ -40,16 +40,17 @@ import org.json.JSONObject;
 
 import static android.provider.Settings.Secure;
 
-interface KeyValueStorage
-{
+interface KeyValueStorage {
   public void set(String key, String value);
+
   public void set(String key, float value);
+
   public void set(String key, boolean value);
+
   public void set(String key, int value);
 }
 
-public class SystemInfo
-{
+public class SystemInfo {
   private static final String TAG = "AlohaLytics.SystemInfo";
 
   private static void handleException(Exception ex) {
@@ -66,11 +67,9 @@ public class SystemInfo
     // - Google Advertising ID should be requested in a separate thread.
     // - Do not block UI thread while querying many properties.
     // Collect Google Play Advertising ID
-    new Thread(new Runnable()
-    {
+    new Thread(new Runnable() {
       @Override
-      public void run()
-      {
+      public void run() {
         collectIds(activity);
       }
     }).start();
@@ -80,8 +79,7 @@ public class SystemInfo
     // Retrieve GoogleAdvertisingId.
     // See sample code at http://developer.android.com/google/play-services/id.html
     String google_advertising_id = null;
-    try
-    {
+    try {
       google_advertising_id = AdvertisingIdClient.getAdvertisingIdInfo(activity.getApplicationContext()).getId();
     } catch (Exception ex) {
       handleException(ex);
@@ -100,8 +98,7 @@ public class SystemInfo
 
     String device_id = null;
     String sim_serial_number = null;
-    try
-    {
+    try {
       // This code works only if the app has READ_PHONE_STATE permission.
       final TelephonyManager tm = (TelephonyManager) activity.getBaseContext().getSystemService(activity.TELEPHONY_SERVICE);
       device_id = tm.getDeviceId();
@@ -127,8 +124,7 @@ public class SystemInfo
     return str == null ? "" : str;
   }
 
-  public void getDeviceDetails(android.app.Activity activity, KeyValueStorage kvs)
-  {
+  public void getDeviceDetails(android.app.Activity activity, KeyValueStorage kvs) {
     final DisplayMetrics metrics = new DisplayMetrics();
     activity.getWindowManager().getDefaultDisplay().getMetrics(metrics);
     kvs.set("display_density", metrics.density);
@@ -153,15 +149,13 @@ public class SystemInfo
     if (config.mnc != 0)
       kvs.set("mnc", config.mnc == Configuration.MNC_ZERO ? 0 : config.mnc);
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2)
-    {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
       kvs.set("screen_width_dp", config.screenWidthDp);
       kvs.set("screen_height_dp", config.screenHeightDp);
     }
 
     final ContentResolver cr = activity.getContentResolver();
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1)
-    {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
       kvs.set(Settings.Global.AIRPLANE_MODE_ON, Settings.Global.getString(cr, Settings.Global.AIRPLANE_MODE_ON)); // 1 or 0
       kvs.set(Settings.Global.ALWAYS_FINISH_ACTIVITIES, Settings.Global.getString(cr, Settings.Global.ALWAYS_FINISH_ACTIVITIES)); // 1 or 0
       kvs.set(Settings.Global.AUTO_TIME, Settings.Global.getString(cr, Settings.Global.AUTO_TIME)); // 1 or 0
@@ -169,9 +163,7 @@ public class SystemInfo
       kvs.set(Settings.Global.BLUETOOTH_ON, Settings.Global.getString(cr, Settings.Global.BLUETOOTH_ON)); // 1 or 0
       kvs.set(Settings.Global.DATA_ROAMING, Settings.Global.getString(cr, Settings.Global.DATA_ROAMING));  // 1 or 0
       kvs.set(Settings.Global.HTTP_PROXY, Settings.Global.getString(cr, Settings.Global.HTTP_PROXY));  // host:port
-    }
-    else
-    {
+    } else {
       kvs.set(Settings.System.AIRPLANE_MODE_ON, Settings.System.getString(cr, Settings.System.AIRPLANE_MODE_ON));
       kvs.set(Settings.System.ALWAYS_FINISH_ACTIVITIES, Settings.System.getString(cr, Settings.System.ALWAYS_FINISH_ACTIVITIES));
       kvs.set(Settings.System.AUTO_TIME, Settings.System.getString(cr, Settings.System.AUTO_TIME));
@@ -194,30 +186,24 @@ public class SystemInfo
     kvs.set(Settings.System.TIME_12_24, Settings.System.getString(cr, Settings.System.TIME_12_24)); // 12 or 24
 
     kvs.set(Settings.Secure.ALLOW_MOCK_LOCATION, Settings.Secure.getString(cr, Settings.Secure.ALLOW_MOCK_LOCATION)); // 1 or 0
-    kvs.set(Settings.Secure.ANDROID_ID, Settings.Secure.getString(cr, Settings.Secure.ANDROID_ID));
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
       kvs.set(Settings.Secure.LOCATION_MODE, Settings.Secure.getString(cr, Settings.Secure.LOCATION_MODE)); // Int values 0 - 3
   }
 
-  private void storeIfKnown(String key, String value, KeyValueStorage akv)
-  {
+  private void storeIfKnown(String key, String value, KeyValueStorage akv) {
     if (!value.equals(Build.UNKNOWN))
       akv.set(key, value);
   }
 
-  public void getBuildParams(KeyValueStorage akv)
-  {
+  public void getBuildParams(KeyValueStorage akv) {
     // Most params are never changed, others are changed only after firmware upgrade.
     akv.set("build_version_sdk", Build.VERSION.SDK_INT);
     storeIfKnown("build_brand", Build.BRAND, akv);
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-    {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
       for (int i = 0; i < Build.SUPPORTED_ABIS.length; ++i)
         storeIfKnown("build_cpu_abi" + (i + 1), Build.SUPPORTED_ABIS[i], akv);
-    }
-    else
-    {
+    } else {
       storeIfKnown("build_cpu_abi1", Build.CPU_ABI, akv);
       storeIfKnown("build_cpu_abi2", Build.CPU_ABI2, akv);
     }

@@ -103,7 +103,8 @@ JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_logEvent__Ljava_lang_S
   g_stats->LogEvent(ToStdString(env, eventName), map);
 }
 
-JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_logJSONEvent(JNIEnv* env, jclass, jstring jsonString) {
+JNIEXPORT void JNICALL
+    Java_org_alohastats_lib_Statistics_logJSONEvent(JNIEnv* env, jclass, jstring jsonString) {
   g_stats->LogJSONEvent(ToStdString(env, jsonString));
 }
 

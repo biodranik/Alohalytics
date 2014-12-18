@@ -146,6 +146,7 @@ public class HttpTransport {
     // Optionally client can override default HTTP User-Agent.
     public String userAgent = null;
     public int httpResponseCode = -1;
+
     public Params(String url) {
       this.url = url;
     }
