@@ -6,9 +6,9 @@
 #include <string>
 #include <chrono>
 
-#include "cereal/include/cereal/cereal.hpp"
-#include "cereal/include/cereal/types/base_class.hpp"
-#include "cereal/include/cereal/types/polymorphic.hpp"
+#include "cereal/include/cereal.hpp"
+#include "cereal/include/types/base_class.hpp"
+#include "cereal/include/types/polymorphic.hpp"
 
 // For easier processing on a server side, every statistics event should derive from this base class.
 struct AlohalyticsBaseEvent {

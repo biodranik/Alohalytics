@@ -14,7 +14,7 @@
 #include "message_queue.h"
 #include "event_base.h"
 
-#include "cereal/include/cereal/archives/binary.hpp"
+#include "cereal/include/archives/binary.hpp"
 #include "cereal/include/types/string.hpp"
 #include "cereal/include/types/map.hpp"
 
