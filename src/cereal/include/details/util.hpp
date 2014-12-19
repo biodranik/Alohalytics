@@ -56,7 +56,7 @@ namespace cereal
 } // namespace cereal
 #else // clang or gcc
 
-// Patch to avoid Cereal compilation error for Android.
+// Patch by Alex Zolotarev to avoid Cereal compilation error for Android.
 #ifndef ANDROID
 #include <cxxabi.h>
 #else

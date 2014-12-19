@@ -8,7 +8,6 @@
 
 #include <string>
 #include <map>
-#include <chrono>
 
 #include "http_client.h"
 #include "logger.h"
@@ -27,7 +26,7 @@ class StatsUploader {
   }
   void OnMessage(const std::string& message, size_t /*unused_dropped_events*/ = 0) const {
     // TODO(AlexZ): temporary stub.
-    HTTPClientPlatformWrapper(url_).set_post_body(message, "application/cereal-binary-stream").RunHTTPRequest();
+    HTTPClientPlatformWrapper(url_).set_post_body(message, "application/alohalytics-binary-blob").RunHTTPRequest();
   }
   const std::string& GetURL() const {
     return url_;
@@ -68,7 +67,6 @@ class Stats {
       LOG("LogEvent:", event_name);
     }
     AlohalyticsCompatibilityKeyEvent event;
-    event.timestamp = Timestamp();
     event.key = event_name;
     std::ostringstream sstream;
     {
@@ -82,7 +80,6 @@ class Stats {
       LOG("LogEvent:", event_name, "=", event_value);
     }
     AlohalyticsCompatibilityKeyValueEvent event;
-    event.timestamp = Timestamp();
     event.key = event_name;
     event.value = event_value;
     std::ostringstream sstream;
@@ -97,7 +94,6 @@ class Stats {
       LOG("LogEvent:", event_name, "=", value_pairs);
     }
     AlohalyticsCompatibilityKeyPairsEvent event;
-    event.timestamp = Timestamp();
     event.key = event_name;
     event.pairs = value_pairs;
     std::ostringstream sstream;
@@ -147,11 +143,6 @@ class Stats {
       // Asynchronous call, returns immediately.
       message_queue_.PushMessage(message);
     }
-  }
-
-  static uint64_t Timestamp() {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
   }
 };
 
