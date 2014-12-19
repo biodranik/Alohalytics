@@ -17,6 +17,7 @@ android {
     ndk {
       moduleName "alohastats"
       stl "c++_static"
+      cFlags "-frtti -fexceptions"
       ldLibs "log", "atomic"
     }
   }

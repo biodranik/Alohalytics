@@ -1,14 +1,22 @@
 #ifndef ALOHA_STATS_H
 #define ALOHA_STATS_H
 
+// Used to avoid cereal compilation issues on iOS/MacOS when check() macro is defined.
+#ifdef __APPLE__
+#define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
+#endif
+
 #include <string>
 #include <map>
-#include <thread>
-#include <iostream>
 
 #include "http_client.h"
 #include "logger.h"
 #include "message_queue.h"
+#include "event_base.h"
+
+#include "cereal/include/archives/binary.hpp"
+#include "cereal/include/types/string.hpp"
+#include "cereal/include/types/map.hpp"
 
 namespace aloha {
 
@@ -17,7 +25,8 @@ class StatsUploader {
   explicit StatsUploader(const std::string& url) : url_(url) {
   }
   void OnMessage(const std::string& message, size_t /*unused_dropped_events*/ = 0) const {
-    HTTPClientPlatformWrapper(url_).set_post_body(message, "text/plain").RunHTTPRequest();
+    // TODO(AlexZ): temporary stub.
+    HTTPClientPlatformWrapper(url_).set_post_body(message, "application/alohalytics-binary-blob").RunHTTPRequest();
   }
   const std::string& GetURL() const {
     return url_;
@@ -57,29 +66,41 @@ class Stats {
     if (debug_mode_) {
       LOG("LogEvent:", event_name);
     }
-    // TODO(dkorolev): Insert real message queue + cereal here.
-    PushMessageViaQueue(event_name);
+    AlohalyticsCompatibilityKeyEvent event;
+    event.key = event_name;
+    std::ostringstream sstream;
+    {
+      cereal::BinaryOutputArchive(sstream) << event;
+    }
+    PushMessageViaQueue(sstream.str());
   }
 
   void LogEvent(std::string const& event_name, std::string const& event_value) const {
     if (debug_mode_) {
       LOG("LogEvent:", event_name, "=", event_value);
     }
-    // TODO(dkorolev): Insert real message queue + cereal here.
-    PushMessageViaQueue(event_name + "=" + event_value);
+    AlohalyticsCompatibilityKeyValueEvent event;
+    event.key = event_name;
+    event.value = event_value;
+    std::ostringstream sstream;
+    {
+      cereal::BinaryOutputArchive(sstream) << event;
+    }
+    PushMessageViaQueue(sstream.str());
   }
 
   void LogEvent(std::string const& event_name, TStringMap const& value_pairs) const {
-    // TODO(dkorolev): Insert real message queue + cereal here.
-    std::string merged = event_name + "{";
-    for (const auto& it : value_pairs) {
-      merged += (it.first + "=" + it.second + ",");
-    }
-    merged.back() = '}';
-    PushMessageViaQueue(merged);
     if (debug_mode_) {
       LOG("LogEvent:", event_name, "=", value_pairs);
     }
+    AlohalyticsCompatibilityKeyPairsEvent event;
+    event.key = event_name;
+    event.pairs = value_pairs;
+    std::ostringstream sstream;
+    {
+      cereal::BinaryOutputArchive(sstream) << event;
+    }
+    PushMessageViaQueue(sstream.str());
   }
 
   void LogJSONEvent(std::string const& event_in_json) const {

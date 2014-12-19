@@ -55,8 +55,21 @@ namespace cereal
   } // namespace util
 } // namespace cereal
 #else // clang or gcc
+
+// Patch by Alex Zolotarev to avoid Cereal compilation error for Android.
+#ifndef ANDROID
 #include <cxxabi.h>
+#else
+namespace __cxxabiv1 {
+extern "C" char * __cxa_demangle(const char *mangled_name, char *output_buffer, size_t *length, int *status);
+}
+namespace abi = __cxxabiv1;
+// This one was copied directly from the NDK r10d.
+#include "../../cxa_demangle.cpp"
+#endif
+
 #include <cstdlib>
+
 namespace cereal
 {
   namespace util

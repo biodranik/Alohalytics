@@ -72,7 +72,7 @@ public class HttpTransportTest extends InstrumentationTestCase {
     final HttpTransport.Params r = HttpTransport.run(p);
     assertEquals(200, r.httpResponseCode);
     final String receivedBody = new String(r.data);
-    assertTrue(receivedBody, -1 != receivedBody.indexOf(postBody));
+    assertTrue(receivedBody, receivedBody.contains(postBody));
   }
 
   public void testPostMissingContentType() throws Exception {
@@ -113,7 +113,7 @@ public class HttpTransportTest extends InstrumentationTestCase {
       final HttpTransport.Params r = HttpTransport.run(p);
       assertEquals(200, r.httpResponseCode);
       final String receivedBody = new String(p.data);
-      assertTrue(receivedBody, -1 != receivedBody.indexOf(p.inputFilePath));
+      assertTrue(receivedBody, receivedBody.contains(p.inputFilePath));
     } finally {
       (new File(p.inputFilePath)).delete();
     }
@@ -130,7 +130,7 @@ public class HttpTransportTest extends InstrumentationTestCase {
       // TODO(AlexZ): Think about using data field in the future for error pages (404 etc)
       //assertNull(r.data);
       final String receivedBody = Util.ReadFileAsUtf8String(p.outputFilePath);
-      assertTrue(receivedBody, -1 != receivedBody.indexOf(p.outputFilePath));
+      assertTrue(receivedBody, receivedBody.contains(p.outputFilePath));
     } finally {
       (new File(p.outputFilePath)).delete();
     }
@@ -147,7 +147,7 @@ public class HttpTransportTest extends InstrumentationTestCase {
       final HttpTransport.Params r = HttpTransport.run(p);
       assertEquals(200, r.httpResponseCode);
       final String receivedBody = Util.ReadFileAsUtf8String(p.outputFilePath);
-      assertTrue(receivedBody, -1 != receivedBody.indexOf(postBodyToSend));
+      assertTrue(receivedBody, receivedBody.contains(postBodyToSend));
     } finally {
       (new File(p.inputFilePath)).delete();
       (new File(p.outputFilePath)).delete();
@@ -166,7 +166,7 @@ public class HttpTransportTest extends InstrumentationTestCase {
     assertEquals(200, r.httpResponseCode);
     assertEquals(r.url, r.receivedUrl);
     final String receivedBody = new String(r.data);
-    assertTrue(-1 != receivedBody.indexOf("\"Aloha\": \"Mahalo\""));
+    assertTrue(receivedBody.contains("\"Aloha\": \"Mahalo\""));
   }
 
   public void testHttpRedirect302() throws Exception {
@@ -174,7 +174,7 @@ public class HttpTransportTest extends InstrumentationTestCase {
     final HttpTransport.Params r = HttpTransport.run(p);
     assertEquals(200, r.httpResponseCode);
     assertEquals(r.receivedUrl, "http://httpbin.org/get");
-    assertTrue(r.url != r.receivedUrl);
+    assertTrue(!r.url.equals(r.receivedUrl));
   }
 
   public void testUserAgent() throws Exception {
@@ -183,7 +183,7 @@ public class HttpTransportTest extends InstrumentationTestCase {
     final HttpTransport.Params r = HttpTransport.run(p);
     assertEquals(200, r.httpResponseCode);
     final String receivedBody = new String(r.data);
-    assertTrue(-1 != receivedBody.indexOf(p.userAgent));
+    assertTrue(receivedBody.contains(p.userAgent));
   }
 
   // Default HTTPUrlConnection implementation doesn't automatically follow http <==> https redirects
@@ -192,7 +192,7 @@ public class HttpTransportTest extends InstrumentationTestCase {
     final HttpTransport.Params r = HttpTransport.run(p);
     assertEquals(200, r.httpResponseCode);
     assertEquals(r.receivedUrl, "https://github.com/");
-    assertTrue(r.url != r.receivedUrl);
+    assertTrue(r.url.equals(r.receivedUrl));
   }
 
   public void testHttpRedirect307() throws Exception {
@@ -200,7 +200,7 @@ public class HttpTransportTest extends InstrumentationTestCase {
     final HttpTransport.Params r = HttpTransport.run(p);
     assertEquals(200, r.httpResponseCode);
     assertEquals(r.receivedUrl, "http://www.msn.com/");
-    assertTrue(r.url != r.receivedUrl);
+    assertTrue(!r.url.equals(r.receivedUrl));
   }
 
   public void testInvalidHost() throws Exception {
@@ -208,6 +208,7 @@ public class HttpTransportTest extends InstrumentationTestCase {
     boolean caughtException = false;
     try {
       final HttpTransport.Params r = HttpTransport.run(p);
+      assertEquals(-1, r.httpResponseCode);
       assertFalse(true);
     } catch (java.net.UnknownHostException ex) {
       caughtException = true;
@@ -224,8 +225,8 @@ public class HttpTransportTest extends InstrumentationTestCase {
       final HttpTransport.Params r = HttpTransport.run(p);
       assertEquals(200, r.httpResponseCode);
       final String receivedBody = new String(p.data);
-      assertTrue(receivedBody, -1 != receivedBody.indexOf("\"data\": \"\""));
-      assertTrue(receivedBody, -1 != receivedBody.indexOf("\"form\": {}"));
+      assertTrue(receivedBody, receivedBody.contains("\"data\": \"\""));
+      assertTrue(receivedBody, receivedBody.contains("\"form\": {}"));
     } finally {
       (new File(p.inputFilePath)).delete();
     }
