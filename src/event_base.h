@@ -34,9 +34,9 @@ struct AlohalyticsBaseEvent {
 CEREAL_REGISTER_TYPE(AlohalyticsBaseEvent);
 
 // Base for all Android-specific events.
-struct AlohalyticsAndroidBaseEvent : public AlohalyticsBaseEvent {
+struct AlohalyticsAndroidBaseEvent : AlohalyticsBaseEvent {
   template <class Archive> void serialize(Archive& ar) {
-    ar(cereal::base_class<AlohalyticsBaseEvent>(this));
+    AlohalyticsBaseEvent::serialize(ar);
   }
 };
 CEREAL_REGISTER_TYPE(AlohalyticsAndroidBaseEvent);
@@ -44,7 +44,7 @@ CEREAL_REGISTER_TYPE(AlohalyticsAndroidBaseEvent);
 // Base for all iOS-specific events.
 struct AlohalyticsiOSBaseEvent : public AlohalyticsBaseEvent {
   template <class Archive> void serialize(Archive& ar) {
-    ar(cereal::base_class<AlohalyticsBaseEvent>(this));
+    AlohalyticsBaseEvent::serialize(ar);
   }
 };
 CEREAL_REGISTER_TYPE(AlohalyticsiOSBaseEvent);
@@ -57,11 +57,11 @@ struct AlohalyticsAndroidIdsEvent : public AlohalyticsAndroidBaseEvent {
   std::string sim_serial_number;
 
   template <class Archive> void serialize(Archive& ar) {
-    ar(cereal::base_class<AlohalyticsAndroidBaseEvent>(this),
-        CEREAL_NVP(google_advertising_id),
-        CEREAL_NVP(android_id),
-        CEREAL_NVP(device_id),
-        CEREAL_NVP(sim_serial_number));
+    AlohalyticsAndroidBaseEvent::serialize(ar);
+    ar(CEREAL_NVP(google_advertising_id),
+       CEREAL_NVP(android_id),
+       CEREAL_NVP(device_id),
+       CEREAL_NVP(sim_serial_number));
   }
 };
 CEREAL_REGISTER_TYPE(AlohalyticsAndroidIdsEvent);
@@ -71,7 +71,8 @@ struct AlohalyticsBaseModeEvent : public AlohalyticsBaseEvent {
   std::string mode_name;
 
   template <class Archive> void serialize(Archive& ar) {
-    ar(cereal::base_class<AlohalyticsBaseEvent>(this), CEREAL_NVP(mode_name));
+    AlohalyticsBaseEvent::serialize(ar);
+    ar(CEREAL_NVP(mode_name));
   }
 };
 CEREAL_REGISTER_TYPE(AlohalyticsBaseModeEvent);
@@ -79,7 +80,7 @@ CEREAL_REGISTER_TYPE(AlohalyticsBaseModeEvent);
 // Activity.onResume() on Android.
 struct AlohalyticsModeActivatedEvent : public AlohalyticsBaseModeEvent {
   template <class Archive> void serialize(Archive& ar) {
-    ar(cereal::base_class<AlohalyticsBaseModeEvent>(this));
+    AlohalyticsBaseModeEvent::serialize(ar);
   }
 };
 CEREAL_REGISTER_TYPE(AlohalyticsModeActivatedEvent);
@@ -87,7 +88,7 @@ CEREAL_REGISTER_TYPE(AlohalyticsModeActivatedEvent);
 // Activity.onPause() on Android.
 struct AlohalyticsModeDeactivatedEvent : public AlohalyticsBaseModeEvent {
   template <class Archive> void serialize(Archive& ar) {
-    ar(cereal::base_class<AlohalyticsBaseModeEvent>(this), CEREAL_NVP(mode_name));
+    AlohalyticsBaseModeEvent::serialize(ar);
   }
 };
 CEREAL_REGISTER_TYPE(AlohalyticsModeDeactivatedEvent);
@@ -98,7 +99,8 @@ struct AlohalyticsCompatibilityKeyEvent : public AlohalyticsBaseEvent {
   std::string key;
 
   template <class Archive> void serialize(Archive& ar) {
-    ar(cereal::base_class<AlohalyticsBaseEvent>(this), CEREAL_NVP(key));
+    AlohalyticsBaseEvent::serialize(ar);
+    ar(CEREAL_NVP(key));
   }
 };
 CEREAL_REGISTER_TYPE(AlohalyticsCompatibilityKeyEvent);
@@ -108,7 +110,8 @@ struct AlohalyticsCompatibilityKeyValueEvent : public AlohalyticsCompatibilityKe
   std::string value;
 
   template <class Archive> void serialize(Archive& ar) {
-    ar(cereal::base_class<AlohalyticsCompatibilityKeyEvent>(this), CEREAL_NVP(value));
+    AlohalyticsCompatibilityKeyEvent::serialize(ar);
+    ar(CEREAL_NVP(value));
   }
 };
 CEREAL_REGISTER_TYPE(AlohalyticsCompatibilityKeyValueEvent);
@@ -118,7 +121,8 @@ struct AlohalyticsCompatibilityKeyPairsEvent : public AlohalyticsCompatibilityKe
   std::map<std::string, std::string> pairs;
 
   template <class Archive> void serialize(Archive& ar) {
-    ar(cereal::base_class<AlohalyticsCompatibilityKeyEvent>(this), CEREAL_NVP(pairs));
+    AlohalyticsCompatibilityKeyEvent::serialize(ar);
+    ar(CEREAL_NVP(pairs));
   }
 };
 CEREAL_REGISTER_TYPE(AlohalyticsCompatibilityKeyPairsEvent);
