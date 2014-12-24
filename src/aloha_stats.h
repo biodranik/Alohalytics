@@ -38,6 +38,11 @@ class StatsUploader {
 
 typedef std::map<std::string, std::string> TStringMap;
 
+// Used for cereal smart-pointers polymorphic serialization.
+struct NoOpDeleter {
+template <typename T> void operator()(T *) {}
+};
+
 class Stats {
   StatsUploader uploader_;
   mutable MessageQueue<StatsUploader> message_queue_;
@@ -70,7 +75,8 @@ class Stats {
     event.key = event_name;
     std::ostringstream sstream;
     {
-      cereal::BinaryOutputArchive(sstream) << event;
+      // unique_ptr is used to correctly serialize polymorphic types.
+      cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
     }
     PushMessageViaQueue(sstream.str());
   }
@@ -84,7 +90,7 @@ class Stats {
     event.value = event_value;
     std::ostringstream sstream;
     {
-      cereal::BinaryOutputArchive(sstream) << event;
+      cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
     }
     PushMessageViaQueue(sstream.str());
   }
@@ -98,7 +104,7 @@ class Stats {
     event.pairs = value_pairs;
     std::ostringstream sstream;
     {
-      cereal::BinaryOutputArchive(sstream) << event;
+      cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
     }
     PushMessageViaQueue(sstream.str());
   }
