@@ -38,6 +38,8 @@ import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.HashMap;
+
 import static android.provider.Settings.Secure;
 
 interface KeyValueStorage {
@@ -76,48 +78,45 @@ public class SystemInfo {
   }
 
   private static void collectIds(final Activity activity) {
+
+    final HashMap<String,String> ids = new HashMap<>();
     // Retrieve GoogleAdvertisingId.
     // See sample code at http://developer.android.com/google/play-services/id.html
-    String google_advertising_id = null;
     try {
-      google_advertising_id = AdvertisingIdClient.getAdvertisingIdInfo(activity.getApplicationContext()).getId();
-    } catch (Exception ex) {
-      handleException(ex);
-    }
-
-    String android_id = null;
-    try {
-      android_id = Settings.Secure.getString(activity.getContentResolver(), Settings.Secure.ANDROID_ID);
-      // This is a known bug workaround - https://code.google.com/p/android/issues/detail?id=10603
-      if (android_id.equalsIgnoreCase("9774d56d682e549c")) {
-        android_id = null;
+      final String google_advertising_id = AdvertisingIdClient.getAdvertisingIdInfo(activity.getApplicationContext()).getId();
+      if (google_advertising_id != null) {
+        ids.put("google_advertising_id", google_advertising_id);
       }
     } catch (Exception ex) {
       handleException(ex);
     }
 
-    String device_id = null;
-    String sim_serial_number = null;
     try {
-      // This code works only if the app has READ_PHONE_STATE permission.
-      final TelephonyManager tm = (TelephonyManager) activity.getBaseContext().getSystemService(activity.TELEPHONY_SERVICE);
-      device_id = tm.getDeviceId();
-      sim_serial_number = tm.getSimSerialNumber();
+      final String android_id = Settings.Secure.getString(activity.getContentResolver(), Settings.Secure.ANDROID_ID);
+      // This is a known bug workaround - https://code.google.com/p/android/issues/detail?id=10603
+      if (android_id != null && android_id.equals("9774d56d682e549c")) {
+        ids.put("android_id", android_id);
+      }
     } catch (Exception ex) {
       handleException(ex);
     }
 
-    // This androidInfo object should match into C++ AndroidIds class.
-    final JSONObject androidIds = new JSONObject();
     try {
-      androidIds.put("google_advertising_id", emptyIfNull(google_advertising_id));
-      androidIds.put("android_id", emptyIfNull(android_id));
-      androidIds.put("device_id", emptyIfNull(device_id));
-      androidIds.put("sim_serial_number", emptyIfNull(sim_serial_number));
-      Statistics.logJSONEvent(androidIds);
-    } catch (JSONException ex) {
+      // This code works only if the app has READ_PHONE_STATE permission.
+      final TelephonyManager tm = (TelephonyManager) activity.getBaseContext().getSystemService(activity.TELEPHONY_SERVICE);
+      final String device_id = tm.getDeviceId();
+      if (device_id != null) {
+        ids.put("device_id", device_id);
+      }
+      final String sim_serial_number = tm.getSimSerialNumber();
+      if (sim_serial_number != null) {
+        ids.put("sim_serial_number", sim_serial_number);
+      }
+    } catch (Exception ex) {
       handleException(ex);
     }
+
+    Statistics.logEvent("$AndroidIds", ids);
   }
 
   public static String emptyIfNull(final String str) {

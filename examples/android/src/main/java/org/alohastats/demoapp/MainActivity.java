@@ -65,10 +65,6 @@ public class MainActivity extends Activity {
   protected void onResume() {
     super.onResume();
 
-    // Basic call to track user time spent in the app.
-    // Should be added to each activity you want to track together with Statistics.onPause().
-    Statistics.onResume(this);
-
     // TODO: send detailed system info statistics automatically on startup
 
     // Very simple event.
@@ -93,12 +89,15 @@ public class MainActivity extends Activity {
     }
     // Event with a key=value pairs but passed as an array.
     Statistics.logEvent("app", arr);
+
+    // Example event to track user activity.
+    Statistics.logEvent("$onResume", getLocalClassName());
   }
 
   @Override
   protected void onPause() {
     super.onPause();
-    Statistics.onPause(this);
+    Statistics.logEvent("$onPause", getLocalClassName());
   }
 
   public void onSendButtonClicked(View v) {

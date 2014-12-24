@@ -27,10 +27,6 @@ package org.alohastats.lib;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.util.Log;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.File;
 import java.util.Map;
@@ -75,30 +71,6 @@ public class Statistics {
       array[index++] = entry.getValue();
     }
     logEvent(eventName, array);
-  }
-
-  public static native void logJSONEvent(final String cppClassInWrappedJSONFormat);
-
-  public static void logJSONEvent(JSONObject eventShouldMatchCPPClass) {
-    // Wrap event as C++ Cereal requires it.
-    try {
-      logJSONEvent((new JSONObject().put("value0", eventShouldMatchCPPClass)).toString());
-    } catch (JSONException ex) {
-      if (sDebugModeEnabled) {
-        if (ex.getMessage() != null) {
-          Log.e(TAG, ex.getMessage());
-        }
-        ex.printStackTrace();
-      }
-    }
-  }
-
-  static public void onResume(Activity activity) {
-    logEvent("$onResume", activity.getLocalClassName());
-  }
-
-  static public void onPause(Activity activity) {
-    logEvent("$onPause", activity.getLocalClassName());
   }
 
   // http://stackoverflow.com/a/7929810
