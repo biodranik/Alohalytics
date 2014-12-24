@@ -66,7 +66,7 @@ class Stats {
     if (debug_mode_) {
       LOG("LogEvent:", event_name);
     }
-    AlohalyticsCompatibilityKeyEvent event;
+    AlohalyticsKeyEvent event;
     event.key = event_name;
     std::ostringstream sstream;
     {
@@ -79,7 +79,7 @@ class Stats {
     if (debug_mode_) {
       LOG("LogEvent:", event_name, "=", event_value);
     }
-    AlohalyticsCompatibilityKeyValueEvent event;
+    AlohalyticsKeyValueEvent event;
     event.key = event_name;
     event.value = event_value;
     std::ostringstream sstream;
@@ -93,7 +93,7 @@ class Stats {
     if (debug_mode_) {
       LOG("LogEvent:", event_name, "=", value_pairs);
     }
-    AlohalyticsCompatibilityKeyPairsEvent event;
+    AlohalyticsKeyPairsEvent event;
     event.key = event_name;
     event.pairs = value_pairs;
     std::ostringstream sstream;
@@ -101,14 +101,6 @@ class Stats {
       cereal::BinaryOutputArchive(sstream) << event;
     }
     PushMessageViaQueue(sstream.str());
-  }
-
-  void LogJSONEvent(std::string const& event_in_json) const {
-    if (debug_mode_) {
-      LOG("LogJSONEvent:", event_in_json);
-    }
-    // TODO(AlexZ): construct C++ event class from json with Cereal.
-    PushMessageViaQueue(event_in_json);
   }
 
   void DebugMode(bool enable) {

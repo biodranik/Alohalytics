@@ -31,71 +31,10 @@ struct AlohalyticsBaseEvent {
   // To use polymorphism on a server side.
   virtual ~AlohalyticsBaseEvent() = default;
 };
-CEREAL_REGISTER_TYPE(AlohalyticsBaseEvent);
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsBaseEvent, "b");
 
-// Base for all Android-specific events.
-struct AlohalyticsAndroidBaseEvent : AlohalyticsBaseEvent {
-  template <class Archive> void serialize(Archive& ar) {
-    AlohalyticsBaseEvent::serialize(ar);
-  }
-};
-CEREAL_REGISTER_TYPE(AlohalyticsAndroidBaseEvent);
-
-// Base for all iOS-specific events.
-struct AlohalyticsiOSBaseEvent : public AlohalyticsBaseEvent {
-  template <class Archive> void serialize(Archive& ar) {
-    AlohalyticsBaseEvent::serialize(ar);
-  }
-};
-CEREAL_REGISTER_TYPE(AlohalyticsiOSBaseEvent);
-
-// Delivers Android-specific Ids.
-struct AlohalyticsAndroidIdsEvent : public AlohalyticsAndroidBaseEvent {
-  std::string google_advertising_id;
-  std::string android_id;
-  std::string device_id;
-  std::string sim_serial_number;
-
-  template <class Archive> void serialize(Archive& ar) {
-    AlohalyticsAndroidBaseEvent::serialize(ar);
-    ar(CEREAL_NVP(google_advertising_id),
-       CEREAL_NVP(android_id),
-       CEREAL_NVP(device_id),
-       CEREAL_NVP(sim_serial_number));
-  }
-};
-CEREAL_REGISTER_TYPE(AlohalyticsAndroidIdsEvent);
-
-// Base for all user-interface screens (modes).
-struct AlohalyticsBaseModeEvent : public AlohalyticsBaseEvent {
-  std::string mode_name;
-
-  template <class Archive> void serialize(Archive& ar) {
-    AlohalyticsBaseEvent::serialize(ar);
-    ar(CEREAL_NVP(mode_name));
-  }
-};
-CEREAL_REGISTER_TYPE(AlohalyticsBaseModeEvent);
-
-// Activity.onResume() on Android.
-struct AlohalyticsModeActivatedEvent : public AlohalyticsBaseModeEvent {
-  template <class Archive> void serialize(Archive& ar) {
-    AlohalyticsBaseModeEvent::serialize(ar);
-  }
-};
-CEREAL_REGISTER_TYPE(AlohalyticsModeActivatedEvent);
-
-// Activity.onPause() on Android.
-struct AlohalyticsModeDeactivatedEvent : public AlohalyticsBaseModeEvent {
-  template <class Archive> void serialize(Archive& ar) {
-    AlohalyticsBaseModeEvent::serialize(ar);
-  }
-};
-CEREAL_REGISTER_TYPE(AlohalyticsModeDeactivatedEvent);
-
-// *** Events compatible with other statistic systems ***
 // Simple event with a string name (key) only.
-struct AlohalyticsCompatibilityKeyEvent : public AlohalyticsBaseEvent {
+struct AlohalyticsKeyEvent : public AlohalyticsBaseEvent {
   std::string key;
 
   template <class Archive> void serialize(Archive& ar) {
@@ -103,28 +42,28 @@ struct AlohalyticsCompatibilityKeyEvent : public AlohalyticsBaseEvent {
     ar(CEREAL_NVP(key));
   }
 };
-CEREAL_REGISTER_TYPE(AlohalyticsCompatibilityKeyEvent);
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyEvent, "k");
 
 // Simple event with a string key/value pair.
-struct AlohalyticsCompatibilityKeyValueEvent : public AlohalyticsCompatibilityKeyEvent {
+struct AlohalyticsKeyValueEvent : public AlohalyticsKeyEvent {
   std::string value;
 
   template <class Archive> void serialize(Archive& ar) {
-    AlohalyticsCompatibilityKeyEvent::serialize(ar);
+    AlohalyticsKeyEvent::serialize(ar);
     ar(CEREAL_NVP(value));
   }
 };
-CEREAL_REGISTER_TYPE(AlohalyticsCompatibilityKeyValueEvent);
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyValueEvent, "v");
 
 // Simple event with a string key and map<string, string> value.
-struct AlohalyticsCompatibilityKeyPairsEvent : public AlohalyticsCompatibilityKeyEvent {
+struct AlohalyticsKeyPairsEvent : public AlohalyticsKeyEvent {
   std::map<std::string, std::string> pairs;
 
   template <class Archive> void serialize(Archive& ar) {
-    AlohalyticsCompatibilityKeyEvent::serialize(ar);
+    AlohalyticsKeyEvent::serialize(ar);
     ar(CEREAL_NVP(pairs));
   }
 };
-CEREAL_REGISTER_TYPE(AlohalyticsCompatibilityKeyPairsEvent);
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyPairsEvent, "p");
 
 #endif  // EVENT_BASE_H
