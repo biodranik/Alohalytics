@@ -116,7 +116,7 @@ class Stats {
  private:
   void PushMessageViaQueue(std::string&& message) const {
     // Asynchronous call, returns immediately.
-    message_queue_.PushMessage(message);
+    message_queue_.PushMessage(std::move(message));
   }
 };
 
