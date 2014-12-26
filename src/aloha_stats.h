@@ -33,7 +33,6 @@ class Stats {
   const std::string storage_path_;
   // TODO: Use this id for every file sent to identify received files on the server.
   const std::string installation_id_;
-  const bool use_message_queue_;
   bool debug_mode_ = false;
 
  public:
@@ -42,13 +41,11 @@ class Stats {
   // @param[in] installation_id some id unique for this app installation.
   Stats(const std::string& statistics_server_url,
         const std::string& storage_path_with_a_slash_at_the_end,
-        const std::string& installation_id,
-        bool use_message_queue = true)
+        const std::string& installation_id)
       : uploader_(statistics_server_url),
         message_queue_(uploader_),
         storage_path_(storage_path_with_a_slash_at_the_end),
-        installation_id_(installation_id),
-        use_message_queue_(use_message_queue) {
+        installation_id_(installation_id) {
   }
 
   void LogEvent(std::string const& event_name) const {
@@ -117,14 +114,9 @@ class Stats {
   }
 
  private:
-  void PushMessageViaQueue(const std::string& message) const {
-    if (!use_message_queue_) {
-      // Blocking call, waiting in the calling thread to complete it.
-      uploader_.OnMessage(message);
-    } else {
-      // Asynchronous call, returns immediately.
-      message_queue_.PushMessage(message);
-    }
+  void PushMessageViaQueue(std::string&& message) const {
+    // Asynchronous call, returns immediately.
+    message_queue_.PushMessage(message);
   }
 };
 
