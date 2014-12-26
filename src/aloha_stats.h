@@ -9,32 +9,16 @@
 #include <string>
 #include <map>
 
-#include "http_client.h"
 #include "logger.h"
 #include "message_queue.h"
 #include "event_base.h"
+#include "stats_uploader.h"
 
 #include "cereal/include/archives/binary.hpp"
 #include "cereal/include/types/string.hpp"
 #include "cereal/include/types/map.hpp"
 
 namespace aloha {
-
-class StatsUploader {
- public:
-  explicit StatsUploader(const std::string& url) : url_(url) {
-  }
-  void OnMessage(const std::string& message, size_t /*unused_dropped_events*/ = 0) const {
-    // TODO(AlexZ): temporary stub.
-    HTTPClientPlatformWrapper(url_).set_post_body(message, "application/alohalytics-binary-blob").RunHTTPRequest();
-  }
-  const std::string& GetURL() const {
-    return url_;
-  }
-
- private:
-  const std::string url_;
-};
 
 typedef std::map<std::string, std::string> TStringMap;
 
