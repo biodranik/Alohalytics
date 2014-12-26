@@ -4,7 +4,7 @@
 #include <string>
 
 #include "http_client.h"
-
+#include "FileStorageQueue/fsq.h"
 
 namespace aloha {
 
