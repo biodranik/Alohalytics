@@ -30,7 +30,7 @@ template <typename T> void operator()(T *) {}
 
 class Stats {
   StatsUploader uploader_;
-  friend MessageQueue<Stats>;
+  friend class MessageQueue<Stats>;
   mutable MessageQueue<Stats> message_queue_;
   fsq::FSQ<fsq::Config<StatsUploader>> file_storage_queue_;
   // TODO: Use this id for every file sent to identify received files on the server.
@@ -66,7 +66,7 @@ class Stats {
       // unique_ptr is used to correctly serialize polymorphic types.
       cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
     }
-    PushMessageViaQueue(sstream.str());
+    message_queue_.PushMessage(std::move(sstream.str()));
   }
 
   void LogEvent(std::string const& event_name, std::string const& event_value) const {
@@ -80,7 +80,7 @@ class Stats {
     {
       cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
     }
-    PushMessageViaQueue(sstream.str());
+    message_queue_.PushMessage(std::move(sstream.str()));
   }
 
   void LogEvent(std::string const& event_name, TStringMap const& value_pairs) const {
@@ -94,7 +94,7 @@ class Stats {
     {
       cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
     }
-    PushMessageViaQueue(sstream.str());
+    message_queue_.PushMessage(std::move(sstream.str()));
   }
 
   void DebugMode(bool enable) {
@@ -114,12 +114,6 @@ class Stats {
       LOG("Alohalytics: Uploading data to", uploader_.GetURL());
     }
     file_storage_queue_.ForceProcessing();
-  }
-
- private:
-  void PushMessageViaQueue(std::string&& message) const {
-    // Asynchronous call, returns immediately.
-    message_queue_.PushMessage(std::move(message));
   }
 };
 

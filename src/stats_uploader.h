@@ -13,7 +13,7 @@ namespace aloha {
 // Collects statistics and uploads it to the server.
 class StatsUploader {
  public:
-  explicit StatsUploader(const std::string& upload_url) : upload_url_(upload_url), debug_mode_(false) {
+  explicit StatsUploader(const std::string& upload_url) : upload_url_(upload_url) {
   }
 
   template <typename T_TIMESTAMP>
@@ -52,7 +52,7 @@ class StatsUploader {
 
  private:
   const std::string upload_url_;
-  bool debug_mode_;
+  bool debug_mode_ = false;
 };
 
 } // namespace aloha
