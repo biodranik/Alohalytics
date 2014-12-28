@@ -1,3 +1,6 @@
+#ifndef LOGGER_H
+#define LOGGER_H
+
 #include <sstream>
 
 #if defined(__OBJC__)
@@ -80,4 +83,6 @@ class Logger {
 #else
 #define TRACE(...) aloha::Logger(__FILE__, __LINE__).Log(__VA_ARGS__)
 #define LOG(...) aloha::Logger().Log(__VA_ARGS__)
+#endif
+
 #endif

@@ -9,10 +9,11 @@
 #include <string>
 #include <map>
 
-#include "http_client.h"
 #include "logger.h"
 #include "message_queue.h"
 #include "event_base.h"
+#include "stats_uploader.h"
+#include "FileStorageQueue/fsq.h"
 
 #include "cereal/include/archives/binary.hpp"
 #include "cereal/include/types/string.hpp"
@@ -20,32 +21,26 @@
 
 namespace aloha {
 
-class StatsUploader {
- public:
-  explicit StatsUploader(const std::string& url) : url_(url) {
-  }
-  void OnMessage(const std::string& message, size_t /*unused_dropped_events*/ = 0) const {
-    // TODO(AlexZ): temporary stub.
-    HTTPClientPlatformWrapper(url_).set_post_body(message, "application/alohalytics-binary-blob").RunHTTPRequest();
-  }
-  const std::string& GetURL() const {
-    return url_;
-  }
-
- private:
-  const std::string url_;
-};
-
 typedef std::map<std::string, std::string> TStringMap;
+
+// Used for cereal smart-pointers polymorphic serialization.
+struct NoOpDeleter {
+template <typename T> void operator()(T *) {}
+};
 
 class Stats {
   StatsUploader uploader_;
-  mutable MessageQueue<StatsUploader> message_queue_;
-  const std::string storage_path_;
+  friend MessageQueue<Stats>;
+  mutable MessageQueue<Stats> message_queue_;
+  fsq::FSQ<fsq::Config<StatsUploader>> file_storage_queue_;
   // TODO: Use this id for every file sent to identify received files on the server.
   const std::string installation_id_;
-  const bool use_message_queue_;
   bool debug_mode_ = false;
+
+  // Process messages passed from UI to message queue's own thread.
+  void OnMessage(const std::string& message, size_t /*unused_dropped_events*/ = 0) {
+    file_storage_queue_.PushMessage(message);
+  }
 
  public:
   // @param[in] statistics_server_url where we should send statistics.
@@ -53,13 +48,11 @@ class Stats {
   // @param[in] installation_id some id unique for this app installation.
   Stats(const std::string& statistics_server_url,
         const std::string& storage_path_with_a_slash_at_the_end,
-        const std::string& installation_id,
-        bool use_message_queue = true)
+        const std::string& installation_id)
       : uploader_(statistics_server_url),
-        message_queue_(uploader_),
-        storage_path_(storage_path_with_a_slash_at_the_end),
-        installation_id_(installation_id),
-        use_message_queue_(use_message_queue) {
+        message_queue_(*this),
+        file_storage_queue_(uploader_, storage_path_with_a_slash_at_the_end),
+        installation_id_(installation_id) {
   }
 
   void LogEvent(std::string const& event_name) const {
@@ -70,7 +63,8 @@ class Stats {
     event.key = event_name;
     std::ostringstream sstream;
     {
-      cereal::BinaryOutputArchive(sstream) << event;
+      // unique_ptr is used to correctly serialize polymorphic types.
+      cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
     }
     PushMessageViaQueue(sstream.str());
   }
@@ -84,7 +78,7 @@ class Stats {
     event.value = event_value;
     std::ostringstream sstream;
     {
-      cereal::BinaryOutputArchive(sstream) << event;
+      cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
     }
     PushMessageViaQueue(sstream.str());
   }
@@ -98,17 +92,18 @@ class Stats {
     event.pairs = value_pairs;
     std::ostringstream sstream;
     {
-      cereal::BinaryOutputArchive(sstream) << event;
+      cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
     }
     PushMessageViaQueue(sstream.str());
   }
 
   void DebugMode(bool enable) {
     debug_mode_ = enable;
+    uploader_.set_debug_mode(debug_mode_);
     if (enable) {
       LOG("Alohalytics: Enabled debug mode.");
       LOG("Alohalytics: Server url:", uploader_.GetURL());
-      LOG("Alohalytics: Storage path:", storage_path_);
+      LOG("Alohalytics: Storage path:", file_storage_queue_.WorkingDirectory());
       LOG("Alohalytics: Installation ID:", installation_id_);
     }
   }
@@ -118,23 +113,13 @@ class Stats {
     if (debug_mode_) {
       LOG("Alohalytics: Uploading data to", uploader_.GetURL());
     }
-    // TODO
-  }
-
-  // TODO(dkorolev): Was needed for unit testing.
-  int UniversalDebugAnswer() const {
-    return 42;
+    file_storage_queue_.ForceProcessing();
   }
 
  private:
-  void PushMessageViaQueue(const std::string& message) const {
-    if (!use_message_queue_) {
-      // Blocking call, waiting in the calling thread to complete it.
-      uploader_.OnMessage(message);
-    } else {
-      // Asynchronous call, returns immediately.
-      message_queue_.PushMessage(message);
-    }
+  void PushMessageViaQueue(std::string&& message) const {
+    // Asynchronous call, returns immediately.
+    message_queue_.PushMessage(std::move(message));
   }
 };
 

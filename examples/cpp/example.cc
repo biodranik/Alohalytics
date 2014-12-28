@@ -19,14 +19,13 @@ DEFINE_string(storage,
 DEFINE_bool(debug, true, "Enables debug mode for statistics engine.");
 DEFINE_bool(upload, false, "If true, triggers event to forcebly upload all statistics to the server.");
 DEFINE_double(sleep, 2.5, "The number of seconds to sleep before terminating.");
-DEFINE_bool(use_message_queue, true, "Whether the message queue should be used.");
 
 using namespace std;
 
 int main(int argc, char** argv) {
   ParseDFlags(&argc, &argv);
 
-  aloha::Stats stats(FLAGS_server_url, FLAGS_storage, "Some Unique ID here", FLAGS_use_message_queue);
+  aloha::Stats stats(FLAGS_server_url, FLAGS_storage, "Some Unique ID here");
   if (FLAGS_debug) {
     stats.DebugMode(true);
   }

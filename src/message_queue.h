@@ -49,7 +49,7 @@ class MessageQueue final {
     PushEventCommit(index);
   }
   void PushMessage(T_MESSAGE&& message) {
-    const size_t index = PushEventAllocate(message);
+    const size_t index = PushEventAllocate();
     circular_buffer_[index].message_body = std::move(message);
     PushEventCommit(index);
   }
