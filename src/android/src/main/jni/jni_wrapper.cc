@@ -125,7 +125,6 @@ JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_setupCPP(JNIEnv* env,
   // Initialize statistics engine
   g_stats.reset(new aloha::Stats(
       ToStdString(env, serverUrl), ToStdString(env, storagePath), ToStdString(env, installationId)));
-  g_stats->DebugMode(true);
 
   g_httpTransportClass = static_cast<jclass>(env->NewGlobalRef(httpTransportClass));
   RETURN_ON_EXCEPTION
