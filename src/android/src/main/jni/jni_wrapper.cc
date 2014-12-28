@@ -148,6 +148,13 @@ JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_debugCPP(JNIEnv* env, 
     LOG("Alohalytics: Please call setup before enabling debug mode.");
 }
 
+JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_forceUpload(JNIEnv* env, jclass) {
+  if (g_stats)
+    g_stats->Upload();
+  else
+    LOG("Alohalytics: Please call setup before forceUpload.");
+}
+
 }  // extern "C"
 
 //***********************************************************************

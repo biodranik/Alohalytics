@@ -42,6 +42,9 @@ public class Statistics {
     debugCPP(enable);
   }
 
+  // Try to upload all collected statistics now.
+  public static native void forceUpload();
+
   public static boolean debugMode() {
     return sDebugModeEnabled;
   }
