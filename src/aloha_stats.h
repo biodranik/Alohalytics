@@ -13,6 +13,7 @@
 #include "message_queue.h"
 #include "event_base.h"
 #include "stats_uploader.h"
+#include "FileStorageQueue/fsq.h"
 
 #include "cereal/include/archives/binary.hpp"
 #include "cereal/include/types/string.hpp"
@@ -29,11 +30,17 @@ template <typename T> void operator()(T *) {}
 
 class Stats {
   StatsUploader uploader_;
-  mutable MessageQueue<StatsUploader> message_queue_;
-  const std::string storage_path_;
+  friend MessageQueue<Stats>;
+  mutable MessageQueue<Stats> message_queue_;
+  fsq::FSQ<fsq::Config<StatsUploader>> file_storage_queue_;
   // TODO: Use this id for every file sent to identify received files on the server.
   const std::string installation_id_;
   bool debug_mode_ = false;
+
+  // Process messages passed from UI to message queue's own thread.
+  void OnMessage(const std::string& message, size_t /*unused_dropped_events*/ = 0) {
+    file_storage_queue_.PushMessage(message);
+  }
 
  public:
   // @param[in] statistics_server_url where we should send statistics.
@@ -43,8 +50,8 @@ class Stats {
         const std::string& storage_path_with_a_slash_at_the_end,
         const std::string& installation_id)
       : uploader_(statistics_server_url),
-        message_queue_(uploader_),
-        storage_path_(storage_path_with_a_slash_at_the_end),
+        message_queue_(*this),
+        file_storage_queue_(uploader_, storage_path_with_a_slash_at_the_end),
         installation_id_(installation_id) {
   }
 
@@ -92,10 +99,11 @@ class Stats {
 
   void DebugMode(bool enable) {
     debug_mode_ = enable;
+    uploader_.set_debug_mode(debug_mode_);
     if (enable) {
       LOG("Alohalytics: Enabled debug mode.");
       LOG("Alohalytics: Server url:", uploader_.GetURL());
-      LOG("Alohalytics: Storage path:", storage_path_);
+      LOG("Alohalytics: Storage path:", file_storage_queue_.WorkingDirectory());
       LOG("Alohalytics: Installation ID:", installation_id_);
     }
   }
@@ -105,6 +113,7 @@ class Stats {
     if (debug_mode_) {
       LOG("Alohalytics: Uploading data to", uploader_.GetURL());
     }
+    file_storage_queue_.ForceProcessing();
   }
 
  private:
