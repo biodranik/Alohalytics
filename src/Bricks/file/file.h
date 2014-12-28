@@ -38,8 +38,6 @@ SOFTWARE.
 
 #include "exceptions.h"
 
-#include "../util/make_scope_guard.h"
-
 namespace bricks {
 
 inline std::string ReadFileAsString(std::string const& file_name) {
@@ -101,6 +99,13 @@ class ScopedRemoveFile final {
   std::string file_name_;
 };
 
+class ScopedCloseDir final {
+  DIR * dir_;
+ public:
+  explicit ScopedCloseDir(DIR* dir) : dir_(dir) {}
+  ~ScopedCloseDir() { ::closedir(dir_); }
+};
+
 // Platform-indepenent, injection-friendly filesystem wrapper.
 struct FileSystem {
   typedef std::ofstream OutputFile;
@@ -128,7 +133,7 @@ struct FileSystem {
 
   static void ScanDirUntil(const std::string& directory, std::function<bool(const std::string&)> lambda) {
     DIR* dir = ::opendir(directory.c_str());
-    const auto closedir_guard = MakeScopeGuard([dir]() { ::closedir(dir); });
+    const ScopedCloseDir dir_closer(dir);
     if (dir) {
       while (struct dirent* entry = ::readdir(dir)) {
         if (*entry->d_name && ::strcmp(entry->d_name, ".") && ::strcmp(entry->d_name, "..")) {
