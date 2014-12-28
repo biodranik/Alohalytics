@@ -2,5 +2,9 @@
           package="org.alohastats.lib">
 
   <uses-permission android:name="android.permission.INTERNET"/>
+  <!-- This permission is needed if you want to access device's IMEI.
+       It is not enabled by default as users are very sensitive to it.
+  <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
+  -->
 
 </manifest>
