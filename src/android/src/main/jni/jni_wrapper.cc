@@ -122,10 +122,6 @@ JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_setupCPP(JNIEnv* env,
                                                                    jstring serverUrl,
                                                                    jstring storagePath,
                                                                    jstring installationId) {
-  // Initialize statistics engine
-  g_stats.reset(new aloha::Stats(
-      ToStdString(env, serverUrl), ToStdString(env, storagePath), ToStdString(env, installationId)));
-
   g_httpTransportClass = static_cast<jclass>(env->NewGlobalRef(httpTransportClass));
   RETURN_ON_EXCEPTION
   g_httpTransportClass_run = env->GetStaticMethodID(
@@ -139,6 +135,10 @@ JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_setupCPP(JNIEnv* env,
   RETURN_ON_EXCEPTION
   g_httpParamsConstructor = env->GetMethodID(g_httpParamsClass, "<init>", "(Ljava/lang/String;)V");
   RETURN_ON_EXCEPTION
+
+  // Initialize statistics engine at the end of setup function, as it can use globals above.
+  g_stats.reset(new aloha::Stats(
+      ToStdString(env, serverUrl), ToStdString(env, storagePath), ToStdString(env, installationId)));
 }
 
 JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_debugCPP(JNIEnv* env, jclass, jboolean enableDebug) {
