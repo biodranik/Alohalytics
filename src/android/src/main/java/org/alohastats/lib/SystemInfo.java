@@ -94,7 +94,7 @@ public class SystemInfo {
     try {
       final String android_id = Settings.Secure.getString(activity.getContentResolver(), Settings.Secure.ANDROID_ID);
       // This is a known bug workaround - https://code.google.com/p/android/issues/detail?id=10603
-      if (android_id != null && android_id.equals("9774d56d682e549c")) {
+      if (android_id != null && !android_id.equals("9774d56d682e549c")) {
         ids.put("android_id", android_id);
       }
     } catch (Exception ex) {
