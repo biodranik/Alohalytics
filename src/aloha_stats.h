@@ -105,12 +105,6 @@ class Stats {
     if (debug_mode_) {
       LOG("Alohalytics: Uploading data to", uploader_.GetURL());
     }
-    // TODO
-  }
-
-  // TODO(dkorolev): Was needed for unit testing.
-  int UniversalDebugAnswer() const {
-    return 42;
   }
 
  private:
