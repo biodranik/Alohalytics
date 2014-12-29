@@ -24,12 +24,9 @@ class Logger {
   std::ostringstream out_;
 
  public:
-  Logger() {
-  }
+  Logger() {}
 
-  Logger(const char* file, int line) {
-    out_ << file << ':' << line << ": ";
-  }
+  Logger(const char* file, int line) { out_ << file << ':' << line << ": "; }
 
   ~Logger() {
     out_ << std::endl;
@@ -50,8 +47,7 @@ class Logger {
     Log(others...);
   }
 
-  void Log() {
-  }
+  void Log() {}
 
   template <typename T>
   void Log(const T& t) {
@@ -59,9 +55,7 @@ class Logger {
   }
 
   // String specialization to avoid printing every character as a container's element.
-  void Log(const std::string& t) {
-    out_ << t;
-  }
+  void Log(const std::string& t) { out_ << t; }
 
   // Pretty-printing for containers.
   template <template <typename, typename...> class ContainerType, typename ValueType, typename... Args>

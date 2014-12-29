@@ -16,15 +16,16 @@ struct AlohalyticsBaseEvent {
 
   static uint64_t CurrentTimestamp() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
+               std::chrono::system_clock::now().time_since_epoch()).count();
   }
 
-  // To avoid unnecessary calls on a server side
+// To avoid unnecessary calls on a server side
 #ifndef ALOHALYTICS_SERVER
   AlohalyticsBaseEvent() : timestamp(CurrentTimestamp()) {}
 #endif
 
-  template <class Archive> void serialize(Archive& ar) {
+  template <class Archive>
+  void serialize(Archive& ar) {
     ar(CEREAL_NVP(timestamp));
   }
 
@@ -38,7 +39,8 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsBaseEvent, "b");
 struct AlohalyticsIdEvent : public AlohalyticsBaseEvent {
   std::string id;
 
-  template <class Archive> void serialize(Archive& ar) {
+  template <class Archive>
+  void serialize(Archive& ar) {
     AlohalyticsBaseEvent::serialize(ar);
     ar(CEREAL_NVP(id));
   }
@@ -49,7 +51,8 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsIdEvent, "i");
 struct AlohalyticsKeyEvent : public AlohalyticsBaseEvent {
   std::string key;
 
-  template <class Archive> void serialize(Archive& ar) {
+  template <class Archive>
+  void serialize(Archive& ar) {
     AlohalyticsBaseEvent::serialize(ar);
     ar(CEREAL_NVP(key));
   }
@@ -60,7 +63,8 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyEvent, "k");
 struct AlohalyticsKeyValueEvent : public AlohalyticsKeyEvent {
   std::string value;
 
-  template <class Archive> void serialize(Archive& ar) {
+  template <class Archive>
+  void serialize(Archive& ar) {
     AlohalyticsKeyEvent::serialize(ar);
     ar(CEREAL_NVP(value));
   }
@@ -71,7 +75,8 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyValueEvent, "v");
 struct AlohalyticsKeyPairsEvent : public AlohalyticsKeyEvent {
   std::map<std::string, std::string> pairs;
 
-  template <class Archive> void serialize(Archive& ar) {
+  template <class Archive>
+  void serialize(Archive& ar) {
     AlohalyticsKeyEvent::serialize(ar);
     ar(CEREAL_NVP(pairs));
   }

@@ -25,7 +25,8 @@ typedef std::map<std::string, std::string> TStringMap;
 
 // Used for cereal smart-pointers polymorphic serialization.
 struct NoOpDeleter {
-template <typename T> void operator()(T *) {}
+  template <typename T>
+  void operator()(T*) {}
 };
 
 class Stats final {
@@ -41,13 +42,11 @@ class Stats final {
   }
 
   // Used to mark each file sent to the server.
-  static std::string InstallationIdEvent(const std::string & installation_id) {
+  static std::string InstallationIdEvent(const std::string& installation_id) {
     AlohalyticsIdEvent event;
     event.id = installation_id;
     std::ostringstream sstream;
-    {
-      cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
-    }
+    { cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event); }
     return sstream.str();
   }
 
@@ -60,8 +59,7 @@ class Stats final {
         const std::string& installation_id)
       : uploader_(statistics_server_url, InstallationIdEvent(installation_id)),
         message_queue_(*this),
-        file_storage_queue_(uploader_, storage_path_with_a_slash_at_the_end) {
-  }
+        file_storage_queue_(uploader_, storage_path_with_a_slash_at_the_end) {}
 
   void LogEvent(std::string const& event_name) const {
     if (debug_mode_) {
@@ -85,9 +83,7 @@ class Stats final {
     event.key = event_name;
     event.value = event_value;
     std::ostringstream sstream;
-    {
-      cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
-    }
+    { cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event); }
     message_queue_.PushMessage(sstream.str());
   }
 
@@ -99,9 +95,7 @@ class Stats final {
     event.key = event_name;
     event.pairs = value_pairs;
     std::ostringstream sstream;
-    {
-      cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
-    }
+    { cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event); }
     message_queue_.PushMessage(sstream.str());
   }
 

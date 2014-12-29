@@ -7,15 +7,13 @@
 #include "FileStorageQueue/fsq.h"
 #include "logger.h"
 
-
 namespace aloha {
 
 // Collects statistics and uploads it to the server.
 class StatsUploader final {
  public:
   explicit StatsUploader(const std::string& upload_url, const std::string installation_id_event)
-  : upload_url_(upload_url), installation_id_event_(installation_id_event) {
-  }
+      : upload_url_(upload_url), installation_id_event_(installation_id_event) {}
 
   template <typename T_TIMESTAMP>
   fsq::FileProcessingResult OnFileReady(const fsq::FileInfo<T_TIMESTAMP>& file, T_TIMESTAMP /*now*/) {
@@ -44,7 +42,7 @@ class StatsUploader final {
     bool success = false;
     try {
       success = request.RunHTTPRequest();
-    } catch (const std::exception & ex) {
+    } catch (const std::exception& ex) {
       if (debug_mode_) {
         LOG("Alohalytics: exception while trying to upload file", ex.what());
       }
@@ -62,9 +60,7 @@ class StatsUploader final {
     }
   }
 
-  const std::string& GetURL() const {
-    return upload_url_;
-  }
+  const std::string& GetURL() const { return upload_url_; }
 
   void set_debug_mode(bool debug_mode) { debug_mode_ = debug_mode; }
 
@@ -75,6 +71,6 @@ class StatsUploader final {
   bool debug_mode_ = false;
 };
 
-} // namespace aloha
+}  // namespace aloha
 
-#endif // STATS_UPLOADER_H
+#endif  // STATS_UPLOADER_H

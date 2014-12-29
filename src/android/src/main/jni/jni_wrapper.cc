@@ -59,9 +59,7 @@ string ToStdString(JNIEnv* env, jstring str) {
 }  // namespace
 
 // Exported for access from C++ code
-extern JavaVM* GetJVM() {
-  return g_jvm;
-}
+extern JavaVM* GetJVM() { return g_jvm; }
 
 extern "C" {
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
@@ -74,19 +72,13 @@ JNIEXPORT void JNICALL
   g_stats->LogEvent(ToStdString(env, eventName));
 }
 
-JNIEXPORT void JNICALL
-    Java_org_alohastats_lib_Statistics_logEvent__Ljava_lang_String_2Ljava_lang_String_2(JNIEnv* env,
-                                                                                        jclass,
-                                                                                        jstring eventName,
-                                                                                        jstring eventValue) {
+JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_logEvent__Ljava_lang_String_2Ljava_lang_String_2(
+    JNIEnv* env, jclass, jstring eventName, jstring eventValue) {
   g_stats->LogEvent(ToStdString(env, eventName), ToStdString(env, eventValue));
 }
 
 JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_logEvent__Ljava_lang_String_2_3Ljava_lang_String_2(
-    JNIEnv* env,
-    jclass,
-    jstring eventName,
-    jobjectArray keyValuePairs) {
+    JNIEnv* env, jclass, jstring eventName, jobjectArray keyValuePairs) {
   const jsize count = env->GetArrayLength(keyValuePairs);
   aloha::TStringMap map;
   string key;

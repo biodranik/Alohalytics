@@ -27,8 +27,7 @@ class MessageQueue final {
       : consumer_(consumer),
         circular_buffer_size_(buffer_size),
         circular_buffer_(circular_buffer_size_),
-        consumer_thread_(&MessageQueue::ConsumerThread, this) {
-  }
+        consumer_thread_(&MessageQueue::ConsumerThread, this) {}
 
   // Destructor waits for the consumer thread to terminate, which implies committing all the queued events.
   ~MessageQueue() {
@@ -61,9 +60,7 @@ class MessageQueue final {
   void operator=(MessageQueue&&) = delete;
 
   // Increment the index respecting the circular nature of the buffer.
-  void Increment(size_t& i) const {
-    i = (i + 1) % circular_buffer_size_;
-  }
+  void Increment(size_t& i) const { i = (i + 1) % circular_buffer_size_; }
 
   // The thread which extracts fully populated events from the tail of the buffer and exports them.
   void ConsumerThread() {

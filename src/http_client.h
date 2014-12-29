@@ -55,10 +55,8 @@ class HTTPClientPlatformWrapper {
   HTTPClientPlatformWrapper& operator=(const HTTPClientPlatformWrapper&) = delete;
 
  public:
-  HTTPClientPlatformWrapper() : error_code_(kNotInitialized) {
-  }
-  HTTPClientPlatformWrapper(const std::string& url) : url_requested_(url), error_code_(kNotInitialized) {
-  }
+  HTTPClientPlatformWrapper() : error_code_(kNotInitialized) {}
+  HTTPClientPlatformWrapper(const std::string& url) : url_requested_(url), error_code_(kNotInitialized) {}
   HTTPClientPlatformWrapper& set_url_requested(const std::string& url) {
     url_requested_ = url;
     return *this;
@@ -102,24 +100,14 @@ class HTTPClientPlatformWrapper {
   // @note Implementations should transparently support all needed HTTP redirects
   bool RunHTTPRequest();
 
-  std::string const& url_requested() const {
-    return url_requested_;
-  }
+  std::string const& url_requested() const { return url_requested_; }
   // @returns empty string in the case of error
-  std::string const& url_received() const {
-    return url_received_;
-  }
-  bool was_redirected() const {
-    return url_requested_ != url_received_;
-  }
+  std::string const& url_received() const { return url_received_; }
+  bool was_redirected() const { return url_requested_ != url_received_; }
   // Mix of HTTP errors (in case of successful connection) and system-dependent error codes,
   // in the simplest success case use 'if (200 == client.error_code())' // 200 means OK in HTTP
-  int error_code() const {
-    return error_code_;
-  }
-  std::string const& server_response() const {
-    return server_response_;
-  }
+  int error_code() const { return error_code_; }
+  std::string const& server_response() const { return server_response_; }
 
 };  // class HTTPClientPlatformWrapper
 
