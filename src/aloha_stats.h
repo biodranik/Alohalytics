@@ -74,7 +74,7 @@ class Stats final {
       // unique_ptr is used to correctly serialize polymorphic types.
       cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
     }
-    message_queue_.PushMessage(std::move(sstream.str()));
+    message_queue_.PushMessage(sstream.str());
   }
 
   void LogEvent(std::string const& event_name, std::string const& event_value) const {
@@ -88,7 +88,7 @@ class Stats final {
     {
       cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
     }
-    message_queue_.PushMessage(std::move(sstream.str()));
+    message_queue_.PushMessage(sstream.str());
   }
 
   void LogEvent(std::string const& event_name, TStringMap const& value_pairs) const {
@@ -102,7 +102,7 @@ class Stats final {
     {
       cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
     }
-    message_queue_.PushMessage(std::move(sstream.str()));
+    message_queue_.PushMessage(sstream.str());
   }
 
   void DebugMode(bool enable) {
