@@ -33,6 +33,18 @@ struct AlohalyticsBaseEvent {
 };
 CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsBaseEvent, "b");
 
+// Special event in the beginning of each block (file) sent to stats server.
+// Designed to mark all events in this data block as belonging to one user with specified id.
+struct AlohalyticsIdEvent : public AlohalyticsBaseEvent {
+  std::string id;
+
+  template <class Archive> void serialize(Archive& ar) {
+    AlohalyticsBaseEvent::serialize(ar);
+    ar(CEREAL_NVP(id));
+  }
+};
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsIdEvent, "i");
+
 // Simple event with a string name (key) only.
 struct AlohalyticsKeyEvent : public AlohalyticsBaseEvent {
   std::string key;

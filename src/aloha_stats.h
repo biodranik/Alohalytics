@@ -28,18 +28,27 @@ struct NoOpDeleter {
 template <typename T> void operator()(T *) {}
 };
 
-class Stats {
+class Stats final {
   StatsUploader uploader_;
   friend class MessageQueue<Stats>;
   mutable MessageQueue<Stats> message_queue_;
   fsq::FSQ<fsq::Config<StatsUploader>> file_storage_queue_;
-  // TODO: Use this id for every file sent to identify received files on the server.
-  const std::string installation_id_;
   bool debug_mode_ = false;
 
   // Process messages passed from UI to message queue's own thread.
   void OnMessage(const std::string& message, size_t /*unused_dropped_events*/ = 0) {
     file_storage_queue_.PushMessage(message);
+  }
+
+  // Used to mark each file sent to the server.
+  static std::string InstallationIdEvent(const std::string & installation_id) {
+    AlohalyticsIdEvent event;
+    event.id = installation_id;
+    std::ostringstream sstream;
+    {
+      cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
+    }
+    return sstream.str();
   }
 
  public:
@@ -49,10 +58,9 @@ class Stats {
   Stats(const std::string& statistics_server_url,
         const std::string& storage_path_with_a_slash_at_the_end,
         const std::string& installation_id)
-      : uploader_(statistics_server_url),
+      : uploader_(statistics_server_url, InstallationIdEvent(installation_id)),
         message_queue_(*this),
-        file_storage_queue_(uploader_, storage_path_with_a_slash_at_the_end),
-        installation_id_(installation_id) {
+        file_storage_queue_(uploader_, storage_path_with_a_slash_at_the_end) {
   }
 
   void LogEvent(std::string const& event_name) const {
@@ -104,7 +112,6 @@ class Stats {
       LOG("Alohalytics: Enabled debug mode.");
       LOG("Alohalytics: Server url:", uploader_.GetURL());
       LOG("Alohalytics: Storage path:", file_storage_queue_.WorkingDirectory());
-      LOG("Alohalytics: Installation ID:", installation_id_);
     }
   }
 
