@@ -22,7 +22,7 @@
  SOFTWARE.
  *******************************************************************************/
 
-package org.alohastats.lib;
+package org.alohalytics;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;

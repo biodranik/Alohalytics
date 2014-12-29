@@ -1,2 +1,2 @@
-include ':alohastats'
-project(':alohastats').projectDir = new File(rootProject.projectDir, '../../src/android')
+include ':alohalytics'
+project(':alohalytics').projectDir = new File(rootProject.projectDir, '../../src/android')

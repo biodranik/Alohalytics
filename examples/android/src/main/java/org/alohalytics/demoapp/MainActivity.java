@@ -22,7 +22,7 @@
  SOFTWARE.
  *******************************************************************************/
 
-package org.alohastats.demoapp;
+package org.alohalytics.demoapp;
 
 import android.app.Activity;
 import android.content.pm.PackageManager;
@@ -32,7 +32,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.widget.TextView;
 
-import org.alohastats.lib.Statistics;
+import org.alohalytics.Statistics;
 
 import java.util.HashMap;
 

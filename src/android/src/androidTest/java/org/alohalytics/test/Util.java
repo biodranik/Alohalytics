@@ -22,7 +22,7 @@
  SOFTWARE.
  *******************************************************************************/
 
-package org.alohastats.test;
+package org.alohalytics.test;
 
 import java.io.File;
 import java.io.FileInputStream;

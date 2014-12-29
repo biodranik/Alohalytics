@@ -16,7 +16,7 @@ allprojects {
 apply plugin: 'com.android.application'
 
 dependencies {
-  compile project(':alohastats')
+  compile project(':alohalytics')
 }
 
 android {
@@ -24,7 +24,7 @@ android {
   buildToolsVersion "21.1.1"
 
   defaultConfig {
-    applicationId "org.alohastats.demoapp"
+    applicationId "org.alohalytics.demoapp"
     minSdkVersion 9
     targetSdkVersion 21
     versionCode 1

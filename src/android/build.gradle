@@ -15,7 +15,7 @@ android {
     targetSdkVersion 21
 
     ndk {
-      moduleName "alohastats"
+      moduleName "alohalytics"
       stl "c++_static"
       cFlags "-frtti -fexceptions"
       ldLibs "log", "atomic"
