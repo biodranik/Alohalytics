@@ -81,23 +81,26 @@ public class SystemInfo {
 
   // Used for convenient null-checks.
   private static class KeyValueWrapper {
-    public HashMap<String,String> mPairs = new HashMap<>();
+    public HashMap<String, String> mPairs = new HashMap<>();
 
     public void put(String key, String value) {
       if (key != null && value != null) {
         mPairs.put(key, value == null ? "" : value);
       }
     }
+
     public void put(String key, float value) {
       if (key != null) {
         mPairs.put(key, String.valueOf(value));
       }
     }
+
     public void put(String key, boolean value) {
       if (key != null) {
         mPairs.put(key, String.valueOf(value));
       }
     }
+
     public void put(String key, int value) {
       if (key != null) {
         mPairs.put(key, String.valueOf(value));
@@ -194,8 +197,7 @@ public class SystemInfo {
 
     if (Build.VERSION.SDK_INT == Build.VERSION_CODES.JELLY_BEAN) {
       kvs.put(Settings.Secure.DEVELOPMENT_SETTINGS_ENABLED, Settings.Secure.getString(cr, Settings.Secure.DEVELOPMENT_SETTINGS_ENABLED)); // 1 or 0
-    }
-    else if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN) {
+    } else if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN) {
       kvs.put(Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, Settings.Global.getString(cr, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED));
     }
 
