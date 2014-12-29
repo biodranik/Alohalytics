@@ -22,7 +22,7 @@
  SOFTWARE.
  *******************************************************************************/
 
-package org.alohastats.lib;
+package org.alohalytics;
 
 import android.app.Activity;
 import android.content.Context;
@@ -107,7 +107,7 @@ public class Statistics {
   private native static void debugCPP(boolean enable);
 
   static {
-    System.loadLibrary("alohastats");
+    System.loadLibrary("alohalytics");
   }
 
 }

@@ -22,11 +22,11 @@
  SOFTWARE.
  *******************************************************************************/
 
-package org.alohastats.test;
+package org.alohalytics.test;
 
 import android.test.InstrumentationTestCase;
 
-import org.alohastats.lib.HttpTransport;
+import org.alohalytics.HttpTransport;
 
 import java.io.File;
 import java.io.FileNotFoundException;

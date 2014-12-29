@@ -22,7 +22,7 @@
  SOFTWARE.
  *******************************************************************************/
 
-package org.alohastats.lib;
+package org.alohalytics;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -42,6 +42,6 @@ public class ConnectivityChangedReceiver extends BroadcastReceiver {
   }
 
   public void onWiFiConnected() {
-    org.alohastats.lib.Statistics.forceUpload();
+    org.alohalytics.Statistics.forceUpload();
   }
 }

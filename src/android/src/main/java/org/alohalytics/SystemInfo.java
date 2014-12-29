@@ -22,7 +22,7 @@
  SOFTWARE.
  *******************************************************************************/
 
-package org.alohastats.lib;
+package org.alohalytics;
 
 import android.app.Activity;
 import android.content.ContentResolver;
