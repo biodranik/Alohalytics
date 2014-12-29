@@ -59,9 +59,7 @@ string ToStdString(JNIEnv* env, jstring str) {
 }  // namespace
 
 // Exported for access from C++ code
-extern JavaVM* GetJVM() {
-  return g_jvm;
-}
+extern JavaVM* GetJVM() { return g_jvm; }
 
 extern "C" {
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
@@ -74,19 +72,13 @@ JNIEXPORT void JNICALL
   g_stats->LogEvent(ToStdString(env, eventName));
 }
 
-JNIEXPORT void JNICALL
-    Java_org_alohastats_lib_Statistics_logEvent__Ljava_lang_String_2Ljava_lang_String_2(JNIEnv* env,
-                                                                                        jclass,
-                                                                                        jstring eventName,
-                                                                                        jstring eventValue) {
+JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_logEvent__Ljava_lang_String_2Ljava_lang_String_2(
+    JNIEnv* env, jclass, jstring eventName, jstring eventValue) {
   g_stats->LogEvent(ToStdString(env, eventName), ToStdString(env, eventValue));
 }
 
 JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_logEvent__Ljava_lang_String_2_3Ljava_lang_String_2(
-    JNIEnv* env,
-    jclass,
-    jstring eventName,
-    jobjectArray keyValuePairs) {
+    JNIEnv* env, jclass, jstring eventName, jobjectArray keyValuePairs) {
   const jsize count = env->GetArrayLength(keyValuePairs);
   aloha::TStringMap map;
   string key;
@@ -122,11 +114,6 @@ JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_setupCPP(JNIEnv* env,
                                                                    jstring serverUrl,
                                                                    jstring storagePath,
                                                                    jstring installationId) {
-  // Initialize statistics engine
-  g_stats.reset(new aloha::Stats(
-      ToStdString(env, serverUrl), ToStdString(env, storagePath), ToStdString(env, installationId)));
-  g_stats->DebugMode(true);
-
   g_httpTransportClass = static_cast<jclass>(env->NewGlobalRef(httpTransportClass));
   RETURN_ON_EXCEPTION
   g_httpTransportClass_run = env->GetStaticMethodID(
@@ -140,6 +127,10 @@ JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_setupCPP(JNIEnv* env,
   RETURN_ON_EXCEPTION
   g_httpParamsConstructor = env->GetMethodID(g_httpParamsClass, "<init>", "(Ljava/lang/String;)V");
   RETURN_ON_EXCEPTION
+
+  // Initialize statistics engine at the end of setup function, as it can use globals above.
+  g_stats.reset(new aloha::Stats(
+      ToStdString(env, serverUrl), ToStdString(env, storagePath), ToStdString(env, installationId)));
 }
 
 JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_debugCPP(JNIEnv* env, jclass, jboolean enableDebug) {
@@ -147,6 +138,13 @@ JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_debugCPP(JNIEnv* env, 
     g_stats->DebugMode(enableDebug);
   else
     LOG("Alohalytics: Please call setup before enabling debug mode.");
+}
+
+JNIEXPORT void JNICALL Java_org_alohastats_lib_Statistics_forceUpload(JNIEnv* env, jclass) {
+  if (g_stats)
+    g_stats->Upload();
+  else
+    LOG("Alohalytics: Please call setup before forceUpload.");
 }
 
 }  // extern "C"

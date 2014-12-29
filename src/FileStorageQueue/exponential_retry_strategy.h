@@ -31,8 +31,7 @@ class ExponentialDelayRetryStrategy {
   typedef FILE_SYSTEM_FOR_RETRY_STRATEGY T_FILE_SYSTEM;
   struct DistributionParams {
     double mean, min, max;
-    DistributionParams(double mean, double min, double max) : mean(mean), min(min), max(max) {
-    }
+    DistributionParams(double mean, double min, double max) : mean(mean), min(min), max(max) {}
     DistributionParams() = default;
     DistributionParams(const DistributionParams&) = default;
     DistributionParams& operator=(const DistributionParams&) = default;
@@ -43,14 +42,12 @@ class ExponentialDelayRetryStrategy {
         time_to_be_ready_to_process_(last_update_time_),
         params_(params),
         rng_(StatefulRandSeed::GetRandSeed()),
-        distribution_(1.0 / params.mean) {
-  }
+        distribution_(1.0 / params.mean) {}
   explicit ExponentialDelayRetryStrategy(const T_FILE_SYSTEM& file_system,
                                          const double mean = 15 * 60 * 1e3,
                                          const double min = 60 * 1e3,
                                          const double max = 24 * 60 * 60 * 1e3)
-      : ExponentialDelayRetryStrategy(file_system, DistributionParams(mean, min, max)) {
-  }
+      : ExponentialDelayRetryStrategy(file_system, DistributionParams(mean, min, max)) {}
 #if 0
   void AttachToFile(const std::string filename) {
     // TODO(dkorolev): File persistence.

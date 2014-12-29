@@ -42,13 +42,9 @@ class ScopeGuard final {
   void operator=(const ScopeGuard&) = delete;
 
  public:
-  explicit ScopeGuard(F f) : f_(f) {
-  }
-  ScopeGuard(ScopeGuard&& other) : f_(std::forward<F>(other.f_)) {
-  }
-  ~ScopeGuard() {
-    f_();
-  }
+  explicit ScopeGuard(F f) : f_(f) {}
+  ScopeGuard(ScopeGuard&& other) : f_(std::forward<F>(other.f_)) {}
+  ~ScopeGuard() { f_(); }
 };
 
 template <typename F>

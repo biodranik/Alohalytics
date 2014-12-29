@@ -16,8 +16,7 @@ const char* const kTestDir = "build/";
 
 // TestOutputFilesProcessor collects the output of finalized files.
 struct TestOutputFilesProcessor {
-  TestOutputFilesProcessor() : finalized_count(0) {
-  }
+  TestOutputFilesProcessor() : finalized_count(0) {}
 
   fsq::FileProcessingResult OnFileReady(const fsq::FileInfo<uint64_t>& file_info, uint64_t now) {
     if (mimic_unavailable_) {
@@ -43,9 +42,7 @@ struct TestOutputFilesProcessor {
     timestamp = 0;
   }
 
-  void SetMimicUnavailable(bool mimic_unavailable = true) {
-    mimic_unavailable_ = mimic_unavailable;
-  }
+  void SetMimicUnavailable(bool mimic_unavailable = true) { mimic_unavailable_ = mimic_unavailable; }
 
   atomic_size_t finalized_count;
   string filenames = "";
@@ -59,9 +56,7 @@ struct MockTime {
   typedef uint64_t T_TIMESTAMP;
   typedef int64_t T_TIME_SPAN;
   uint64_t now = 0;
-  T_TIMESTAMP Now() const {
-    return now;
-  }
+  T_TIMESTAMP Now() const { return now; }
 };
 
 struct MockConfig : fsq::Config<TestOutputFilesProcessor> {
@@ -88,9 +83,7 @@ struct MockConfig : fsq::Config<TestOutputFilesProcessor> {
 
 struct NoResumeMockConfig : MockConfig {
   struct T_FILE_RESUME_STRATEGY {
-    inline static bool ShouldResume() {
-      return false;
-    }
+    inline static bool ShouldResume() { return false; }
   };
 };
 

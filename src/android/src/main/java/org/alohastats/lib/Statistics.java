@@ -42,6 +42,9 @@ public class Statistics {
     debugCPP(enable);
   }
 
+  // Try to upload all collected statistics now.
+  public static native void forceUpload();
+
   public static boolean debugMode() {
     return sDebugModeEnabled;
   }
@@ -75,12 +78,14 @@ public class Statistics {
 
   // http://stackoverflow.com/a/7929810
   private static String uniqueID = null;
-  private static final String PREF_UNIQUE_ID = "ALOHALYTICS_UNIQUE_ID";
+  // Shared with other statistics modules.
+  public static final String PREF_FILE = "ALOHALYTICS";
+  private static final String PREF_UNIQUE_ID = "UNIQUE_ID";
 
   public synchronized static String getInstallationId(final Context context) {
     if (uniqueID == null) {
       final SharedPreferences sharedPrefs = context.getSharedPreferences(
-          PREF_UNIQUE_ID, Context.MODE_PRIVATE);
+          PREF_FILE, Context.MODE_PRIVATE);
       uniqueID = sharedPrefs.getString(PREF_UNIQUE_ID, null);
       if (uniqueID == null) {
         // "A:" means Android. It will be different for other platforms, for convenience debugging.

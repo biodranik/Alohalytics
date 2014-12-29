@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.zip.GZIPOutputStream;
 
 public class HttpTransport {
 
@@ -63,10 +64,23 @@ public class HttpTransport {
         connection.setRequestProperty("Content-Type", p.contentType);
         connection.setDoOutput(true);
         if (p.data != null) {
-          connection.setFixedLengthStreamingMode(p.data.length);
-          final OutputStream ostream = connection.getOutputStream();
-          ostream.write(p.data);
-          ostream.close(); // IOException
+          // Use gzip compression for memory-only transfers.
+          // TODO(AlexZ): Move compression to the lower file-level (file storage queue) to save device space.
+          final ByteArrayOutputStream bos = new ByteArrayOutputStream();
+          final GZIPOutputStream zos = new GZIPOutputStream(bos);
+          try {
+            zos.write(p.data);
+          } finally {
+            zos.close();
+          }
+          connection.setFixedLengthStreamingMode(bos.size());
+          connection.setRequestProperty("Content-Encoding", "gzip");
+          final OutputStream os = connection.getOutputStream();
+          try {
+            os.write(bos.toByteArray());
+          } finally {
+            os.close();
+          }
         } else {
           final File file = new File(p.inputFilePath);
           assert (file.length() == (int) file.length());

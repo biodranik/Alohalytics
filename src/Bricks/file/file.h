@@ -100,10 +100,14 @@ class ScopedRemoveFile final {
 };
 
 class ScopedCloseDir final {
-  DIR * dir_;
+  DIR* dir_;
+
  public:
-  explicit ScopedCloseDir(DIR* dir) : dir_(dir) {}
-  ~ScopedCloseDir() { ::closedir(dir_); }
+  explicit ScopedCloseDir(DIR* dir) : dir_(dir) {
+  }
+  ~ScopedCloseDir() {
+    ::closedir(dir_);
+  }
 };
 
 // Platform-indepenent, injection-friendly filesystem wrapper.

@@ -101,8 +101,7 @@ class FSQ final : public CONFIG::T_FILE_NAMING_STRATEGY,
       const std::string& working_directory,
       const T_TIME_MANAGER& time_manager = T_TIME_MANAGER(),
       const T_FILE_SYSTEM& file_system = T_FILE_SYSTEM())
-      : FSQ(processor, working_directory, time_manager, file_system, T_RETRY_STRATEGY_INSTANCE(file_system)) {
-  }
+      : FSQ(processor, working_directory, time_manager, file_system, T_RETRY_STRATEGY_INSTANCE(file_system)) {}
 
   // Destructor gracefully terminates worker thread and optionally joins it.
   ~FSQ() {
@@ -125,9 +124,7 @@ class FSQ final : public CONFIG::T_FILE_NAMING_STRATEGY,
   }
 
   // Getters.
-  const std::string& WorkingDirectory() const {
-    return working_directory_;
-  }
+  const std::string& WorkingDirectory() const { return working_directory_; }
 
   const Status GetQueueStatus() const {
     if (!status_ready_) {
