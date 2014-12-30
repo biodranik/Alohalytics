@@ -29,14 +29,17 @@ SOFTWARE.
 #include "../../../../alohalytics.h"
 #include "../../../../make_scope_guard.h"
 
+
 using bricks::MakePointerScopeGuard;
 using std::string;
+
+// Implemented in jni_main.cc, you can use your own impl if necessary.
+extern JavaVM* GetJVM();
 
 namespace {
 
 static std::unique_ptr<aloha::Stats> g_stats;
 
-static JavaVM* g_jvm = 0;
 // Cached class and methods for faster access from native code
 static jclass g_httpTransportClass = 0;
 static jmethodID g_httpTransportClass_run = 0;
@@ -58,14 +61,8 @@ string ToStdString(JNIEnv* env, jstring str) {
 
 }  // namespace
 
-// Exported for access from C++ code
-extern JavaVM* GetJVM() { return g_jvm; }
 
 extern "C" {
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
-  g_jvm = vm;
-  return JNI_VERSION_1_6;
-}
 
 JNIEXPORT void JNICALL
     Java_org_alohalytics_Statistics_logEvent__Ljava_lang_String_2(JNIEnv* env, jclass, jstring eventName) {
