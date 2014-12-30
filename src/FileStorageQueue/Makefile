@@ -1,12 +1,15 @@
-.PHONY: test fulltest all indent clean check
+.PHONY: test fulltest all indent clean check coverage
 
-CPP=g++
+CPLUSPLUS=g++
 CPPFLAGS=-std=c++11 -Wall -W
 LDFLAGS=-pthread
+CPPFLAGS_FOR_COVERAGE=${CPPFLAGS} -O0 -g -fprofile-arcs -ftest-coverage
+LDFLAGS_FOR_COVERAGE=${LDFLAGS}
 
 PWD=$(shell pwd)
 SRC=$(wildcard *.cc)
 BIN=$(SRC:%.cc=build/%)
+BIN_FOR_COVERAGE=$(SRC:%.cc=build/coverage/%)
 
 LATENCY_TEST=./build/test_retry_strategy --verbose=false --gtest_break_on_failure --gtest_repeat=50
 
@@ -34,7 +37,7 @@ build/CHECK_OK: build *.h
 		echo -n $(basename $$i)': ' ; \
 		ln -sf ${PWD}/$$i ${PWD}/build/$$i.cc ; \
 		if [ ! -f build/$$i.h.o -o build/$$i.h.cc -nt build/$$i.h.o ] ; then \
-			${CPP} -I . ${CPPFLAGS} -c build/$$i.cc -o build/$$i.h.o ${LDFLAGS} || exit 1 ; echo 'OK' ; \
+			${CPLUSPLUS} -I . ${CPPFLAGS} -c build/$$i.cc -o build/$$i.h.o ${LDFLAGS} || exit 1 ; echo 'OK' ; \
 		else \
 			echo 'Already OK' ; \
 		fi \
@@ -44,4 +47,18 @@ build:
 	mkdir -p build
 
 build/%: %.cc *.h
-	${CPP} ${CPPFLAGS} -o $@ $< ${LDFLAGS}
+	${CPLUSPLUS} ${CPPFLAGS} -o $@ $< ${LDFLAGS}
+
+build/coverage:
+	mkdir -p $@
+
+build/coverage/%: %.cc *.h
+	${CPLUSPLUS} ${CPPFLAGS_FOR_COVERAGE} -o $@ $< ${LDFLAGS_FOR_COVERAGE}
+
+coverage: build/coverage ${BIN_FOR_COVERAGE}
+	./build/coverage/test
+	gcov test.cc
+	geninfo . --output-file coverage.info
+	genhtml coverage.info --output-directory build/coverage | grep -A 2 "^Overall"
+	rm -rf coverage.info *.gcov *.gcda *.gcno
+	echo ${PWD}/build/coverage/index.html

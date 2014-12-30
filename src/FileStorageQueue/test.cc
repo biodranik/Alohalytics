@@ -16,11 +16,14 @@ const char* const kTestDir = "build/";
 
 // TestOutputFilesProcessor collects the output of finalized files.
 struct TestOutputFilesProcessor {
-  TestOutputFilesProcessor() : finalized_count(0) {}
+  TestOutputFilesProcessor() : finalized_count(0) {
+  }
 
   fsq::FileProcessingResult OnFileReady(const fsq::FileInfo<uint64_t>& file_info, uint64_t now) {
     if (mimic_unavailable_) {
       return fsq::FileProcessingResult::Unavailable;
+    } else if (mimic_need_retry_) {
+      return fsq::FileProcessingResult::FailureNeedRetry;
     } else {
       if (!finalized_count) {
         contents = bricks::ReadFileAsString(file_info.full_path_name);
@@ -42,7 +45,13 @@ struct TestOutputFilesProcessor {
     timestamp = 0;
   }
 
-  void SetMimicUnavailable(bool mimic_unavailable = true) { mimic_unavailable_ = mimic_unavailable; }
+  void SetMimicUnavailable(bool mimic_unavailable = true) {
+    mimic_unavailable_ = mimic_unavailable;
+  }
+
+  void SetMimicNeedRetry(bool mimic_need_retry = true) {
+    mimic_need_retry_ = mimic_need_retry;
+  }
 
   atomic_size_t finalized_count;
   string filenames = "";
@@ -50,13 +59,16 @@ struct TestOutputFilesProcessor {
   uint64_t timestamp = 0;
 
   bool mimic_unavailable_ = false;
+  bool mimic_need_retry_ = false;
 };
 
 struct MockTime {
   typedef uint64_t T_TIMESTAMP;
   typedef int64_t T_TIME_SPAN;
   uint64_t now = 0;
-  T_TIMESTAMP Now() const { return now; }
+  T_TIMESTAMP Now() const {
+    return now;
+  }
 };
 
 struct MockConfig : fsq::Config<TestOutputFilesProcessor> {
@@ -71,8 +83,8 @@ struct MockConfig : fsq::Config<TestOutputFilesProcessor> {
                                                     MockTime::T_TIME_SPAN(10 * 1000),
                                                     100,
                                                     MockTime::T_TIME_SPAN(60 * 1000)> T_FINALIZE_STRATEGY;
-  // Purge after 1000 bytes total or after 3 files.
-  typedef fsq::strategy::SimplePurgeStrategy<1000, 3> T_PURGE_STRATEGY;
+  // Purge after 50 bytes total or after 3 files.
+  typedef fsq::strategy::SimplePurgeStrategy<50, 3> T_PURGE_STRATEGY;
 
   // Non-static initialization.
   template <typename T_FSQ_INSTANCE>
@@ -83,7 +95,9 @@ struct MockConfig : fsq::Config<TestOutputFilesProcessor> {
 
 struct NoResumeMockConfig : MockConfig {
   struct T_FILE_RESUME_STRATEGY {
-    inline static bool ShouldResume() { return false; }
+    inline static bool ShouldResume() {
+      return false;
+    }
   };
 };
 
@@ -122,8 +136,8 @@ TEST(FileSystemQueueTest, FinalizedBySize) {
   EXPECT_EQ(0ul, fsq.GetQueueStatus().finalized.total_size);
   EXPECT_EQ(0u, processor.finalized_count);
 
-  // Add another message that would make current file exceed 20 bytes.
-  fsq.PushMessage("now go ahead and process this stuff");
+  // Add another message, under 20 bytes itself, that would make the current file exceed 20 bytes.
+  fsq.PushMessage("process now");
   while (processor.finalized_count != 1) {
     ;  // Spin lock.
   }
@@ -141,7 +155,7 @@ TEST(FileSystemQueueTest, FinalizedBySize) {
 
   EXPECT_EQ(2u, processor.finalized_count);
   EXPECT_EQ("finalized-00000000000000000101.bin|finalized-00000000000000000103.bin", processor.filenames);
-  EXPECT_EQ("this is\na test\nFILE SEPARATOR\nnow go ahead and process this stuff\n", processor.contents);
+  EXPECT_EQ("this is\na test\nFILE SEPARATOR\nprocess now\n", processor.contents);
   EXPECT_EQ(103ull, processor.timestamp);
 }
 
@@ -364,4 +378,161 @@ TEST(FileSystemQueueTest, PurgesByNumberOfFiles) {
   EXPECT_EQ(15ul, fsq.GetQueueStatus().finalized.total_size);  // strlen("two\nthree\nfour\n").
   EXPECT_EQ("finalized-00000000000000100002.bin", fsq.GetQueueStatus().finalized.queue.front().name);
   EXPECT_EQ("finalized-00000000000000100004.bin", fsq.GetQueueStatus().finalized.queue.back().name);
+}
+
+// Purges the oldest files so that the total size of the queue never exceeds 20 bytes.
+TEST(FileSystemQueueTest, PurgesByTotalSize) {
+  CleanupOldFiles();
+
+  TestOutputFilesProcessor processor;
+  processor.SetMimicUnavailable();
+  MockTime mock_wall_time;
+  FSQ fsq(processor, kTestDir, mock_wall_time);
+
+  mock_wall_time.now = 100001;
+  fsq.PushMessage("one");
+  mock_wall_time.now = 100002;
+  fsq.PushMessage("two");
+  fsq.FinalizeCurrentFile();
+  mock_wall_time.now = 100003;
+  fsq.PushMessage("three");
+  mock_wall_time.now = 100004;
+  fsq.PushMessage("four");
+  fsq.FinalizeCurrentFile();
+
+  // Confirm the queue contains two files.
+  EXPECT_EQ(2u, fsq.GetQueueStatus().finalized.queue.size());
+  EXPECT_EQ(19ul, fsq.GetQueueStatus().finalized.total_size);  // strlen("one\ntwo\nthree\nfour\n").
+  EXPECT_EQ("finalized-00000000000000100001.bin", fsq.GetQueueStatus().finalized.queue.front().name);
+  EXPECT_EQ("finalized-00000000000000100003.bin", fsq.GetQueueStatus().finalized.queue.back().name);
+
+  // Add another file of the size that would force the oldest one to get purged.
+  mock_wall_time.now = 100010;
+  fsq.PushMessage("very, very, very, very long message");
+  fsq.FinalizeCurrentFile();
+
+  // Confirm the oldest file got deleted.
+  EXPECT_EQ(2u, fsq.GetQueueStatus().finalized.queue.size());
+  EXPECT_EQ(47l, fsq.GetQueueStatus().finalized.total_size);
+  EXPECT_EQ("finalized-00000000000000100003.bin", fsq.GetQueueStatus().finalized.queue.front().name);
+  EXPECT_EQ("finalized-00000000000000100010.bin", fsq.GetQueueStatus().finalized.queue.back().name);
+}
+
+// Persists retry delay to the file.
+TEST(FileSystemQueueTest, SavesRetryDelayToFile) {
+  const std::string state_file_name = std::move(bricks::FileSystem::JoinPath(kTestDir, "state"));
+
+  CleanupOldFiles();
+  bricks::RemoveFile(state_file_name, bricks::RemoveFileParameters::Silent);
+
+  const uint64_t t1 = static_cast<uint64_t>(bricks::time::Now());
+
+  TestOutputFilesProcessor processor;
+  MockTime mock_wall_time;
+  typedef fsq::strategy::ExponentialDelayRetryStrategy<bricks::FileSystem> ExpRetry;
+  // Wait between 1 second and 2 seconds before retrying.
+  FSQ fsq(processor,
+          kTestDir,
+          mock_wall_time,
+          bricks::FileSystem(),
+          ExpRetry(bricks::FileSystem(), ExpRetry::DistributionParams(1500, 1000, 2000)));
+
+  // Attach to file, this will force the creation of the file.
+  fsq.AttachToFile(state_file_name);
+
+  const uint64_t t2 = static_cast<uint64_t>(bricks::time::Now());
+
+  // At start, with no file to resume, update time should be equal to next processing ready time,
+  // and they should both be between `t1` and `t2` retrieved above.
+  std::string contents1 = bricks::ReadFileAsString(state_file_name);
+  ASSERT_EQ(contents1.length(), 41);  // 20 + 1 + 20.
+  std::istringstream is1(contents1);
+  uint64_t a1, b1;
+  is1 >> a1 >> b1;
+  EXPECT_GE(a1, t1);
+  EXPECT_LE(a1, t2);
+  EXPECT_GE(b1, t1);
+  EXPECT_LE(b1, t2);
+  EXPECT_EQ(a1, b1);
+
+  // Now, after one failure, update time whould be between `t4` and `t4`,
+  // and next processing time should be between one and two seconds into the future.
+  const uint64_t t3 = static_cast<uint64_t>(bricks::time::Now());
+  fsq.PushMessage("blah");
+  processor.SetMimicNeedRetry();
+  fsq.ForceProcessing();
+  const uint64_t t4 = static_cast<uint64_t>(bricks::time::Now());
+
+  // Give FSQ some time to apply retry policy and to update the state file.
+  const uint64_t SAFETY_INTERVAL = 50;  // Wait for 50ms to ensure the file is updated.
+  // TODO(dkorolev): This makes the test flaky, but should be fine for Alex to go ahead and push it.
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(SAFETY_INTERVAL));
+
+  std::string contents2 = bricks::ReadFileAsString(state_file_name);
+  ASSERT_EQ(contents2.length(), 41);  // 20 + 1 + 20.
+  std::istringstream is2(contents2);
+  uint64_t a2, b2;
+  is2 >> a2 >> b2;
+  EXPECT_GE(a2, t3);
+  EXPECT_LE(a2, t4 + SAFETY_INTERVAL);
+  EXPECT_GE(b2, a2 + 1000);
+  EXPECT_LE(b2, a2 + 2000);
+}
+
+// Reads retry delay from file.
+TEST(FileSystemQueueTest, ReadsRetryDelayFromFile) {
+  const std::string state_file_name = std::move(bricks::FileSystem::JoinPath(kTestDir, "state"));
+
+  CleanupOldFiles();
+
+  // Legitimately configure FSQ to wait for 5 seconds from now before further processing takes place.
+  const uint64_t t1 = static_cast<uint64_t>(bricks::time::Now());
+  using bricks::strings::PackToString;
+  bricks::WriteStringToFile(state_file_name.c_str(), PackToString(t1) + ' ' + PackToString(t1 + 5000));
+
+  TestOutputFilesProcessor processor;
+  MockTime mock_wall_time;
+  typedef fsq::strategy::ExponentialDelayRetryStrategy<bricks::FileSystem> ExpRetry;
+  FSQ fsq(processor,
+          kTestDir,
+          mock_wall_time,
+          bricks::FileSystem(),
+          ExpRetry(bricks::FileSystem(), ExpRetry::DistributionParams(1500, 1000, 2000)));
+  fsq.AttachToFile(state_file_name);
+
+  const uint64_t t2 = static_cast<uint64_t>(bricks::time::Now());
+
+  // Should wait for 5 more seconds, perhaps without a few milliseconds it took to read the file, etc.
+  bricks::time::MILLISECONDS_INTERVAL d;
+  ASSERT_TRUE(fsq.ShouldWait(&d));
+  EXPECT_GE(t2, t1);
+  EXPECT_LE(t2 - t1, 50);
+  EXPECT_GE(static_cast<uint64_t>(d), 4950);
+  EXPECT_LE(static_cast<uint64_t>(d), 5000);
+}
+
+// Ignored retry delay if it was set from the future.
+TEST(FileSystemQueueTest, IgnoredRetryDelaySetFromTheFuture) {
+  const std::string state_file_name = std::move(bricks::FileSystem::JoinPath(kTestDir, "state"));
+
+  CleanupOldFiles();
+
+  // Incorrectly configure FSQ to start 5 seconds from now, set at 0.5 seconds into the future.
+  const uint64_t t = static_cast<uint64_t>(bricks::time::Now());
+  using bricks::strings::PackToString;
+  bricks::WriteStringToFile(state_file_name.c_str(), PackToString(t + 500) + ' ' + PackToString(t + 5000));
+
+  TestOutputFilesProcessor processor;
+  MockTime mock_wall_time;
+  typedef fsq::strategy::ExponentialDelayRetryStrategy<bricks::FileSystem> ExpRetry;
+  FSQ fsq(processor,
+          kTestDir,
+          mock_wall_time,
+          bricks::FileSystem(),
+          ExpRetry(bricks::FileSystem(), ExpRetry::DistributionParams(1500, 1000, 2000)));
+  fsq.AttachToFile(state_file_name);
+
+  bricks::time::MILLISECONDS_INTERVAL interval;
+  ASSERT_FALSE(fsq.ShouldWait(&interval));
 }
