@@ -61,6 +61,12 @@ string ToStdString(JNIEnv* env, jstring str) {
 
 }  // namespace
 
+// Exported for usage in any C++ code.
+extern aloha::Stats & Alohalytics() {
+  aloha::Stats * ptr = g_stats.get();
+  assert(ptr);
+  return *ptr;
+}
 
 extern "C" {
 

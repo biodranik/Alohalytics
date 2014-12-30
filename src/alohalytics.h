@@ -43,6 +43,7 @@
 #include "cereal/include/types/string.hpp"
 #include "cereal/include/types/map.hpp"
 
+
 namespace aloha {
 
 typedef std::map<std::string, std::string> TStringMap;
@@ -143,5 +144,10 @@ class Stats final {
 };
 
 }  // namespace aloha
+
+// Usually platform creates and initializes the instance with some platform-specific params,
+// that's why it should be implemented by platform-dependent code.
+// @returns usable statistics instance!
+extern aloha::Stats & Alohalytics();
 
 #endif  // #ifndef ALOHALYTICS_H
