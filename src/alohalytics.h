@@ -22,8 +22,8 @@
  SOFTWARE.
  *******************************************************************************/
 
-#ifndef ALOHA_STATS_H
-#define ALOHA_STATS_H
+#ifndef ALOHALYTICS_H
+#define ALOHALYTICS_H
 
 // Used to avoid cereal compilation issues on iOS/MacOS when check() macro is defined.
 #ifdef __APPLE__
@@ -144,4 +144,4 @@ class Stats final {
 
 }  // namespace aloha
 
-#endif  // #ifndef ALOHA_STATS_H
+#endif  // #ifndef ALOHALYTICS_H

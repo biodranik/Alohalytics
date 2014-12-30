@@ -26,7 +26,7 @@ SOFTWARE.
 #include <string>
 #include <memory>
 
-#include "../../../../aloha_stats.h"
+#include "../../../../alohalytics.h"
 #include "../../../../make_scope_guard.h"
 
 using bricks::MakePointerScopeGuard;
