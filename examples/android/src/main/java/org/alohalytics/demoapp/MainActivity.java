@@ -65,8 +65,6 @@ public class MainActivity extends Activity {
   protected void onResume() {
     super.onResume();
 
-    // TODO: send detailed system info statistics automatically on startup
-
     // Very simple event.
     Statistics.logEvent("simple_event");
 

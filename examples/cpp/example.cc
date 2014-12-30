@@ -23,7 +23,7 @@
  *******************************************************************************/
 
 // Core statistics engine.
-#include "../../src/aloha_stats.h"
+#include "../../src/alohalytics.h"
 // dflags is optional and is used here just for command line parameters parsing.
 #include "dflags.h"
 

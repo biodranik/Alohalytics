@@ -22,8 +22,8 @@
  SOFTWARE.
  *******************************************************************************/
 
-#ifndef ALOHA_STATS_H
-#define ALOHA_STATS_H
+#ifndef ALOHALYTICS_H
+#define ALOHALYTICS_H
 
 // Used to avoid cereal compilation issues on iOS/MacOS when check() macro is defined.
 #ifdef __APPLE__
@@ -42,6 +42,7 @@
 #include "cereal/include/archives/binary.hpp"
 #include "cereal/include/types/string.hpp"
 #include "cereal/include/types/map.hpp"
+
 
 namespace aloha {
 
@@ -144,4 +145,9 @@ class Stats final {
 
 }  // namespace aloha
 
-#endif  // #ifndef ALOHA_STATS_H
+// Usually platform creates and initializes the instance with some platform-specific params,
+// that's why it should be implemented by platform-dependent code.
+// @returns usable statistics instance!
+extern aloha::Stats & Alohalytics();
+
+#endif  // #ifndef ALOHALYTICS_H
