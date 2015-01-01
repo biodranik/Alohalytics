@@ -88,7 +88,7 @@ class Stats final {
 
   void LogEvent(std::string const& event_name) const {
     if (debug_mode_) {
-      LOG("LogEvent:", event_name);
+      ALOG("LogEvent:", event_name);
     }
     AlohalyticsKeyEvent event;
     event.key = event_name;
@@ -102,7 +102,7 @@ class Stats final {
 
   void LogEvent(std::string const& event_name, std::string const& event_value) const {
     if (debug_mode_) {
-      LOG("LogEvent:", event_name, "=", event_value);
+      ALOG("LogEvent:", event_name, "=", event_value);
     }
     AlohalyticsKeyValueEvent event;
     event.key = event_name;
@@ -114,7 +114,7 @@ class Stats final {
 
   void LogEvent(std::string const& event_name, TStringMap const& value_pairs) const {
     if (debug_mode_) {
-      LOG("LogEvent:", event_name, "=", value_pairs);
+      ALOG("LogEvent:", event_name, "=", value_pairs);
     }
     AlohalyticsKeyPairsEvent event;
     event.key = event_name;
@@ -128,16 +128,16 @@ class Stats final {
     debug_mode_ = enable;
     uploader_.set_debug_mode(debug_mode_);
     if (enable) {
-      LOG("Alohalytics: Enabled debug mode.");
-      LOG("Alohalytics: Server url:", uploader_.GetURL());
-      LOG("Alohalytics: Storage path:", file_storage_queue_.WorkingDirectory());
+      ALOG("Alohalytics: Enabled debug mode.");
+      ALOG("Alohalytics: Server url:", uploader_.GetURL());
+      ALOG("Alohalytics: Storage path:", file_storage_queue_.WorkingDirectory());
     }
   }
 
   // Forcedly tries to upload all stored records to the server.
   void Upload() {
     if (debug_mode_) {
-      LOG("Alohalytics: Uploading data to", uploader_.GetURL());
+      ALOG("Alohalytics: Uploading data to", uploader_.GetURL());
     }
     file_storage_queue_.ForceProcessing();
   }

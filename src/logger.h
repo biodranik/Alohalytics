@@ -93,12 +93,7 @@ class Logger {
 
 }  // namespace aloha
 
-#if defined(__OBJC__) || defined(ANDROID)
-#define TRACE(...) aloha::Logger(__FILE__, __LINE__).Log(__VA_ARGS__)
-#define LOG(...) aloha::Logger().Log(__VA_ARGS__)
-#else
-#define TRACE(...) aloha::Logger(__FILE__, __LINE__).Log(__VA_ARGS__)
-#define LOG(...) aloha::Logger().Log(__VA_ARGS__)
-#endif
+#define ATRACE(...) aloha::Logger(__FILE__, __LINE__).Log(__VA_ARGS__)
+#define ALOG(...) aloha::Logger().Log(__VA_ARGS__)
 
 #endif

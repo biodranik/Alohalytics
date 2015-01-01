@@ -42,7 +42,7 @@ class StatsUploader final {
   template <typename T_TIMESTAMP>
   fsq::FileProcessingResult OnFileReady(const fsq::FileInfo<T_TIMESTAMP>& file, T_TIMESTAMP /*now*/) {
     if (debug_mode_) {
-      LOG("Alohalytics: trying to upload statistics file", file.full_path_name, "to", upload_url_);
+      ALOG("Alohalytics: trying to upload statistics file", file.full_path_name, "to", upload_url_);
     }
     HTTPClientPlatformWrapper request(upload_url_);
     // Append unique installation id in the beginning of each file sent to the server.
@@ -59,7 +59,7 @@ class StatsUploader final {
       if (fi.good()) {
         request.set_post_body(std::move(buffer), "application/alohalytics-binary-blob");
       } else if (debug_mode_) {
-        LOG("Alohalytics: can't load file with size", file_size, "into memory");
+        ALOG("Alohalytics: can't load file with size", file_size, "into memory");
         return fsq::FileProcessingResult::FailureNeedRetry;
       }
     }
@@ -68,17 +68,17 @@ class StatsUploader final {
       success = request.RunHTTPRequest();
     } catch (const std::exception& ex) {
       if (debug_mode_) {
-        LOG("Alohalytics: exception while trying to upload file", ex.what());
+        ALOG("Alohalytics: exception while trying to upload file", ex.what());
       }
     }
     if (success) {
       if (debug_mode_) {
-        LOG("Alohalytics: file was successfully uploaded.");
+        ALOG("Alohalytics: file was successfully uploaded.");
       }
       return fsq::FileProcessingResult::Success;
     } else {
       if (debug_mode_) {
-        LOG("Alohalytics: error while uploading file", request.error_code());
+        ALOG("Alohalytics: error while uploading file", request.error_code());
       }
       return fsq::FileProcessingResult::FailureNeedRetry;
     }

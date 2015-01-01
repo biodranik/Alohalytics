@@ -140,14 +140,14 @@ JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_debugCPP(JNIEnv* env, jcl
   if (g_stats)
     g_stats->DebugMode(enableDebug);
   else
-    LOG("Alohalytics: Please call setup before enabling debug mode.");
+    ALOG("Alohalytics: Please call setup before enabling debug mode.");
 }
 
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_forceUpload(JNIEnv* env, jclass) {
   if (g_stats)
     g_stats->Upload();
   else
-    LOG("Alohalytics: Please call setup before forceUpload.");
+    ALOG("Alohalytics: Please call setup before forceUpload.");
 }
 
 }  // extern "C"
@@ -169,7 +169,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
           reinterpret_cast<void**>(&env),
 #endif
           nullptr)) {
-    LOG("Alohalytics: ERROR while trying to attach JNI thread");
+    ALOG("Alohalytics: ERROR while trying to attach JNI thread");
     return false;
   }
 
