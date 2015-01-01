@@ -55,9 +55,7 @@ class Logger {
   ~Logger() {
     out_ << std::endl;
 #if defined(__OBJC__)
-    @autoreleasepool {
-      NSLog(@"%s", out_.str().c_str());
-    }
+    NSLog(@"%s", out_.str().c_str());
 #elif defined(ANDROID)
     __android_log_print(ANDROID_LOG_INFO, "Alohalytics", "%s", out_.str().c_str());
 #else
