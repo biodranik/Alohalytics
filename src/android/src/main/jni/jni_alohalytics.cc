@@ -28,17 +28,20 @@ SOFTWARE.
 
 #include "../../../../alohalytics.h"
 #include "../../../../make_scope_guard.h"
+#include "../../../../http_client.h"
+#include "../../../../logger.h"
 
 
 using bricks::MakePointerScopeGuard;
 using std::string;
 
+using alohalytics::Stats;
+using alohalytics::TStringMap;
+
 // Implemented in jni_main.cc, you can use your own impl if necessary.
 extern JavaVM* GetJVM();
 
 namespace {
-
-static std::unique_ptr<aloha::Stats> g_stats;
 
 // Cached class and methods for faster access from native code
 static jclass g_httpTransportClass = 0;
@@ -61,29 +64,22 @@ string ToStdString(JNIEnv* env, jstring str) {
 
 }  // namespace
 
-// Exported for usage in any C++ code.
-extern aloha::Stats & Alohalytics() {
-  aloha::Stats * ptr = g_stats.get();
-  assert(ptr);
-  return *ptr;
-}
-
 extern "C" {
 
 JNIEXPORT void JNICALL
     Java_org_alohalytics_Statistics_logEvent__Ljava_lang_String_2(JNIEnv* env, jclass, jstring eventName) {
-  g_stats->LogEvent(ToStdString(env, eventName));
+  Stats::Instance().LogEvent(ToStdString(env, eventName));
 }
 
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_logEvent__Ljava_lang_String_2Ljava_lang_String_2(
     JNIEnv* env, jclass, jstring eventName, jstring eventValue) {
-  g_stats->LogEvent(ToStdString(env, eventName), ToStdString(env, eventValue));
+  Stats::Instance().LogEvent(ToStdString(env, eventName), ToStdString(env, eventValue));
 }
 
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_logEvent__Ljava_lang_String_2_3Ljava_lang_String_2(
     JNIEnv* env, jclass, jstring eventName, jobjectArray keyValuePairs) {
   const jsize count = env->GetArrayLength(keyValuePairs);
-  aloha::TStringMap map;
+  TStringMap map;
   string key;
   for (jsize i = 0; i < count; ++i) {
     const jstring jni_string = static_cast<jstring>(env->GetObjectArrayElement(keyValuePairs, i));
@@ -95,7 +91,7 @@ JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_logEvent__Ljava_lang_Stri
     }
     if (jni_string) env->DeleteLocalRef(jni_string);
   }
-  g_stats->LogEvent(ToStdString(env, eventName), map);
+  alohalytics::Stats::Instance().LogEvent(ToStdString(env, eventName), map);
 }
 
 #define CLEAR_AND_RETURN_FALSE_ON_EXCEPTION \
@@ -132,22 +128,17 @@ JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_setupCPP(JNIEnv* env,
   RETURN_ON_EXCEPTION
 
   // Initialize statistics engine at the end of setup function, as it can use globals above.
-  g_stats.reset(new aloha::Stats(
-      ToStdString(env, serverUrl), ToStdString(env, storagePath), ToStdString(env, installationId)));
+  Stats::Instance().SetClientId(ToStdString(env, installationId))
+                   .SetStoragePath(ToStdString(env, storagePath))
+                   .SetServerUrl(ToStdString(env, serverUrl));
 }
 
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_debugCPP(JNIEnv* env, jclass, jboolean enableDebug) {
-  if (g_stats)
-    g_stats->DebugMode(enableDebug);
-  else
-    ALOG("Alohalytics: Please call setup before enabling debug mode.");
+  Stats::Instance().SetDebugMode(enableDebug);
 }
 
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_forceUpload(JNIEnv* env, jclass) {
-  if (g_stats)
-    g_stats->Upload();
-  else
-    ALOG("Alohalytics: Please call setup before forceUpload.");
+  Stats::Instance().Upload();
 }
 
 }  // extern "C"
@@ -155,7 +146,7 @@ JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_forceUpload(JNIEnv* env, 
 //***********************************************************************
 // Exported functions implementation
 //***********************************************************************
-namespace aloha {
+namespace alohalytics {
 
 bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   // Attaching multiple times from the same thread is a no-op, which only gets good env for us.
@@ -169,7 +160,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
           reinterpret_cast<void**>(&env),
 #endif
           nullptr)) {
-    ALOG("Alohalytics: ERROR while trying to attach JNI thread");
+    ALOG("ERROR while trying to attach JNI thread");
     return false;
   }
 
@@ -292,4 +283,4 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   return true;
 }
 
-}  // namespace aloha
+}  // namespace alohalytics

@@ -31,41 +31,57 @@
 #include <thread>
 #include <chrono>
 
-DEFINE_string(server_url, "http://localhost:8080/", "Statistics server url.");
+
+DEFINE_string(server_url, "", "Statistics server url.");
 DEFINE_string(event, "TestEvent", "Records given event.");
 DEFINE_string(values,
               "",
               "Records event with single value (--values singleValue) or value pairs (--values "
               "key1=value1,key2=value2).");
 DEFINE_string(storage,
-              "build/",
-              "Path to directory (with a slash at the end) to temporarily store recorded events.");
+              "",
+              "Path to directory (with a slash at the end) to store recorded events before they are sent.");
 DEFINE_bool(debug, true, "Enables debug mode for statistics engine.");
 DEFINE_bool(upload, false, "If true, triggers event to forcebly upload all statistics to the server.");
-DEFINE_double(sleep, 2.5, "The number of seconds to sleep before terminating.");
+DEFINE_double(sleep, 1, "The number of seconds to sleep before terminating.");
+DEFINE_string(id, "0xDEADBABA", "Unique client id.");
 
 using namespace std;
+using alohalytics::Stats;
 
 int main(int argc, char** argv) {
   ParseDFlags(&argc, &argv);
 
-  aloha::Stats stats(FLAGS_server_url, FLAGS_storage, "Some Unique ID here");
+  Stats & stats = Stats::Instance();
+
   if (FLAGS_debug) {
-    stats.DebugMode(true);
+    stats.SetDebugMode(true);
+  }
+
+  if (!FLAGS_server_url.empty()) {
+    stats.SetServerUrl(FLAGS_server_url);
+  }
+
+  if (!FLAGS_storage.empty()) {
+    stats.SetStoragePath(FLAGS_storage);
+  }
+
+  if (!FLAGS_id.empty()) {
+    stats.SetClientId(FLAGS_id);
   }
 
   if (!FLAGS_event.empty()) {
     if (!FLAGS_values.empty()) {
-      std::string values = FLAGS_values;
+      string values = FLAGS_values;
       for (auto& c : values) {
         if (c == '=' || c == ',') {
           c = ' ';
         }
       }
-      std::string key;
-      aloha::TStringMap map;
-      std::istringstream is(values);
-      std::string it;
+      string key;
+      alohalytics::TStringMap map;
+      istringstream is(values);
+      string it;
       while (is >> it) {
         if (key.empty()) {
           key = it;

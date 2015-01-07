@@ -414,13 +414,15 @@ class FSQ final : public CONFIG::T_FILE_NAMING_STRATEGY,
 
       // Process the file, if available.
       if (next_file) {
-        const FileProcessingResult result = processor_.OnFileReady(*next_file.get(), time_manager_.Now());
+//      const FileProcessingResult result = processor_.OnFileReady(*next_file.get(), time_manager_.Now());
+        const bool successfully_processed = processor_.OnFileReady(next_file->full_path_name, next_file->size);
         // Important to clear force_processing_, in a locked way.
         {
           std::unique_lock<std::mutex> lock(status_mutex_);
           force_processing_ = false;
         }
-        if (result == FileProcessingResult::Success || result == FileProcessingResult::SuccessAndMoved) {
+//      if (result == FileProcessingResult::Success || result == FileProcessingResult::SuccessAndMoved) {
+        if (successfully_processed) {
           std::unique_lock<std::mutex> lock(status_mutex_);
           processing_suspended_ = false;
           if (*next_file.get() == status_.finalized.queue.front()) {
@@ -430,18 +432,18 @@ class FSQ final : public CONFIG::T_FILE_NAMING_STRATEGY,
             // The `front()` part of the queue should only be altered by this worker thread.
             throw FSQException();
           }
-          if (result == FileProcessingResult::Success) {
+//        if (result == FileProcessingResult::Success) {
             T_FILE_SYSTEM::RemoveFile(next_file->full_path_name);
-          }
+//        }
           T_RETRY_STRATEGY_INSTANCE::OnSuccess();
-        } else if (result == FileProcessingResult::Unavailable) {
-          std::unique_lock<std::mutex> lock(status_mutex_);
-          processing_suspended_ = true;
-        } else if (result == FileProcessingResult::FailureNeedRetry) {
+//      } else if (result == FileProcessingResult::Unavailable) {
+//        std::unique_lock<std::mutex> lock(status_mutex_);
+//        processing_suspended_ = true;
+        } else {//if (result == FileProcessingResult::FailureNeedRetry) {
           T_RETRY_STRATEGY_INSTANCE::OnFailure();
-        } else {
-          throw FSQException();
-        }
+        } //else {
+          //throw FSQException();
+        //}
       }
     }
   }

@@ -42,7 +42,7 @@ std::ostream& operator<<(std::ostream& out, const std::pair<T, U>& p) {
   return out;
 }
 
-namespace aloha {
+namespace alohalytics {
 
 class Logger {
   std::ostringstream out_;
@@ -53,13 +53,13 @@ class Logger {
   Logger(const char* file, int line) { out_ << file << ':' << line << ": "; }
 
   ~Logger() {
-    out_ << std::endl;
+//    out_ << std::endl;
 #if defined(__OBJC__)
-    NSLog(@"%s", out_.str().c_str());
+    NSLog(@"Alohalytics: %s", out_.str().c_str());
 #elif defined(ANDROID)
     __android_log_print(ANDROID_LOG_INFO, "Alohalytics", "%s", out_.str().c_str());
 #else
-    std::cout << out_.str();
+    std::cout << "Alohalytics: " << out_.str() << std::endl;
 #endif
   }
 
@@ -91,9 +91,9 @@ class Logger {
   }
 };
 
-}  // namespace aloha
+}  // namespace alohalytics
 
-#define ATRACE(...) aloha::Logger(__FILE__, __LINE__).Log(__VA_ARGS__)
-#define ALOG(...) aloha::Logger().Log(__VA_ARGS__)
+#define ATRACE(...) alohalytics::Logger(__FILE__, __LINE__).Log(__VA_ARGS__)
+#define ALOG(...) alohalytics::Logger().Log(__VA_ARGS__)
 
 #endif

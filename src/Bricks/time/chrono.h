@@ -13,8 +13,10 @@ namespace bricks {
 
 namespace time {
 
-enum class EPOCH_MILLISECONDS : uint64_t {};
-enum class MILLISECONDS_INTERVAL : uint64_t {};
+//enum class EPOCH_MILLISECONDS : uint64_t {};
+typedef uint64_t EPOCH_MILLISECONDS;
+//enum class MILLISECONDS_INTERVAL : uint64_t {};
+typedef uint64_t MILLISECONDS_INTERVAL;
 
 #ifndef BRICKS_ANDROID
 
@@ -74,30 +76,30 @@ struct FixedSizeSerializer<bricks::time::EPOCH_MILLISECONDS> {
 
 }  // namespace bricks
 
-inline bricks::time::MILLISECONDS_INTERVAL operator-(bricks::time::EPOCH_MILLISECONDS lhs,
-                                                     bricks::time::EPOCH_MILLISECONDS rhs) {
-  return static_cast<bricks::time::MILLISECONDS_INTERVAL>(static_cast<int64_t>(lhs) -
-                                                          static_cast<int64_t>(rhs));
-}
+//inline bricks::time::MILLISECONDS_INTERVAL operator-(bricks::time::EPOCH_MILLISECONDS lhs,
+//                                                     bricks::time::EPOCH_MILLISECONDS rhs) {
+//  return static_cast<bricks::time::MILLISECONDS_INTERVAL>(static_cast<int64_t>(lhs) -
+//                                                          static_cast<int64_t>(rhs));
+//}
 
-inline bricks::time::MILLISECONDS_INTERVAL operator-(bricks::time::EPOCH_MILLISECONDS x) {
-  return static_cast<bricks::time::MILLISECONDS_INTERVAL>(-static_cast<int64_t>(x));
-}
+//inline bricks::time::MILLISECONDS_INTERVAL operator-(bricks::time::EPOCH_MILLISECONDS x) {
+//  return static_cast<bricks::time::MILLISECONDS_INTERVAL>(-static_cast<int64_t>(x));
+//}
 
-inline bricks::time::EPOCH_MILLISECONDS operator+(bricks::time::EPOCH_MILLISECONDS lhs,
-                                                  bricks::time::MILLISECONDS_INTERVAL rhs) {
-  return static_cast<bricks::time::EPOCH_MILLISECONDS>(static_cast<int64_t>(lhs) + static_cast<int64_t>(rhs));
-}
+//inline bricks::time::EPOCH_MILLISECONDS operator+(bricks::time::EPOCH_MILLISECONDS lhs,
+//                                                  bricks::time::MILLISECONDS_INTERVAL rhs) {
+//  return static_cast<bricks::time::EPOCH_MILLISECONDS>(static_cast<int64_t>(lhs) + static_cast<int64_t>(rhs));
+//}
 
-inline bricks::time::EPOCH_MILLISECONDS operator-(bricks::time::EPOCH_MILLISECONDS lhs,
-                                                  bricks::time::MILLISECONDS_INTERVAL rhs) {
-  return static_cast<bricks::time::EPOCH_MILLISECONDS>(static_cast<int64_t>(lhs) - static_cast<int64_t>(rhs));
-}
+//inline bricks::time::EPOCH_MILLISECONDS operator-(bricks::time::EPOCH_MILLISECONDS lhs,
+//                                                  bricks::time::MILLISECONDS_INTERVAL rhs) {
+//  return static_cast<bricks::time::EPOCH_MILLISECONDS>(static_cast<int64_t>(lhs) - static_cast<int64_t>(rhs));
+//}
 
-inline bricks::time::EPOCH_MILLISECONDS operator+(bricks::time::MILLISECONDS_INTERVAL lhs,
-                                                  bricks::time::EPOCH_MILLISECONDS rhs) {
-  return static_cast<bricks::time::EPOCH_MILLISECONDS>(static_cast<int64_t>(lhs) + static_cast<int64_t>(rhs));
-}
+//inline bricks::time::EPOCH_MILLISECONDS operator+(bricks::time::MILLISECONDS_INTERVAL lhs,
+//                                                  bricks::time::EPOCH_MILLISECONDS rhs) {
+//  return static_cast<bricks::time::EPOCH_MILLISECONDS>(static_cast<int64_t>(lhs) + static_cast<int64_t>(rhs));
+//}
 
 // TODO(dkorolev): Add more arithmetic operations on milliseconds here.
 

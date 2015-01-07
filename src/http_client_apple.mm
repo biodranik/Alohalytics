@@ -41,7 +41,7 @@ SOFTWARE.
 
 #define TIMEOUT_IN_SECONDS 30.0
 
-namespace aloha {
+namespace alohalytics {
 
 bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   @autoreleasepool {
@@ -96,4 +96,4 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   } // @autoreleasepool
 }
 
-} // namespace aloha
+} // namespace alohalytics
