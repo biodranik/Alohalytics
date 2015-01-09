@@ -91,7 +91,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       else
         [url_data writeToFile:[NSString stringWithUTF8String:received_file_.c_str()] atomically:YES];
     }
-    return true;  // TODO(dkorolev) + TODO(deathbaba): Figure out something smarter than return (200 == error_code_);
+    return response && 200 == error_code_;
 
   } // @autoreleasepool
 }
