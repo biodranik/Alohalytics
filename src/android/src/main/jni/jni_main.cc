@@ -35,7 +35,6 @@ static JavaVM* g_jvm = 0;
 extern JavaVM* GetJVM() { return g_jvm; }
 
 extern "C" {
-
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
   g_jvm = vm;
   return JNI_VERSION_1_6;

@@ -31,7 +31,6 @@ SOFTWARE.
 #include "../../../../http_client.h"
 #include "../../../../logger.h"
 
-
 using bricks::MakePointerScopeGuard;
 using std::string;
 
@@ -65,7 +64,6 @@ string ToStdString(JNIEnv* env, jstring str) {
 }  // namespace
 
 extern "C" {
-
 JNIEXPORT void JNICALL
     Java_org_alohalytics_Statistics_logEvent__Ljava_lang_String_2(JNIEnv* env, jclass, jstring eventName) {
   Stats::Instance().LogEvent(ToStdString(env, eventName));
@@ -108,17 +106,17 @@ JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_logEvent__Ljava_lang_Stri
   }
 
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_setupCPP(JNIEnv* env,
-                                                                   jclass,
-                                                                   jclass httpTransportClass,
-                                                                   jstring serverUrl,
-                                                                   jstring storagePath,
-                                                                   jstring installationId) {
+                                                                jclass,
+                                                                jclass httpTransportClass,
+                                                                jstring serverUrl,
+                                                                jstring storagePath,
+                                                                jstring installationId) {
   g_httpTransportClass = static_cast<jclass>(env->NewGlobalRef(httpTransportClass));
   RETURN_ON_EXCEPTION
-  g_httpTransportClass_run = env->GetStaticMethodID(
-      g_httpTransportClass,
-      "run",
-      "(Lorg/alohalytics/HttpTransport$Params;)Lorg/alohalytics/HttpTransport$Params;");
+  g_httpTransportClass_run =
+      env->GetStaticMethodID(g_httpTransportClass,
+                             "run",
+                             "(Lorg/alohalytics/HttpTransport$Params;)Lorg/alohalytics/HttpTransport$Params;");
   RETURN_ON_EXCEPTION
   g_httpParamsClass = env->FindClass("org/alohalytics/HttpTransport$Params");
   RETURN_ON_EXCEPTION
@@ -128,9 +126,10 @@ JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_setupCPP(JNIEnv* env,
   RETURN_ON_EXCEPTION
 
   // Initialize statistics engine at the end of setup function, as it can use globals above.
-  Stats::Instance().SetClientId(ToStdString(env, installationId))
-                   .SetStoragePath(ToStdString(env, storagePath))
-                   .SetServerUrl(ToStdString(env, serverUrl));
+  Stats::Instance()
+      .SetClientId(ToStdString(env, installationId))
+      .SetStoragePath(ToStdString(env, storagePath))
+      .SetServerUrl(ToStdString(env, serverUrl));
 }
 
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_debugCPP(JNIEnv* env, jclass, jboolean enableDebug) {

@@ -19,9 +19,7 @@ struct JustAppendToFile {
     // TODO(dkorolev): Should we flush each record? Make it part of the strategy?
     fo << message << std::flush;
   }
-  uint64_t MessageSizeInBytes(const std::string& message) const {
-    return message.length();
-  }
+  uint64_t MessageSizeInBytes(const std::string& message) const { return message.length(); }
 };
 
 // Another simple file append strategy: Append messages adding a separator after each of them.
@@ -34,9 +32,7 @@ class AppendToFileWithSeparator {
   uint64_t MessageSizeInBytes(const std::string& message) const {
     return message.length() + separator_.length();
   }
-  void SetSeparator(const std::string& separator) {
-    separator_ = separator;
-  }
+  void SetSeparator(const std::string& separator) { separator_ = separator; }
 
  private:
   std::string separator_ = "";
@@ -44,32 +40,24 @@ class AppendToFileWithSeparator {
 
 // Default resume strategy: Always resume.
 struct AlwaysResume {
-  inline static bool ShouldResume() {
-    return true;
-  }
+  inline static bool ShouldResume() { return true; }
 };
 
 // A dummy retry strategy: Always process, no need to retry.
 template <class FILE_SYSTEM>
 class AlwaysProcessNoNeedToRetry {
  public:
-  AlwaysProcessNoNeedToRetry(const FILE_SYSTEM&) {
-  }
+  AlwaysProcessNoNeedToRetry(const FILE_SYSTEM&) {}
   typedef FILE_SYSTEM T_FILE_SYSTEM;
-  inline void OnSuccess() {
-  }
-  inline void OnFailure() {
-  }
-  inline bool ShouldWait(bricks::time::MILLISECONDS_INTERVAL*) {
-    return false;
-  }
+  inline void OnSuccess() {}
+  inline void OnFailure() {}
+  inline bool ShouldWait(bricks::time::MILLISECONDS_INTERVAL*) { return false; }
 };
 
 // Default file naming strategy: Use "finalized-{timestamp}.bin" and "current-{timestamp}.bin".
 struct DummyFileNamingToUnblockAlexFromMinsk {
   struct FileNamingSchema {
-    FileNamingSchema(const std::string& prefix, const std::string& suffix) : prefix_(prefix), suffix_(suffix) {
-    }
+    FileNamingSchema(const std::string& prefix, const std::string& suffix) : prefix_(prefix), suffix_(suffix) {}
     template <typename T_TIMESTAMP>
     inline std::string GenerateFileName(const T_TIMESTAMP timestamp) const {
       return prefix_ + bricks::strings::PackToString(timestamp) + suffix_;
@@ -104,9 +92,7 @@ struct DummyFileNamingToUnblockAlexFromMinsk {
 struct UseEpochMilliseconds final {
   typedef bricks::time::EPOCH_MILLISECONDS T_TIMESTAMP;
   typedef bricks::time::MILLISECONDS_INTERVAL T_TIME_SPAN;
-  T_TIMESTAMP Now() const {
-    return bricks::time::Now();
-  }
+  T_TIMESTAMP Now() const { return bricks::time::Now(); }
 };
 
 // Default file finalization strategy: Keeps files under 100KB, if there are files in the processing queue,

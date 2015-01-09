@@ -31,7 +31,6 @@
 #include <thread>
 #include <chrono>
 
-
 DEFINE_string(server_url, "", "Statistics server url.");
 DEFINE_string(event, "TestEvent", "Records given event.");
 DEFINE_string(values,
@@ -52,7 +51,7 @@ using alohalytics::Stats;
 int main(int argc, char** argv) {
   ParseDFlags(&argc, &argv);
 
-  Stats & stats = Stats::Instance();
+  Stats& stats = Stats::Instance();
 
   if (FLAGS_debug) {
     stats.SetDebugMode(true);

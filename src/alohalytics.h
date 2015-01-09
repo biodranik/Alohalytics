@@ -45,7 +45,6 @@
 #include <string>
 #include <map>
 
-
 namespace alohalytics {
 
 typedef std::map<std::string, std::string> TStringMap;
@@ -71,11 +70,9 @@ class Stats final {
   bool debug_mode_ = false;
 
   // Use alohalytics::Stats::Instance() to access statistics engine.
-  Stats() : message_queue_(*this) {
-  }
+  Stats() : message_queue_(*this) {}
 
   static bool UploadBuffer(const std::string& url, std::string&& buffer, bool debug_mode) {
-
     HTTPClientPlatformWrapper request(url);
     request.set_post_body(std::move(buffer), "application/alohalytics-binary-blob");
 
@@ -99,15 +96,15 @@ class Stats final {
   }
 
   // Logs if debug_mode is enabled.
-  template <typename... ARGS> void DebugLog(ARGS...args) const {
+  template <typename... ARGS>
+  void DebugLog(ARGS... args) const {
     if (debug_mode_) {
       alohalytics::Logger().Log(args...);
     }
   }
 
  public:
-  ~Stats() {
-  }
+  ~Stats() {}
 
   // Processes messages passed from UI in message queue's own thread.
   // TODO(AlexZ): Refactor message queue to make this method private.
@@ -118,7 +115,7 @@ class Stats final {
     if (file_storage_queue_) {
       file_storage_queue_->PushMessage(message);
     } else {
-      auto & container = memory_storage_;
+      auto& container = memory_storage_;
       container.push_back(message);
       static const size_t kMaxEventsInMemory = 2048;
       if (container.size() > kMaxEventsInMemory) {
@@ -155,29 +152,29 @@ class Stats final {
     return false;
   }
 
-  static Stats & Instance() {
+  static Stats& Instance() {
     static Stats alohalytics;
     return alohalytics;
   }
 
   // Easier integration if enabled.
-  Stats & SetDebugMode(bool enable) {
+  Stats& SetDebugMode(bool enable) {
     debug_mode_ = enable;
     DebugLog("Enabled debug mode.");
     return *this;
   }
 
   // If not set, collected data will never be uploaded.
-  Stats & SetServerUrl(const std::string & url_to_upload_statistics_to) {
+  Stats& SetServerUrl(const std::string& url_to_upload_statistics_to) {
     upload_url_ = url_to_upload_statistics_to;
     DebugLog("Set upload url:", url_to_upload_statistics_to);
     return *this;
   }
 
   // If not set, data will be stored in memory only.
-  Stats & SetStoragePath(const std::string & full_path_to_storage_with_a_slash_at_the_end) {
+  Stats& SetStoragePath(const std::string& full_path_to_storage_with_a_slash_at_the_end) {
     DebugLog("Set storage path:", full_path_to_storage_with_a_slash_at_the_end);
-    auto & fsq = file_storage_queue_;
+    auto& fsq = file_storage_queue_;
     fsq.reset(nullptr);
     if (!full_path_to_storage_with_a_slash_at_the_end.empty()) {
       fsq.reset(new TFileStorageQueue(*this, full_path_to_storage_with_a_slash_at_the_end));
@@ -186,13 +183,14 @@ class Stats final {
         DebugLog("Active file size:", status.appended_file_size);
         const size_t count = status.finalized.queue.size();
         if (count) {
-          DebugLog(count, "files with total size of", status.finalized.total_size, "bytes are waiting for upload.");
+          DebugLog(
+              count, "files with total size of", status.finalized.total_size, "bytes are waiting for upload.");
         }
       }
       const size_t memory_events_count = memory_storage_.empty();
       if (memory_events_count) {
         DebugLog("Save", memory_events_count, "in-memory events into the file storage.");
-        for (const auto & msg : memory_storage_) {
+        for (const auto& msg : memory_storage_) {
           fsq->PushMessage(msg);
         }
         memory_storage_.clear();
@@ -202,7 +200,7 @@ class Stats final {
   }
 
   // If not set, data will be uploaded without any unique id.
-  Stats & SetClientId(const std::string & unique_client_id) {
+  Stats& SetClientId(const std::string& unique_client_id) {
     DebugLog("Set unique client id:", unique_client_id);
     if (unique_client_id.empty()) {
       unique_client_id_event_.clear();
@@ -261,7 +259,7 @@ class Stats final {
       // TODO(AlexZ): thread-safety?
       TMemoryContainer copy;
       copy.swap(memory_storage_);
-      for (const auto & evt : copy) {
+      for (const auto& evt : copy) {
         buffer.append(evt);
       }
       if (!UploadBuffer(upload_url_, std::move(buffer), debug_mode_)) {

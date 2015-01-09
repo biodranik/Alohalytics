@@ -98,8 +98,7 @@ class FSQ final : public CONFIG::T_FILE_NAMING_STRATEGY,
       const std::string& working_directory,
       const T_TIME_MANAGER& time_manager = T_TIME_MANAGER(),
       const T_FILE_SYSTEM& file_system = T_FILE_SYSTEM())
-      : FSQ(processor, working_directory, time_manager, file_system, T_RETRY_STRATEGY_INSTANCE(file_system)) {
-  }
+      : FSQ(processor, working_directory, time_manager, file_system, T_RETRY_STRATEGY_INSTANCE(file_system)) {}
 
   // Destructor gracefully terminates worker thread and optionally joins it.
   ~FSQ() {
@@ -122,9 +121,7 @@ class FSQ final : public CONFIG::T_FILE_NAMING_STRATEGY,
   }
 
   // Getters.
-  const std::string& WorkingDirectory() const {
-    return working_directory_;
-  }
+  const std::string& WorkingDirectory() const { return working_directory_; }
 
   const Status GetQueueStatus() const {
     if (!status_ready_) {
@@ -414,14 +411,16 @@ class FSQ final : public CONFIG::T_FILE_NAMING_STRATEGY,
 
       // Process the file, if available.
       if (next_file) {
-//      const FileProcessingResult result = processor_.OnFileReady(*next_file.get(), time_manager_.Now());
+        //      const FileProcessingResult result = processor_.OnFileReady(*next_file.get(),
+        //      time_manager_.Now());
         const bool successfully_processed = processor_.OnFileReady(next_file->full_path_name, next_file->size);
         // Important to clear force_processing_, in a locked way.
         {
           std::unique_lock<std::mutex> lock(status_mutex_);
           force_processing_ = false;
         }
-//      if (result == FileProcessingResult::Success || result == FileProcessingResult::SuccessAndMoved) {
+        //      if (result == FileProcessingResult::Success || result == FileProcessingResult::SuccessAndMoved)
+        //      {
         if (successfully_processed) {
           std::unique_lock<std::mutex> lock(status_mutex_);
           processing_suspended_ = false;
@@ -432,17 +431,17 @@ class FSQ final : public CONFIG::T_FILE_NAMING_STRATEGY,
             // The `front()` part of the queue should only be altered by this worker thread.
             throw FSQException();
           }
-//        if (result == FileProcessingResult::Success) {
-            T_FILE_SYSTEM::RemoveFile(next_file->full_path_name);
-//        }
+          //        if (result == FileProcessingResult::Success) {
+          T_FILE_SYSTEM::RemoveFile(next_file->full_path_name);
+          //        }
           T_RETRY_STRATEGY_INSTANCE::OnSuccess();
-//      } else if (result == FileProcessingResult::Unavailable) {
-//        std::unique_lock<std::mutex> lock(status_mutex_);
-//        processing_suspended_ = true;
-        } else {//if (result == FileProcessingResult::FailureNeedRetry) {
+          //      } else if (result == FileProcessingResult::Unavailable) {
+          //        std::unique_lock<std::mutex> lock(status_mutex_);
+          //        processing_suspended_ = true;
+        } else {  // if (result == FileProcessingResult::FailureNeedRetry) {
           T_RETRY_STRATEGY_INSTANCE::OnFailure();
-        } //else {
-          //throw FSQException();
+        }  // else {
+        // throw FSQException();
         //}
       }
     }

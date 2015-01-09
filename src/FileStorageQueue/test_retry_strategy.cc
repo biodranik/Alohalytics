@@ -54,8 +54,7 @@ inline void SafeDebugOutput(const std::string& message) {
 // LatencyMeasuringProcessor measures the time it took for the message to get processed.
 struct LatencyMeasuringProcessor final {
   LatencyMeasuringProcessor(size_t index, atomic_size_t& counter)
-      : index_(index), counter_(counter), failures_remaining_(FLAGS_number_of_failures), processed_(false) {
-  }
+      : index_(index), counter_(counter), failures_remaining_(FLAGS_number_of_failures), processed_(false) {}
 
   fsq::FileProcessingResult OnFileReady(const fsq::FileInfo<EPOCH_MILLISECONDS>&, EPOCH_MILLISECONDS now) {
     if (failures_remaining_ > 0) {
@@ -111,8 +110,7 @@ TEST(FileSystemQueueLatenciesTest, LatencyPercentiles) {
                fsq::strategy::UseEpochMilliseconds(),
                bricks::FileSystem(),
                ExpRetry(bricks::FileSystem(),
-                        ExpRetry::DistributionParams(FLAGS_mean_ms, FLAGS_min_ms, FLAGS_max_ms))) {
-    }
+                        ExpRetry::DistributionParams(FLAGS_mean_ms, FLAGS_min_ms, FLAGS_max_ms))) {}
 
     ~Worker() {
       // TODO(dkorolev): Remove created file(s) and the directory.
@@ -123,9 +121,7 @@ TEST(FileSystemQueueLatenciesTest, LatencyPercentiles) {
       fsq_.PushMessage("foo");
     }
 
-    void InvokeFinalizeCurrentFile() {
-      fsq_.FinalizeCurrentFile();
-    }
+    void InvokeFinalizeCurrentFile() { fsq_.FinalizeCurrentFile(); }
 
     uint64_t ActualProcessingLatencyInMS() const {
       assert(processor_.processed_);
@@ -154,8 +150,7 @@ TEST(FileSystemQueueLatenciesTest, LatencyPercentiles) {
   const size_t N = static_cast<size_t>(FLAGS_n);
   for (size_t i = 0; i < N; ++i) {
     struct DummyProcessor final {
-      DummyProcessor() {
-      }
+      DummyProcessor() {}
       fsq::FileProcessingResult OnFileReady(const fsq::FileInfo<EPOCH_MILLISECONDS>&, EPOCH_MILLISECONDS) {
         return fsq::FileProcessingResult::Success;
       }

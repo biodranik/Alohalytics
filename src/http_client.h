@@ -28,7 +28,6 @@ SOFTWARE.
 #include <string>
 #include <cassert>
 
-
 namespace alohalytics {
 
 class HTTPClientPlatformWrapper {

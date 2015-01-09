@@ -33,19 +33,13 @@ struct Config {
   typedef strategy::KeepUnder20MBAndUnder1KFiles T_PURGE_STRATEGY;
 
   // Set to true to have FSQ detach the processing thread instead of joining it in destructor.
-  inline static bool DetachProcessingThreadOnTermination() {
-    return false;
-  }
+  inline static bool DetachProcessingThreadOnTermination() { return false; }
 
   // Set to false to have PushMessage() throw an exception when attempted to push while shutting down.
-  inline static bool NoThrowOnPushMessageWhileShuttingDown() {
-    return true;
-  }
+  inline static bool NoThrowOnPushMessageWhileShuttingDown() { return true; }
 
   // Set to true to have FSQ process all queued files in destructor before returning.
-  inline static bool ProcessQueueToTheEndOnShutdown() {
-    return false;
-  }
+  inline static bool ProcessQueueToTheEndOnShutdown() { return false; }
 
   template <typename T_FSQ_INSTANCE>
   inline static void Initialize(T_FSQ_INSTANCE&) {
