@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "status.h"
+#include "exception.h"
 #include "config.h"
 #include "strategies.h"
 
@@ -34,10 +35,6 @@
 #include "../Bricks/time/chrono.h"
 
 namespace fsq {
-
-struct FSQException : std::exception {
-  // TODO(dkorolev): Fill this class.
-};
 
 // On `Success`, FQS deleted file that just got processed and sends the next one to as it arrives,
 // which can happen immediately, if the queue is not empty, or later, once the next file is ready.
@@ -414,8 +411,17 @@ class FSQ final : public CONFIG::T_FILE_NAMING_STRATEGY,
 
       // Process the file, if available.
       if (next_file) {
-        const FileProcessingResult result = processor_.OnFileReady(*next_file.get(), time_manager_.Now());
-        if (result == FileProcessingResult::Success || result == FileProcessingResult::SuccessAndMoved) {
+        //      const FileProcessingResult result = processor_.OnFileReady(*next_file.get(),
+        //      time_manager_.Now());
+        const bool successfully_processed = processor_.OnFileReady(next_file->full_path_name, next_file->size);
+        // Important to clear force_processing_, in a locked way.
+        {
+          std::unique_lock<std::mutex> lock(status_mutex_);
+          force_processing_ = false;
+        }
+        //      if (result == FileProcessingResult::Success || result == FileProcessingResult::SuccessAndMoved)
+        //      {
+        if (successfully_processed) {
           std::unique_lock<std::mutex> lock(status_mutex_);
           processing_suspended_ = false;
           if (*next_file.get() == status_.finalized.queue.front()) {
@@ -425,18 +431,18 @@ class FSQ final : public CONFIG::T_FILE_NAMING_STRATEGY,
             // The `front()` part of the queue should only be altered by this worker thread.
             throw FSQException();
           }
-          if (result == FileProcessingResult::Success) {
-            T_FILE_SYSTEM::RemoveFile(next_file->full_path_name);
-          }
+          //        if (result == FileProcessingResult::Success) {
+          T_FILE_SYSTEM::RemoveFile(next_file->full_path_name);
+          //        }
           T_RETRY_STRATEGY_INSTANCE::OnSuccess();
-        } else if (result == FileProcessingResult::Unavailable) {
-          std::unique_lock<std::mutex> lock(status_mutex_);
-          processing_suspended_ = true;
-        } else if (result == FileProcessingResult::FailureNeedRetry) {
+          //      } else if (result == FileProcessingResult::Unavailable) {
+          //        std::unique_lock<std::mutex> lock(status_mutex_);
+          //        processing_suspended_ = true;
+        } else {  // if (result == FileProcessingResult::FailureNeedRetry) {
           T_RETRY_STRATEGY_INSTANCE::OnFailure();
-        } else {
-          throw FSQException();
-        }
+        }  // else {
+        // throw FSQException();
+        //}
       }
     }
   }

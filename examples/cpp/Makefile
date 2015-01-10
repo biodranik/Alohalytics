@@ -9,9 +9,11 @@ SRC=$(wildcard *.cc)
 BIN=$(SRC:%.cc=build/%)
 OS := $(shell uname)
 
+MORE_SOURCES =
 ifeq ($(OS),Darwin)
   CPPFLAGS += -x objective-c++ -fobjc-arc
   LDFLAGS += -framework Foundation
+  MORE_SOURCES += ../../src/http_client_apple.mm
 endif
 
 run: all
@@ -30,4 +32,4 @@ build:
 	mkdir -p $@
 
 build/%: %.cc
-	${CPP} ${CPPFLAGS} -o $@ $< ${LDFLAGS}
+	${CPP} ${CPPFLAGS} -o $@ $< ${MORE_SOURCES}  ${LDFLAGS}
