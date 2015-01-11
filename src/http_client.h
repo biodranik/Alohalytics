@@ -49,6 +49,7 @@ class HTTPClientPlatformWrapper {
   std::string content_type_;
   std::string user_agent_;
   std::string post_body_;
+  bool debug_mode_ = false;
 
   HTTPClientPlatformWrapper(const HTTPClientPlatformWrapper&) = delete;
   HTTPClientPlatformWrapper(HTTPClientPlatformWrapper&&) = delete;
@@ -57,6 +58,10 @@ class HTTPClientPlatformWrapper {
  public:
   HTTPClientPlatformWrapper() : error_code_(kNotInitialized) {}
   HTTPClientPlatformWrapper(const std::string& url) : url_requested_(url), error_code_(kNotInitialized) {}
+  HTTPClientPlatformWrapper& set_debug_mode(bool debug_mode) {
+    debug_mode_ = debug_mode;
+    return *this;
+  }
   HTTPClientPlatformWrapper& set_url_requested(const std::string& url) {
     url_requested_ = url;
     return *this;

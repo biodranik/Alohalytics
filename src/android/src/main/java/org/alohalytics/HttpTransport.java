@@ -24,6 +24,8 @@
 
 package org.alohalytics;
 
+import android.util.Log;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
@@ -40,12 +42,14 @@ public class HttpTransport {
 
   // TODO(AlexZ): tune for larger files
   private final static int STREAM_BUFFER_SIZE = 1024 * 64;
-  private final static String TAG = "HttpTransport";
+  private final static String TAG = "Alohalytics-HttpTransport";
   // Globally accessible for faster unit-testing
   public static int TIMEOUT_IN_MILLISECONDS = 30000;
 
   public static Params run(final Params p) throws IOException, NullPointerException {
     HttpURLConnection connection = null;
+    if (p.debugMode)
+      Log.d(TAG, "Connecting to " + p.url);
     try {
       connection = (HttpURLConnection) new URL(p.url).openConnection(); // NullPointerException, MalformedUrlException, IOException
       // TODO(AlexZ): Customize redirects following in the future implementation for safer transfers.
@@ -81,6 +85,8 @@ public class HttpTransport {
           } finally {
             os.close();
           }
+          if (p.debugMode)
+            Log.d(TAG, "Sent POST with gzipped content of size " + bos.size());
         } else {
           final File file = new File(p.inputFilePath);
           assert (file.length() == (int) file.length());
@@ -94,10 +100,14 @@ public class HttpTransport {
           }
           istream.close(); // IOException
           ostream.close(); // IOException
+          if (p.debugMode)
+            Log.d(TAG, "Sent POST with file of size " + file.length());
         }
       }
       // GET data from the server or receive POST response body
       p.httpResponseCode = connection.getResponseCode();
+      if (p.debugMode)
+        Log.d(TAG, "Received HTTP " + p.httpResponseCode + " from server.");
       p.receivedUrl = connection.getURL().toString();
       p.contentType = connection.getContentType();
       // This implementation receives any data only if we have HTTP::OK (200).
@@ -160,6 +170,7 @@ public class HttpTransport {
     // Optionally client can override default HTTP User-Agent.
     public String userAgent = null;
     public int httpResponseCode = -1;
+    public boolean debugMode = false;
 
     public Params(String url) {
       this.url = url;

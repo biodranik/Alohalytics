@@ -74,6 +74,7 @@ class Stats final {
 
   static bool UploadBuffer(const std::string& url, std::string&& buffer, bool debug_mode) {
     HTTPClientPlatformWrapper request(url);
+    request.set_debug_mode(debug_mode);
     request.set_post_body(std::move(buffer), "application/alohalytics-binary-blob");
 
     try {

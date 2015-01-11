@@ -37,6 +37,7 @@ SOFTWARE.
 #import <Foundation/NSFileManager.h>
 
 #include "http_client.h"
+#include "logger.h"
 
 
 #define TIMEOUT_IN_SECONDS 30.0
@@ -64,7 +65,9 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       const unsigned long long file_size = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:&err].fileSize;
       if (err) {
         error_code_ = err.code;
-        NSLog(@"Error %d %@", error_code_, err.localizedDescription);
+        if (debug_mode_) {
+          ALOG("ERROR", error_code_, [err.localizedDescription UTF8String]);
+        }
         return false;
       }
       request.HTTPBodyStream = [NSInputStream inputStreamWithFileAtPath:path];
@@ -79,20 +82,28 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     if (response) {
       error_code_ = response.statusCode;
       url_received_ = [response.URL.absoluteString UTF8String];
+      if (url_data) {
+        if (received_file_.empty()) {
+          server_response_.assign(reinterpret_cast<char const *>(url_data.bytes), url_data.length);
+        }
+        else {
+          [url_data writeToFile:[NSString stringWithUTF8String:received_file_.c_str()] atomically:YES];
+        }
+      }
+      if (error_code_ != 200) {
+        if (debug_mode_) {
+          ALOG("HTTP Error", error_code_);
+        }
+        return false;
+      }
+      return true;
     }
-    else {
-      error_code_ = err.code;
-      NSLog(@"ERROR while connecting to %s: %@", url_requested_.c_str(), err.localizedDescription);
+    // Request has failed if we are here.
+    error_code_ = err.code;
+    if (debug_mode_) {
+      ALOG("ERROR", error_code_, ':', [err.localizedDescription UTF8String], "while connecting to", url_requested_);
     }
-
-    if (url_data) {
-      if (received_file_.empty())
-        server_response_.assign(reinterpret_cast<char const *>(url_data.bytes), url_data.length);
-      else
-        [url_data writeToFile:[NSString stringWithUTF8String:received_file_.c_str()] atomically:YES];
-    }
-    return response && 200 == error_code_;
-
+    return false;
   } // @autoreleasepool
 }
 

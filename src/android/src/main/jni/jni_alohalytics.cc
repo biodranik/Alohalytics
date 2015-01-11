@@ -235,6 +235,11 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
   }
 
+  const static jfieldID debugModeField =
+      env->GetFieldID(g_httpParamsClass, "debugMode", "Z");
+  env->SetBooleanField(httpParamsObject.get(), debugModeField, debug_mode_);
+  CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
+
   // DO ALL MAGIC!
   // Current Java implementation simply reuses input params instance, so we don't need to
   // DeleteLocalRef(response).
