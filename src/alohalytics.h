@@ -105,8 +105,6 @@ class Stats final {
   }
 
  public:
-  ~Stats() {}
-
   // Processes messages passed from UI in message queue's own thread.
   // TODO(AlexZ): Refactor message queue to make this method private.
   void OnMessage(const std::string& message, size_t dropped_events) {
@@ -264,11 +262,22 @@ class Stats final {
         buffer.append(evt);
       }
       if (!UploadBuffer(upload_url_, std::move(buffer), debug_mode_)) {
+        // If failed, merge events we tried to upload with possible new ones.
         memory_storage_.splice(memory_storage_.end(), std::move(copy));
       }
     }
   }
 };
+
+void LogEvent(std::string const& event_name) {
+  Stats::Instance().LogEvent(event_name);
+}
+void LogEvent(std::string const& event_name, std::string const& event_value) {
+  Stats::Instance().LogEvent(event_name, event_value);
+}
+void LogEvent(std::string const& event_name, TStringMap const& value_pairs) {
+  Stats::Instance().LogEvent(event_name, value_pairs);
+}
 
 }  // namespace alohalytics
 

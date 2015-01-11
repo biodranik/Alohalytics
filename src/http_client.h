@@ -40,7 +40,7 @@ class HTTPClientPlatformWrapper {
   std::string url_requested_;
   // Contains final content's url taking redirects (if any) into an account.
   std::string url_received_;
-  int error_code_;
+  int error_code_ = kNotInitialized;
   std::string post_file_;
   // Used instead of server_reply_ if set.
   std::string received_file_;
@@ -56,8 +56,8 @@ class HTTPClientPlatformWrapper {
   HTTPClientPlatformWrapper& operator=(const HTTPClientPlatformWrapper&) = delete;
 
  public:
-  HTTPClientPlatformWrapper() : error_code_(kNotInitialized) {}
-  HTTPClientPlatformWrapper(const std::string& url) : url_requested_(url), error_code_(kNotInitialized) {}
+  HTTPClientPlatformWrapper() = default;
+  HTTPClientPlatformWrapper(const std::string& url) : url_requested_(url) {}
   HTTPClientPlatformWrapper& set_debug_mode(bool debug_mode) {
     debug_mode_ = debug_mode;
     return *this;

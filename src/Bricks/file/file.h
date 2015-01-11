@@ -37,6 +37,7 @@ SOFTWARE.
 #include <sys/stat.h>
 
 #include "exceptions.h"
+#include "../../logger.h"
 
 namespace bricks {
 
@@ -135,8 +136,8 @@ struct FileSystem {
   }
 
   static inline void RenameFile(const std::string& old_name, const std::string& new_name) {
-    if (::rename(old_name.c_str(), new_name.c_str())) {
-      // TODO(dkorolev): Throw an exception and analyze errno.
+    if (0 != ::rename(old_name.c_str(), new_name.c_str())) {
+      ALOG("Error", errno, "renaming file", old_name, "to", new_name);
     }
   }
 
