@@ -27,12 +27,11 @@ SOFTWARE.
 #include <memory>
 
 #include "../../../../alohalytics.h"
-#include "../../../../make_scope_guard.h"
 #include "../../../../http_client.h"
 #include "../../../../logger.h"
 
-using bricks::MakePointerScopeGuard;
 using std::string;
+using std::unique_ptr;
 
 using alohalytics::Stats;
 using alohalytics::TStringMap;
@@ -41,6 +40,28 @@ using alohalytics::TStringMap;
 extern JavaVM* GetJVM();
 
 namespace {
+
+template <typename POINTER, typename DELETER>
+unique_ptr<POINTER, DELETER> MakePointerScopeGuard(POINTER* x, DELETER t) {
+  return unique_ptr<POINTER, DELETER>(x, t);
+}
+
+template <typename F>
+class ScopeGuard final {
+  F f_;
+  ScopeGuard(const ScopeGuard&) = delete;
+  void operator=(const ScopeGuard&) = delete;
+
+ public:
+  explicit ScopeGuard(const F& f) : f_(f) {}
+  ScopeGuard(ScopeGuard&& other) : f_(std::forward<F>(other.f_)) {}
+  ~ScopeGuard() { f_(); }
+};
+
+template <typename F>
+ScopeGuard<F> MakeScopeGuard(F f) {
+  return ScopeGuard<F>(f);
+}
 
 // Cached class and methods for faster access from native code
 static jclass g_httpTransportClass = 0;
@@ -164,7 +185,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   }
 
   // TODO(AlexZ): May need to refactor if this method will be agressively used from the same thread.
-  const auto detachThreadOnScopeExit = bricks::MakeScopeGuard([] { ::GetJVM()->DetachCurrentThread(); });
+  const auto detachThreadOnScopeExit = MakeScopeGuard([] { ::GetJVM()->DetachCurrentThread(); });
 
   // Convenience lambda.
   const auto deleteLocalRef = [&env](jobject o) { env->DeleteLocalRef(o); };
