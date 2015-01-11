@@ -58,6 +58,7 @@ struct NoOpDeleter {
 class Stats final {
   std::string upload_url_;
   // Stores already serialized and ready-to-append event with unique client id.
+  // NOTE: Statistics will not be uploaded if unique client id was not set.
   std::string unique_client_id_event_;
   MessageQueue<Stats> message_queue_;
   typedef fsq::FSQ<fsq::Config<Stats>> TFileStorageQueue;
@@ -129,6 +130,10 @@ class Stats final {
   bool OnFileReady(const std::string& full_path_to_file, uint64_t file_size) {
     if (upload_url_.empty()) {
       DebugLog("Warning: upload server url was not set and file of", file_size, "bytes was not uploaded.");
+      return false;
+    }
+    if (unique_client_id_event_.empty()) {
+      DebugLog("Warning: unique client ID is not set so statistics was not uploaded.");
       return false;
     }
 
@@ -249,6 +254,10 @@ class Stats final {
   void Upload() {
     if (upload_url_.empty()) {
       DebugLog("Warning: upload server url is not set, nothing was uploaded.");
+      return;
+    }
+    if (unique_client_id_event_.empty()) {
+      DebugLog("Warning: unique client ID is not set so statistics was not uploaded.");
       return;
     }
     if (file_storage_queue_) {
