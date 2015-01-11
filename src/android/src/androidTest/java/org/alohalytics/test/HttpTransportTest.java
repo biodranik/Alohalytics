@@ -72,7 +72,9 @@ public class HttpTransportTest extends InstrumentationTestCase {
     final HttpTransport.Params r = HttpTransport.run(p);
     assertEquals(200, r.httpResponseCode);
     final String receivedBody = new String(r.data);
-    assertTrue(receivedBody, receivedBody.contains(postBody));
+    // Server mirrors our content which we have gzipped.
+    assertTrue(receivedBody, receivedBody.contains("\"Content-Encoding\": \"gzip\""));
+    assertTrue(receivedBody, receivedBody.contains("data:application/octet-stream;base64,H4sIAAAAAAAAAPNIzcnJ11EIzy/KSVEEANDDSuwNAAAA"));
   }
 
   public void testPostMissingContentType() throws Exception {
@@ -122,7 +124,7 @@ public class HttpTransportTest extends InstrumentationTestCase {
   public void testPostFromMemoryIntoFile() throws Exception {
     final HttpTransport.Params p = new HttpTransport.Params("http://httpbin.org/post");
     p.outputFilePath = getFullWritablePathForFile("some_output_test_file_for_http_post");
-    p.data = p.outputFilePath.getBytes(); // Use file name as a test string for the post body.
+    p.data = p.url.getBytes(); // Use server url as a test string for the post body.
     p.contentType = "text/plain";
     try {
       final HttpTransport.Params r = HttpTransport.run(p);
@@ -130,7 +132,8 @@ public class HttpTransportTest extends InstrumentationTestCase {
       // TODO(AlexZ): Think about using data field in the future for error pages (404 etc)
       //assertNull(r.data);
       final String receivedBody = Util.ReadFileAsUtf8String(p.outputFilePath);
-      assertTrue(receivedBody, receivedBody.contains(p.outputFilePath));
+      assertTrue(receivedBody, receivedBody.contains("\"Content-Encoding\": \"gzip\""));
+      assertTrue(receivedBody, receivedBody.contains("data:application/octet-stream;base64,H4sIAAAAAAAAAMsoKSmw0tfPAFJJmXl6+UXp+gX5xSUAYum2hhcAAAA="));
     } finally {
       (new File(p.outputFilePath)).delete();
     }
@@ -195,11 +198,11 @@ public class HttpTransportTest extends InstrumentationTestCase {
     assertTrue(r.url.equals(r.receivedUrl));
   }
 
-  public void testHttpRedirect307() throws Exception {
-    final HttpTransport.Params p = new HttpTransport.Params("http://msn.com");
+  public void testHttpRedirect301() throws Exception {
+    final HttpTransport.Params p = new HttpTransport.Params("http://maps.me");
     final HttpTransport.Params r = HttpTransport.run(p);
     assertEquals(200, r.httpResponseCode);
-    assertEquals(r.receivedUrl, "http://www.msn.com/");
+    assertEquals(r.receivedUrl, "http://maps.me/en/home");
     assertTrue(!r.url.equals(r.receivedUrl));
   }
 
