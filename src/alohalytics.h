@@ -58,6 +58,7 @@ struct NoOpDeleter {
 class Stats final {
   std::string upload_url_;
   // Stores already serialized and ready-to-append event with unique client id.
+  // NOTE: Statistics will not be uploaded if unique client id was not set.
   std::string unique_client_id_event_;
   MessageQueue<Stats> message_queue_;
   typedef fsq::FSQ<fsq::Config<Stats>> TFileStorageQueue;
@@ -74,6 +75,7 @@ class Stats final {
 
   static bool UploadBuffer(const std::string& url, std::string&& buffer, bool debug_mode) {
     HTTPClientPlatformWrapper request(url);
+    request.set_debug_mode(debug_mode);
     request.set_post_body(std::move(buffer), "application/alohalytics-binary-blob");
 
     try {
@@ -104,8 +106,6 @@ class Stats final {
   }
 
  public:
-  ~Stats() {}
-
   // Processes messages passed from UI in message queue's own thread.
   // TODO(AlexZ): Refactor message queue to make this method private.
   void OnMessage(const std::string& message, size_t dropped_events) {
@@ -130,6 +130,10 @@ class Stats final {
   bool OnFileReady(const std::string& full_path_to_file, uint64_t file_size) {
     if (upload_url_.empty()) {
       DebugLog("Warning: upload server url was not set and file of", file_size, "bytes was not uploaded.");
+      return false;
+    }
+    if (unique_client_id_event_.empty()) {
+      DebugLog("Warning: unique client ID is not set so statistics was not uploaded.");
       return false;
     }
 
@@ -252,6 +256,10 @@ class Stats final {
       DebugLog("Warning: upload server url is not set, nothing was uploaded.");
       return;
     }
+    if (unique_client_id_event_.empty()) {
+      DebugLog("Warning: unique client ID is not set so statistics was not uploaded.");
+      return;
+    }
     if (file_storage_queue_) {
       file_storage_queue_->ForceProcessing();
     } else {
@@ -263,11 +271,22 @@ class Stats final {
         buffer.append(evt);
       }
       if (!UploadBuffer(upload_url_, std::move(buffer), debug_mode_)) {
+        // If failed, merge events we tried to upload with possible new ones.
         memory_storage_.splice(memory_storage_.end(), std::move(copy));
       }
     }
   }
 };
+
+void LogEvent(std::string const& event_name) {
+  Stats::Instance().LogEvent(event_name);
+}
+void LogEvent(std::string const& event_name, std::string const& event_value) {
+  Stats::Instance().LogEvent(event_name, event_value);
+}
+void LogEvent(std::string const& event_name, TStringMap const& value_pairs) {
+  Stats::Instance().LogEvent(event_name, value_pairs);
+}
 
 }  // namespace alohalytics
 

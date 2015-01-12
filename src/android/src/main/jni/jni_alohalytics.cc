@@ -27,20 +27,40 @@ SOFTWARE.
 #include <memory>
 
 #include "../../../../alohalytics.h"
-#include "../../../../make_scope_guard.h"
 #include "../../../../http_client.h"
 #include "../../../../logger.h"
 
-using bricks::MakePointerScopeGuard;
 using std::string;
+using std::unique_ptr;
 
-using alohalytics::Stats;
-using alohalytics::TStringMap;
+using namespace alohalytics;
 
 // Implemented in jni_main.cc, you can use your own impl if necessary.
 extern JavaVM* GetJVM();
 
 namespace {
+
+template <typename POINTER, typename DELETER>
+unique_ptr<POINTER, DELETER> MakePointerScopeGuard(POINTER* x, DELETER t) {
+  return unique_ptr<POINTER, DELETER>(x, t);
+}
+
+template <typename F>
+class ScopeGuard final {
+  F f_;
+  ScopeGuard(const ScopeGuard&) = delete;
+  void operator=(const ScopeGuard&) = delete;
+
+ public:
+  explicit ScopeGuard(const F& f) : f_(f) {}
+  ScopeGuard(ScopeGuard&& other) : f_(std::forward<F>(other.f_)) {}
+  ~ScopeGuard() { f_(); }
+};
+
+template <typename F>
+ScopeGuard<F> MakeScopeGuard(F f) {
+  return ScopeGuard<F>(f);
+}
 
 // Cached class and methods for faster access from native code
 static jclass g_httpTransportClass = 0;
@@ -66,12 +86,12 @@ string ToStdString(JNIEnv* env, jstring str) {
 extern "C" {
 JNIEXPORT void JNICALL
     Java_org_alohalytics_Statistics_logEvent__Ljava_lang_String_2(JNIEnv* env, jclass, jstring eventName) {
-  Stats::Instance().LogEvent(ToStdString(env, eventName));
+  LogEvent(ToStdString(env, eventName));
 }
 
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_logEvent__Ljava_lang_String_2Ljava_lang_String_2(
     JNIEnv* env, jclass, jstring eventName, jstring eventValue) {
-  Stats::Instance().LogEvent(ToStdString(env, eventName), ToStdString(env, eventValue));
+  LogEvent(ToStdString(env, eventName), ToStdString(env, eventValue));
 }
 
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_logEvent__Ljava_lang_String_2_3Ljava_lang_String_2(
@@ -89,7 +109,7 @@ JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_logEvent__Ljava_lang_Stri
     }
     if (jni_string) env->DeleteLocalRef(jni_string);
   }
-  alohalytics::Stats::Instance().LogEvent(ToStdString(env, eventName), map);
+  LogEvent(ToStdString(env, eventName), map);
 }
 
 #define CLEAR_AND_RETURN_FALSE_ON_EXCEPTION \
@@ -164,7 +184,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   }
 
   // TODO(AlexZ): May need to refactor if this method will be agressively used from the same thread.
-  const auto detachThreadOnScopeExit = bricks::MakeScopeGuard([] { ::GetJVM()->DetachCurrentThread(); });
+  const auto detachThreadOnScopeExit = MakeScopeGuard([] { ::GetJVM()->DetachCurrentThread(); });
 
   // Convenience lambda.
   const auto deleteLocalRef = [&env](jobject o) { env->DeleteLocalRef(o); };
@@ -234,6 +254,11 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     env->SetObjectField(httpParamsObject.get(), outputFilePathField, jniOutputFilePath.get());
     CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
   }
+
+  const static jfieldID debugModeField =
+      env->GetFieldID(g_httpParamsClass, "debugMode", "Z");
+  env->SetBooleanField(httpParamsObject.get(), debugModeField, debug_mode_);
+  CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
 
   // DO ALL MAGIC!
   // Current Java implementation simply reuses input params instance, so we don't need to
