@@ -191,7 +191,7 @@ class Stats final {
               count, "files with total size of", status.finalized.total_size, "bytes are waiting for upload.");
         }
       }
-      const size_t memory_events_count = memory_storage_.empty();
+      const size_t memory_events_count = memory_storage_.size();
       if (memory_events_count) {
         DebugLog("Save", memory_events_count, "in-memory events into the file storage.");
         for (const auto& msg : memory_storage_) {
