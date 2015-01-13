@@ -18,7 +18,7 @@ android {
       moduleName "alohalytics"
       stl "c++_static"
       cFlags "-frtti -fexceptions"
-      ldLibs "log", "atomic"
+      ldLibs "log", "atomic", "z"
     }
   }
 }
