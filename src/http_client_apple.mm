@@ -38,7 +38,7 @@ SOFTWARE.
 
 #include "http_client.h"
 #include "logger.h"
-
+#include "gzip_wrapper.h"
 
 #define TIMEOUT_IN_SECONDS 30.0
 
@@ -57,7 +57,10 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       [request setValue:[NSString stringWithUTF8String:user_agent_.c_str()] forHTTPHeaderField:@"User-Agent"];
 
     if (!post_body_.empty()) {
-      request.HTTPBody = [NSData dataWithBytes:post_body_.data() length:post_body_.size()];
+      // TODO(AlexZ): Compress data in file queue impl, before calling this method, to use less disk space in offline.
+      const std::string compressed = Gzip(post_body_);
+      request.HTTPBody = [NSData dataWithBytes:compressed.data() length:compressed.size()];
+      [request setValue:@"gzip" forHTTPHeaderField:@"Content-Encoding"];
       request.HTTPMethod = @"POST";
     } else if (!post_file_.empty()) {
       NSError * err = nil;
