@@ -24,7 +24,6 @@
 
 package org.alohalytics;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 
@@ -49,13 +48,13 @@ public class Statistics {
     return sDebugModeEnabled;
   }
 
-  public static void setup(final String serverUrl, final Activity activity) {
-    final String storagePath = activity.getFilesDir().getAbsolutePath() + "/Alohalytics/";
+  public static void setup(final String serverUrl, final Context context) {
+    final String storagePath = context.getFilesDir().getAbsolutePath() + "/Alohalytics/";
     // Native code expects valid existing writable dir.
     (new File(storagePath)).mkdirs();
-    setupCPP(HttpTransport.class, serverUrl, storagePath, getInstallationId(activity));
+    setupCPP(HttpTransport.class, serverUrl, storagePath, getInstallationId(context));
 
-    SystemInfo.getDeviceInfoAsync(activity);
+    SystemInfo.getDeviceInfoAsync(context);
   }
 
   native static public void logEvent(String eventName);
