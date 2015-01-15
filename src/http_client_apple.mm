@@ -94,9 +94,6 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
         }
       }
       if (error_code_ != 200) {
-        if (debug_mode_) {
-          ALOG("HTTP Error", error_code_);
-        }
         return false;
       }
       return true;
