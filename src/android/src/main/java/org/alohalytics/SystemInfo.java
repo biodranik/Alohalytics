@@ -85,7 +85,7 @@ public class SystemInfo {
 
     public void put(String key, String value) {
       if (key != null && value != null) {
-        mPairs.put(key, value == null ? "" : value);
+        mPairs.put(key, value);
       }
     }
 
@@ -185,11 +185,12 @@ public class SystemInfo {
       kvs.put(Settings.Global.BLUETOOTH_ON, Settings.Global.getString(cr, Settings.Global.BLUETOOTH_ON)); // 1 or 0
       kvs.put(Settings.Global.DATA_ROAMING, Settings.Global.getString(cr, Settings.Global.DATA_ROAMING));  // 1 or 0
       kvs.put(Settings.Global.HTTP_PROXY, Settings.Global.getString(cr, Settings.Global.HTTP_PROXY));  // host:port
+    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+      kvs.put(Settings.System.AUTO_TIME_ZONE, Settings.System.getString(cr, Settings.System.AUTO_TIME_ZONE));
     } else {
       kvs.put(Settings.System.AIRPLANE_MODE_ON, Settings.System.getString(cr, Settings.System.AIRPLANE_MODE_ON));
       kvs.put(Settings.System.ALWAYS_FINISH_ACTIVITIES, Settings.System.getString(cr, Settings.System.ALWAYS_FINISH_ACTIVITIES));
       kvs.put(Settings.System.AUTO_TIME, Settings.System.getString(cr, Settings.System.AUTO_TIME));
-      kvs.put(Settings.System.AUTO_TIME_ZONE, Settings.System.getString(cr, Settings.System.AUTO_TIME_ZONE));
       kvs.put(Settings.Secure.BLUETOOTH_ON, Settings.Secure.getString(cr, Settings.Secure.BLUETOOTH_ON));
       kvs.put(Settings.Secure.DATA_ROAMING, Settings.Secure.getString(cr, Settings.Secure.DATA_ROAMING));
       kvs.put(Settings.Secure.HTTP_PROXY, Settings.Secure.getString(cr, Settings.Secure.HTTP_PROXY));
