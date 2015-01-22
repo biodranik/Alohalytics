@@ -278,13 +278,15 @@ class Stats final {
   }
 };
 
-void LogEvent(std::string const& event_name) {
+inline void LogEvent(std::string const& event_name) {
   Stats::Instance().LogEvent(event_name);
 }
-void LogEvent(std::string const& event_name, std::string const& event_value) {
+
+inline void LogEvent(std::string const& event_name, std::string const& event_value) {
   Stats::Instance().LogEvent(event_name, event_value);
 }
-void LogEvent(std::string const& event_name, TStringMap const& value_pairs) {
+
+inline void LogEvent(std::string const& event_name, TStringMap const& value_pairs) {
   Stats::Instance().LogEvent(event_name, value_pairs);
 }
 
