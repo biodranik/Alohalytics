@@ -104,9 +104,4 @@ public class Statistics {
                                       final String installationId);
 
   private native static void debugCPP(boolean enable);
-
-  static {
-    System.loadLibrary("alohalytics");
-  }
-
 }

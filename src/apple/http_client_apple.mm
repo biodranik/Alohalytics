@@ -36,9 +36,9 @@ SOFTWARE.
 #import <Foundation/NSError.h>
 #import <Foundation/NSFileManager.h>
 
-#include "http_client.h"
-#include "logger.h"
-#include "gzip_wrapper.h"
+#include "../http_client.h"
+#include "../logger.h"
+#include "../gzip_wrapper.h"
 
 #define TIMEOUT_IN_SECONDS 30.0
 

@@ -9,11 +9,11 @@ SRC=$(wildcard *.cc)
 BIN=$(SRC:%.cc=build/%)
 OS := $(shell uname)
 
-MORE_SOURCES = ../../src/alohalytics.cc
+MORE_SOURCES = ../../src/cpp/alohalytics.cc
 ifeq ($(OS),Darwin)
   CPPFLAGS += -x objective-c++ -fobjc-arc
   LDFLAGS += -framework Foundation
-  MORE_SOURCES += ../../src/http_client_apple.mm
+  MORE_SOURCES += ../../src/apple/http_client_apple.mm
 endif
 
 run: all
@@ -23,7 +23,7 @@ run: all
 all: build ${BIN}
 
 indent:
-	(find . ../../src -name "*.cc" ; find . ../../src -name "*.h") | xargs clang-format-3.5 -i
+	(find . ../../src/cpp ../../src/posix -name "*.cc" ; find ../../src -name "*.h" -maxdepth 0) | xargs clang-format-3.5 -i
 
 clean:
 	rm -rf build

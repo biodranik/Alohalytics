@@ -26,9 +26,9 @@ SOFTWARE.
 #include <string>
 #include <memory>
 
-#include "../../../../alohalytics.h"
-#include "../../../../http_client.h"
-#include "../../../../logger.h"
+#include "../../alohalytics.h"
+#include "../../http_client.h"
+#include "../../logger.h"
 
 using std::string;
 using std::unique_ptr;

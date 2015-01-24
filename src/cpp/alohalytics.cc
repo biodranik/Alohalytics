@@ -27,14 +27,14 @@
 #define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
 #endif
 
-#include "alohalytics.h"
-#include "http_client.h"
-#include "logger.h"
-#include "event_base.h"
+#include "../alohalytics.h"
+#include "../http_client.h"
+#include "../logger.h"
+#include "../event_base.h"
 
-#include "cereal/include/archives/binary.hpp"
-#include "cereal/include/types/string.hpp"
-#include "cereal/include/types/map.hpp"
+#include "../cereal/include/archives/binary.hpp"
+#include "../cereal/include/types/string.hpp"
+#include "../cereal/include/types/map.hpp"
 
 #define LOG_IF_DEBUG(...) if (debug_mode_) { alohalytics::Logger().Log(__VA_ARGS__); }
 
