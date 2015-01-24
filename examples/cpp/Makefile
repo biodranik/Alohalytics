@@ -9,7 +9,7 @@ SRC=$(wildcard *.cc)
 BIN=$(SRC:%.cc=build/%)
 OS := $(shell uname)
 
-MORE_SOURCES =
+MORE_SOURCES = ../../src/alohalytics.cc
 ifeq ($(OS),Darwin)
   CPPFLAGS += -x objective-c++ -fobjc-arc
   LDFLAGS += -framework Foundation
