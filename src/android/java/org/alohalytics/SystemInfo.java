@@ -24,7 +24,6 @@
 
 package org.alohalytics;
 
-import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -34,6 +33,7 @@ import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.WindowManager;
 
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 
@@ -54,11 +54,11 @@ public class SystemInfo {
   private static final String PREF_LAST_TIME_DEVICE_INFO_COLLECTED = "ALOHALYTICS_LAST_TIME_DEVICE_INFO_COLLECTED";
   private static final long MONTH_MILLISECONDS = 1000L * 60L * 60L * 24L * 30L;
 
-  public static void getDeviceInfoAsync(final Activity activity) {
+  public static void getDeviceInfoAsync(final Context context) {
 
     // It's a waste of battery and traffic to collect all data below on each app start as it rarely changes.
     // So it would be wise to do it not often than once a month.
-    final SharedPreferences sharedPrefs = activity.getSharedPreferences(
+    final SharedPreferences sharedPrefs = context.getSharedPreferences(
         Statistics.PREF_FILE, Context.MODE_PRIVATE);
     final long now = System.currentTimeMillis();
     final long lastTimeCollected = sharedPrefs.getLong(PREF_LAST_TIME_DEVICE_INFO_COLLECTED, now);
@@ -72,8 +72,8 @@ public class SystemInfo {
       new Thread(new Runnable() {
         @Override
         public void run() {
-          collectIds(activity);
-          collectDeviceDetails(activity);
+          collectIds(context);
+          collectDeviceDetails(context);
         }
       }).start();
     }
@@ -85,7 +85,7 @@ public class SystemInfo {
 
     public void put(String key, String value) {
       if (key != null && value != null) {
-        mPairs.put(key, value == null ? "" : value);
+        mPairs.put(key, value);
       }
     }
 
@@ -108,19 +108,19 @@ public class SystemInfo {
     }
   }
 
-  private static void collectIds(final Activity activity) {
+  private static void collectIds(final Context context) {
 
     final KeyValueWrapper ids = new KeyValueWrapper();
     // Retrieve GoogleAdvertisingId.
     // See sample code at http://developer.android.com/google/play-services/id.html
     try {
-      ids.put("google_advertising_id", AdvertisingIdClient.getAdvertisingIdInfo(activity.getApplicationContext()).getId());
+      ids.put("google_advertising_id", AdvertisingIdClient.getAdvertisingIdInfo(context.getApplicationContext()).getId());
     } catch (Exception ex) {
       handleException(ex);
     }
 
     try {
-      final String android_id = Settings.Secure.getString(activity.getContentResolver(), Settings.Secure.ANDROID_ID);
+      final String android_id = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
       // This is a known bug workaround - https://code.google.com/p/android/issues/detail?id=10603
       if (!android_id.equals("9774d56d682e549c")) {
         ids.put("android_id", android_id);
@@ -131,7 +131,7 @@ public class SystemInfo {
 
     try {
       // This code works only if the app has READ_PHONE_STATE permission.
-      final TelephonyManager tm = (TelephonyManager) activity.getBaseContext().getSystemService(activity.TELEPHONY_SERVICE);
+      final TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
       ids.put("device_id", tm.getDeviceId());
       ids.put("sim_serial_number", tm.getSimSerialNumber());
     } catch (Exception ex) {
@@ -141,21 +141,24 @@ public class SystemInfo {
     Statistics.logEvent("$AndroidIds", ids.mPairs);
   }
 
-  private static void collectDeviceDetails(android.app.Activity activity) {
+  private static void collectDeviceDetails(Context context) {
 
     final KeyValueWrapper kvs = new KeyValueWrapper();
 
-    final DisplayMetrics metrics = new DisplayMetrics();
-    activity.getWindowManager().getDefaultDisplay().getMetrics(metrics);
-    kvs.put("display_density", metrics.density);
-    kvs.put("display_density_dpi", metrics.densityDpi);
-    kvs.put("display_scaled_density", metrics.scaledDensity);
-    kvs.put("display_width_pixels", metrics.widthPixels);
-    kvs.put("display_height_pixels", metrics.heightPixels);
-    kvs.put("display_xdpi", metrics.xdpi);
-    kvs.put("display_ydpi", metrics.ydpi);
+    final WindowManager wm = (WindowManager)context.getSystemService(Context.WINDOW_SERVICE);
+    if (wm != null) {
+      final DisplayMetrics metrics = new DisplayMetrics();
+      wm.getDefaultDisplay().getMetrics(metrics);
+      kvs.put("display_density", metrics.density);
+      kvs.put("display_density_dpi", metrics.densityDpi);
+      kvs.put("display_scaled_density", metrics.scaledDensity);
+      kvs.put("display_width_pixels", metrics.widthPixels);
+      kvs.put("display_height_pixels", metrics.heightPixels);
+      kvs.put("display_xdpi", metrics.xdpi);
+      kvs.put("display_ydpi", metrics.ydpi);
+    }
 
-    final Configuration config = activity.getResources().getConfiguration();
+    final Configuration config = context.getResources().getConfiguration();
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
       kvs.put("dpi", config.densityDpi); // int value
     }
@@ -173,7 +176,7 @@ public class SystemInfo {
       kvs.put("screen_height_dp", config.screenHeightDp);
     }
 
-    final ContentResolver cr = activity.getContentResolver();
+    final ContentResolver cr = context.getContentResolver();
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
       kvs.put(Settings.Global.AIRPLANE_MODE_ON, Settings.Global.getString(cr, Settings.Global.AIRPLANE_MODE_ON)); // 1 or 0
       kvs.put(Settings.Global.ALWAYS_FINISH_ACTIVITIES, Settings.Global.getString(cr, Settings.Global.ALWAYS_FINISH_ACTIVITIES)); // 1 or 0
@@ -182,11 +185,12 @@ public class SystemInfo {
       kvs.put(Settings.Global.BLUETOOTH_ON, Settings.Global.getString(cr, Settings.Global.BLUETOOTH_ON)); // 1 or 0
       kvs.put(Settings.Global.DATA_ROAMING, Settings.Global.getString(cr, Settings.Global.DATA_ROAMING));  // 1 or 0
       kvs.put(Settings.Global.HTTP_PROXY, Settings.Global.getString(cr, Settings.Global.HTTP_PROXY));  // host:port
+    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+      kvs.put(Settings.System.AUTO_TIME_ZONE, Settings.System.getString(cr, Settings.System.AUTO_TIME_ZONE));
     } else {
       kvs.put(Settings.System.AIRPLANE_MODE_ON, Settings.System.getString(cr, Settings.System.AIRPLANE_MODE_ON));
       kvs.put(Settings.System.ALWAYS_FINISH_ACTIVITIES, Settings.System.getString(cr, Settings.System.ALWAYS_FINISH_ACTIVITIES));
       kvs.put(Settings.System.AUTO_TIME, Settings.System.getString(cr, Settings.System.AUTO_TIME));
-      kvs.put(Settings.System.AUTO_TIME_ZONE, Settings.System.getString(cr, Settings.System.AUTO_TIME_ZONE));
       kvs.put(Settings.Secure.BLUETOOTH_ON, Settings.Secure.getString(cr, Settings.Secure.BLUETOOTH_ON));
       kvs.put(Settings.Secure.DATA_ROAMING, Settings.Secure.getString(cr, Settings.Secure.DATA_ROAMING));
       kvs.put(Settings.Secure.HTTP_PROXY, Settings.Secure.getString(cr, Settings.Secure.HTTP_PROXY));

@@ -37,6 +37,11 @@ import org.alohalytics.Statistics;
 import java.util.HashMap;
 
 public class MainActivity extends Activity {
+
+  static {
+    System.loadLibrary("alohalytics");
+  }
+
   private static final String STATISTICS_SERVER_URL = "http://localhost:8080/";
 
   @Override

@@ -36,9 +36,9 @@ SOFTWARE.
 #import <Foundation/NSError.h>
 #import <Foundation/NSFileManager.h>
 
-#include "http_client.h"
-#include "logger.h"
-#include "gzip_wrapper.h"
+#include "../http_client.h"
+#include "../logger.h"
+#include "../gzip_wrapper.h"
 
 #define TIMEOUT_IN_SECONDS 30.0
 
@@ -94,9 +94,6 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
         }
       }
       if (error_code_ != 200) {
-        if (debug_mode_) {
-          ALOG("HTTP Error", error_code_);
-        }
         return false;
       }
       return true;
