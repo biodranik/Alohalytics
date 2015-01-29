@@ -26,6 +26,7 @@ package org.alohalytics;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Pair;
 
 import java.io.File;
 import java.util.Map;
@@ -48,13 +49,51 @@ public class Statistics {
     return sDebugModeEnabled;
   }
 
+  // Use this setup if you are releasing a new application and/or don't bother about already existing installations
+  // prior to Alohalytics integration. Alohalytics will check new unique installations by internal logic only if use this function.
   public static void setup(final String serverUrl, final Context context) {
+    setup(serverUrl, context, true);
+  }
+
+  // Set firstAppLaunch to false if you definitely know that your app was previously installed
+  // (before integrating with Alohalytics) to correctly calculate new unique installations.
+  public static void setup(final String serverUrl, final Context context, boolean firstAppLaunch) {
     final String storagePath = context.getFilesDir().getAbsolutePath() + "/Alohalytics/";
     // Native code expects valid existing writable dir.
     (new File(storagePath)).mkdirs();
-    setupCPP(HttpTransport.class, serverUrl, storagePath, getInstallationId(context));
+    final Pair<String, Boolean> id = getInstallationId(context);
+    setupCPP(HttpTransport.class, serverUrl, storagePath, id.first);
 
-    SystemInfo.getDeviceInfoAsync(context);
+    // Calculate some basic statistics about installations/updates/launches.
+    String versionName = "";
+    long installTime = 0, updateTime = 0;
+    try {
+      final android.content.pm.PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
+      if (packageInfo != null) {
+        versionName = packageInfo.versionName;
+        installTime = packageInfo.firstInstallTime;
+        updateTime = packageInfo.lastUpdateTime;
+      }
+    } catch (android.content.pm.PackageManager.NameNotFoundException ex) {
+      ex.printStackTrace();
+    }
+    final SharedPreferences prefs = context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
+    // Is it a real new install?
+    if (firstAppLaunch && id.second && installTime == updateTime) {
+      logEvent("$install", new String[]{"version", versionName,
+          "secondsBeforeLaunch", String.valueOf((System.currentTimeMillis() - installTime) / 1000)});
+      // Collect device info once on start.
+      SystemInfo.getDeviceInfoAsync(context);
+      prefs.edit().putLong(PREF_APP_UPDATE_TIME, updateTime).apply();
+    } else if (updateTime != installTime && updateTime != prefs.getLong(PREF_APP_UPDATE_TIME, 0)) {
+      logEvent("$update", new String[]{"version", versionName,
+          "userAgeInSeconds", String.valueOf((System.currentTimeMillis() - installTime) / 1000)});
+      // Also collect device info on update.
+      SystemInfo.getDeviceInfoAsync(context);
+      prefs.edit().putLong(PREF_APP_UPDATE_TIME, updateTime).apply();
+    } else {
+      logEvent("$launch");
+    }
   }
 
   native static public void logEvent(String eventName);
@@ -80,8 +119,12 @@ public class Statistics {
   // Shared with other statistics modules.
   public static final String PREF_FILE = "ALOHALYTICS";
   private static final String PREF_UNIQUE_ID = "UNIQUE_ID";
+  //private static final String PREF_APP_VERSION = "APP_VERSION";
+  private static final String PREF_APP_UPDATE_TIME = "APP_UPDATE_TIME";
 
-  public synchronized static String getInstallationId(final Context context) {
+  // Returns id and true if id was generated or false if id was read from preferences.
+  // Please note, that only the very first call to getInstallationId can tell the truth.
+  public synchronized static Pair<String, Boolean> getInstallationId(final Context context) {
     if (uniqueID == null) {
       final SharedPreferences sharedPrefs = context.getSharedPreferences(
           PREF_FILE, Context.MODE_PRIVATE);
@@ -92,9 +135,10 @@ public class Statistics {
         final SharedPreferences.Editor editor = sharedPrefs.edit();
         editor.putString(PREF_UNIQUE_ID, uniqueID);
         editor.apply();
+        return Pair.create(uniqueID, true);
       }
     }
-    return uniqueID;
+    return Pair.create(uniqueID, false);
   }
 
   // Initialize internal C++ statistics engine.
