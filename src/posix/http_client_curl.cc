@@ -26,10 +26,11 @@
 
 #include <stdio.h>  // popen
 #include <fstream>
+#include <iostream> // std::cerr
 
 // Used as a test stub for basic HTTP client implementation.
 
-namespace aloha {
+namespace alohalytics {
 
 std::string RunCurl(const std::string& cmd) {
   FILE* pipe = ::popen(cmd.c_str(), "r");
