@@ -122,7 +122,7 @@ public class SystemInfo {
       handleException(ex);
     }
 
-    Statistics.logEvent("$AndroidIds", ids.mPairs);
+    Statistics.logEvent("$androidIds", ids.mPairs);
   }
 
   private static void collectDeviceDetails(Context context) {
@@ -224,7 +224,7 @@ public class SystemInfo {
     kvs.put("build_type", Build.TYPE);
     kvs.put("build_user", Build.USER);
 
-    Statistics.logEvent("$AndroidDeviceInfo", kvs.mPairs);
+    Statistics.logEvent("$androidDeviceInfo", kvs.mPairs);
   }
 
 }

@@ -38,7 +38,7 @@
 // Pretty-printing for std::pair.
 template <typename T, typename U>
 std::ostream& operator<<(std::ostream& out, const std::pair<T, U>& p) {
-  out << "[" << p.first << "=" << p.second << "]";
+  out << p.first << "=" << p.second;
   return out;
 }
 
