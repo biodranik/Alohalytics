@@ -89,6 +89,7 @@ public class MainActivity extends Activity {
     try {
       arr[arr.length - 1] = getPackageManager().getPackageInfo(packageName, 0).versionName;
     } catch (PackageManager.NameNotFoundException ex) {
+      ex.printStackTrace();
     }
     // Event with a key=value pairs but passed as an array.
     Statistics.logEvent("app", arr);
