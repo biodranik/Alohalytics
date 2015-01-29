@@ -26,7 +26,6 @@ package org.alohalytics;
 
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Build;
 import android.provider.Settings;
@@ -51,32 +50,17 @@ public class SystemInfo {
     }
   }
 
-  private static final String PREF_LAST_TIME_DEVICE_INFO_COLLECTED = "ALOHALYTICS_LAST_TIME_DEVICE_INFO_COLLECTED";
-  private static final long MONTH_MILLISECONDS = 1000L * 60L * 60L * 24L * 30L;
-
   public static void getDeviceInfoAsync(final Context context) {
-
-    // It's a waste of battery and traffic to collect all data below on each app start as it rarely changes.
-    // So it would be wise to do it not often than once a month.
-    final SharedPreferences sharedPrefs = context.getSharedPreferences(
-        Statistics.PREF_FILE, Context.MODE_PRIVATE);
-    final long now = System.currentTimeMillis();
-    final long lastTimeCollected = sharedPrefs.getLong(PREF_LAST_TIME_DEVICE_INFO_COLLECTED, now);
-    if (now - lastTimeCollected > MONTH_MILLISECONDS) {
-      final SharedPreferences.Editor editor = sharedPrefs.edit();
-      editor.putLong(PREF_LAST_TIME_DEVICE_INFO_COLLECTED, now);
-      editor.apply();
-      // Collect all information on a separate thread, because:
-      // - Google Advertising ID should be requested in a separate thread.
-      // - Do not block UI thread while querying many properties.
-      new Thread(new Runnable() {
-        @Override
-        public void run() {
-          collectIds(context);
-          collectDeviceDetails(context);
-        }
-      }).start();
-    }
+    // Collect all information on a separate thread, because:
+    // - Google Advertising ID should be requested in a separate thread.
+    // - Do not block UI thread while querying many properties.
+    new Thread(new Runnable() {
+      @Override
+      public void run() {
+        collectIds(context);
+        collectDeviceDetails(context);
+      }
+    }).start();
   }
 
   // Used for convenient null-checks.
