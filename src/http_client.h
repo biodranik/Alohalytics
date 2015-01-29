@@ -101,7 +101,7 @@ class HTTPClientPlatformWrapper {
   }
 
   // Synchronous (blocking) call, should be implemented for each platform
-  // @returns true only if server answered with HTTP 200 OK
+  // @returns true if connection was made and server returned something (200, 404, etc.).
   // @note Implementations should transparently support all needed HTTP redirects
   bool RunHTTPRequest();
 

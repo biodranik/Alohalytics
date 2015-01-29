@@ -93,9 +93,6 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
           [url_data writeToFile:[NSString stringWithUTF8String:received_file_.c_str()] atomically:YES];
         }
       }
-      if (error_code_ != 200) {
-        return false;
-      }
       return true;
     }
     // Request has failed if we are here.
