@@ -52,6 +52,8 @@ public class ConnectivityChangedReceiver extends BroadcastReceiver {
   }
 
   public void onWiFiConnected() {
+    // TODO(AlexZ): Make it optional.
+    org.alohalytics.Statistics.logEvent("$onWiFi");
     org.alohalytics.Statistics.forceUpload();
   }
 }
