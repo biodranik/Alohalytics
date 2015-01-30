@@ -55,14 +55,7 @@ bool Stats::UploadBuffer(const std::string& url, std::string&& buffer, bool debu
   request.set_post_body(std::move(buffer), "application/alohalytics-binary-blob");
 
   try {
-    if (request.RunHTTPRequest()) {
-      if (debug_mode) {
-        ALOG(buffer.size(), "bytes were successfully uploaded");
-      }
-      return true;
-    } else if (debug_mode) {
-      ALOG("HTTP error", request.error_code(), "while uploading.");
-    }
+    return request.RunHTTPRequest() && 200 == request.error_code();
   } catch (const std::exception& ex) {
     if (debug_mode) {
       ALOG("Exception while trying to upload file", ex.what());

@@ -53,7 +53,7 @@ public class HttpTransport {
     try {
       connection = (HttpURLConnection) new URL(p.url).openConnection(); // NullPointerException, MalformedUrlException, IOException
       // TODO(AlexZ): Customize redirects following in the future implementation for safer transfers.
-      connection.setFollowRedirects(true);
+      connection.setInstanceFollowRedirects(true);
       connection.setConnectTimeout(TIMEOUT_IN_MILLISECONDS);
       connection.setReadTimeout(TIMEOUT_IN_MILLISECONDS);
       connection.setUseCaches(false);

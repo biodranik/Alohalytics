@@ -26,10 +26,11 @@
 
 #include <stdio.h>  // popen
 #include <fstream>
+#include <iostream> // std::cerr
 
 // Used as a test stub for basic HTTP client implementation.
 
-namespace aloha {
+namespace alohalytics {
 
 std::string RunCurl(const std::string& cmd) {
   FILE* pipe = ::popen(cmd.c_str(), "r");
@@ -69,6 +70,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     ::remove(post_file_.c_str());
   }
 
+  // TODO(AlexZ): Detect if we did not make any connection and return false.
   // Extract http status code from the last response line.
   error_code_ = std::stoi(server_response_.substr(server_response_.size() - 3));
   server_response_.resize(server_response_.size() - 4);
@@ -77,7 +79,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     std::ofstream(received_file_) << server_response_;
   }
 
-  return error_code_ == 200;
+  return true;
 }
 
 }  // namespace aloha
