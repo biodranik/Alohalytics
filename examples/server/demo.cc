@@ -26,9 +26,9 @@
 
 // This define is needed to preserve client's timestamps in events.
 #define ALOHALYTICS_SERVER
-#include "../event_base.h"
+#include "../../src/event_base.h"
 
-#include "../Bricks/rtti/dispatcher.h"
+#include "../../src/Bricks/rtti/dispatcher.h"
 
 #include <iostream>
 #include <iomanip>
