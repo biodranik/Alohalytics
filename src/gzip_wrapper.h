@@ -1,7 +1,7 @@
 /*******************************************************************************
 The MIT License (MIT)
 
-Copyright (c) 2014 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
+Copyright (c) 2015 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +40,7 @@ inline std::string Gzip(const std::string& data_to_compress) {
     char buffer[std::min(data_to_compress.size(), kGzipBufferSize)];
     do {
       z.next_out = reinterpret_cast<Bytef*>(buffer);
-      z.avail_out = sizeof(buffer)/sizeof(buffer[0]);
+      z.avail_out = sizeof(buffer) / sizeof(buffer[0]);
       res = ::deflate(&z, Z_FINISH);
       if (compressed.size() < z.total_out) {
         compressed.append(buffer, z.total_out - compressed.size());
@@ -55,4 +55,4 @@ inline std::string Gzip(const std::string& data_to_compress) {
   return std::string();
 }
 
-} // namespace alohalytics
+}  // namespace alohalytics

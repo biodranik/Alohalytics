@@ -1,7 +1,7 @@
 /*******************************************************************************
  The MIT License (MIT)
 
- Copyright (c) 2014 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
+ Copyright (c) 2015 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -91,9 +91,7 @@ class Stats final {
   void Upload();
 };
 
-inline void LogEvent(std::string const& event_name) {
-  Stats::Instance().LogEvent(event_name);
-}
+inline void LogEvent(std::string const& event_name) { Stats::Instance().LogEvent(event_name); }
 
 inline void LogEvent(std::string const& event_name, std::string const& event_value) {
   Stats::Instance().LogEvent(event_name, event_value);

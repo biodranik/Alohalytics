@@ -1,7 +1,7 @@
 /*******************************************************************************
  The MIT License (MIT)
 
- Copyright (c) 2014 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
+ Copyright (c) 2015 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,10 @@
 #include "../cereal/include/types/string.hpp"
 #include "../cereal/include/types/map.hpp"
 
-#define LOG_IF_DEBUG(...) if (debug_mode_) { alohalytics::Logger().Log(__VA_ARGS__); }
+#define LOG_IF_DEBUG(...)                   \
+  if (debug_mode_) {                        \
+    alohalytics::Logger().Log(__VA_ARGS__); \
+  }
 
 namespace alohalytics {
 
@@ -46,7 +49,7 @@ struct NoOpDeleter {
   void operator()(T*) {}
 };
 
-  // Use alohalytics::Stats::Instance() to access statistics engine.
+// Use alohalytics::Stats::Instance() to access statistics engine.
 Stats::Stats() : message_queue_(*this) {}
 
 bool Stats::UploadBuffer(const std::string& url, std::string&& buffer, bool debug_mode) {
@@ -145,8 +148,8 @@ Stats& Stats::SetStoragePath(const std::string& full_path_to_storage_with_a_slas
       LOG_IF_DEBUG("Active file size:", status.appended_file_size);
       const size_t count = status.finalized.queue.size();
       if (count) {
-        LOG_IF_DEBUG(
-            count, "files with total size of", status.finalized.total_size, "bytes are waiting for upload.");
+        LOG_IF_DEBUG(count, "files with total size of", status.finalized.total_size,
+                     "bytes are waiting for upload.");
       }
     }
     const size_t memory_events_count = memory_storage_.size();
