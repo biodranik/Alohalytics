@@ -26,6 +26,8 @@ package org.alohalytics.demoapp;
 
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -93,6 +95,17 @@ public class MainActivity extends Activity {
     }
     // Event with a key=value pairs but passed as an array.
     Statistics.logEvent("app", arr);
+
+    // Event with location.
+    Location l = new Location(LocationManager.NETWORK_PROVIDER);
+    l.setTime(1423169916587L);
+    l.setAccuracy(0.3f);
+    l.setLatitude(-84.123456789);
+    l.setLongitude(177.123456789);
+    l.setAltitude(-11);
+    l.setSpeed(27.123456789f);
+    l.setBearing(0.123456789f);
+    Statistics.logEvent("location", new String[]{"key", "value"}, l);
 
     // Example event to track user activity.
     Statistics.logEvent("$onResume", getLocalClassName());

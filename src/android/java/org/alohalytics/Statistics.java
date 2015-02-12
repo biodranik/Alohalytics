@@ -26,6 +26,8 @@ package org.alohalytics;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.location.Location;
+import android.location.LocationManager;
 import android.util.Pair;
 
 import java.io.File;
@@ -96,14 +98,31 @@ public class Statistics {
     }
   }
 
-  native static public void logEvent(String eventName);
-
-  native static public void logEvent(String eventName, String eventValue);
-
+  public static native void logEvent(String eventName);
+  public static native void logEvent(String eventName, String eventValue);
   // eventDictionary is a key,value,key,value array.
-  native static public void logEvent(String eventName, String[] eventDictionary);
-
-  static public void logEvent(String eventName, Map<String, String> eventDictionary) {
+  public static native void logEvent(String eventName, String[] eventDictionary);
+  private static native void logEvent(String eventName, String[] eventDictionary, boolean hasLatLon,
+                                     long timestamp, double lat, double lon, float accuracy,
+                                     boolean hasAltitude, double altitude, boolean hasBearing,
+                                     float bearing, boolean hasSpeed, float speed, byte source);
+  public static void logEvent(String eventName, String[] eventDictionary, Location l) {
+    if (l == null) {
+      logEvent(eventName, eventDictionary);
+    } else {
+      // See alohalytics::Location::Source in the location.h for enum constants.
+      byte source = 0;
+      switch (l.getProvider()) {
+        case LocationManager.GPS_PROVIDER: source = 1; break;
+        case LocationManager.NETWORK_PROVIDER: source = 2; break;
+        case LocationManager.PASSIVE_PROVIDER: source = 3; break;
+      }
+      logEvent(eventName, eventDictionary, l.hasAccuracy(), l.getTime(), l.getLatitude(), l.getLongitude(),
+          l.getAccuracy(), l.hasAltitude(), l.getAltitude(), l.hasBearing(), l.getBearing(),
+          l.hasSpeed(), l.getSpeed(), source);
+    }
+  }
+  public static void logEvent(String eventName, Map<String, String> eventDictionary) {
     // For faster native processing pass array of strings instead of a map.
     final String[] array = new String[eventDictionary.size() * 2];
     int index = 0;

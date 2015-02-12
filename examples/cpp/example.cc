@@ -44,6 +44,7 @@ DEFINE_bool(debug, true, "Enables debug mode for statistics engine.");
 DEFINE_bool(upload, false, "If true, triggers event to forcebly upload all statistics to the server.");
 DEFINE_double(sleep, 1, "The number of seconds to sleep before terminating.");
 DEFINE_string(id, "0xDEADBABA", "Unique client id.");
+DEFINE_bool(location, true, "Simulates event with a location.");
 
 using namespace std;
 using alohalytics::Stats;
@@ -101,6 +102,12 @@ int main(int argc, char** argv) {
       // Simple event.
       stats.LogEvent(FLAGS_event);
     }
+  }
+
+  if (FLAGS_location) {
+    alohalytics::Location location;
+    location.SetLatLon(123456789L, -14.1234567, 133.1234567, 3.52);
+    stats.LogEvent("SimulatedLocationEvent", {{"somekey", "somevalue"}}, location);
   }
 
   if (FLAGS_upload) {

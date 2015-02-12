@@ -70,6 +70,14 @@ struct Processor {
     }
     std::cout << ']' << std::endl;
   }
+  void operator()(const AlohalyticsKeyPairsLocationEvent &event) {
+    PrintTime(event);
+    std::cout << ' ' << event.key << " [ ";
+    for (const auto &pair : event.pairs) {
+      std::cout << pair.first << '=' << pair.second << ' ';
+    }
+    std::cout << ']' << event.location.ToDebugString() << std::endl;
+  }
 };
 
 int main(int, char **) {
@@ -79,9 +87,9 @@ int main(int, char **) {
     while (std::cin.good()) {
       std::unique_ptr<AlohalyticsBaseEvent> ptr;
       ar(ptr);
-      bricks::rtti::RuntimeDispatcher<AlohalyticsBaseEvent, AlohalyticsKeyPairsEvent, AlohalyticsIdEvent,
-                                      AlohalyticsKeyValueEvent, AlohalyticsKeyEvent>::DispatchCall(*ptr,
-                                                                                                   processor);
+      bricks::rtti::RuntimeDispatcher<AlohalyticsBaseEvent, AlohalyticsKeyPairsLocationEvent,
+                                      AlohalyticsKeyPairsEvent, AlohalyticsIdEvent, AlohalyticsKeyValueEvent,
+                                      AlohalyticsKeyEvent>::DispatchCall(*ptr, processor);
     }
   } catch (const cereal::Exception &ex) {
   }

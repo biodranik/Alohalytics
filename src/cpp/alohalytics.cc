@@ -211,6 +211,17 @@ void Stats::LogEvent(std::string const& event_name, TStringMap const& value_pair
   message_queue_.PushMessage(std::move(sstream.str()));
 }
 
+void Stats::LogEvent(std::string const& event_name, TStringMap const& value_pairs, Location const& location) {
+  LOG_IF_DEBUG("LogEvent:", event_name, "=", value_pairs, location.ToDebugString());
+  AlohalyticsKeyPairsLocationEvent event;
+  event.key = event_name;
+  event.pairs = value_pairs;
+  event.location = location;
+  std::ostringstream sstream;
+  { cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event); }
+  message_queue_.PushMessage(std::move(sstream.str()));
+}
+
 // Forcedly tries to upload all stored data to the server.
 void Stats::Upload() {
   if (upload_url_.empty()) {
