@@ -53,7 +53,6 @@ class Logger {
   Logger(const char* file, int line) { out_ << file << ':' << line << ": "; }
 
   ~Logger() {
-//    out_ << std::endl;
 #if defined(__OBJC__)
     NSLog(@"Alohalytics: %s", out_.str().c_str());
 #elif defined(ANDROID)
@@ -65,7 +64,8 @@ class Logger {
 
   template <typename T, typename... ARGS>
   void Log(const T& arg1, const ARGS&... others) {
-    out_ << arg1 << ' ';
+    Log(arg1);
+    out_ << ' ';
     Log(others...);
   }
 
