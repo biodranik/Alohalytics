@@ -51,15 +51,7 @@ public class Statistics {
     return sDebugModeEnabled;
   }
 
-  // Use this setup if you are releasing a new application and/or don't bother about already existing installations
-  // prior to Alohalytics integration. Alohalytics will check new unique installations by internal logic only if use this function.
   public static void setup(final String serverUrl, final Context context) {
-    setup(serverUrl, context, true);
-  }
-
-  // Set firstAppLaunch to false if you definitely know that your app was previously installed
-  // (before integrating with Alohalytics) to correctly calculate new unique installations.
-  public static void setup(final String serverUrl, final Context context, boolean firstAppLaunch) {
     final String storagePath = context.getFilesDir().getAbsolutePath() + "/Alohalytics/";
     // Native code expects valid existing writable dir.
     (new File(storagePath)).mkdirs();
@@ -81,7 +73,7 @@ public class Statistics {
     }
     final SharedPreferences prefs = context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
     // Is it a real new install?
-    if (firstAppLaunch && id.second && installTime == updateTime) {
+    if (id.second && installTime == updateTime) {
       logEvent("$install", new String[]{"version", versionName,
           "secondsBeforeLaunch", String.valueOf((System.currentTimeMillis() - installTime) / 1000)});
       // Collect device info once on start.
