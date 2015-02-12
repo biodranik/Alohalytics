@@ -37,7 +37,14 @@
 struct Processor {
   void PrintTime(const AlohalyticsBaseEvent & event) {
     const time_t timestamp = static_cast<const time_t>(event.timestamp / 1000);
-    std::cout << std::put_time(std::localtime(&timestamp), "%e-%b-%Y %H:%M:%S");
+    // std::put_time is not implemented in gcc4.8 yet.
+    // std::cout << std::put_time(std::localtime(&timestamp), "%e-%b-%Y %H:%M:%S");
+    char buf[100];
+    if (::strftime(buf, 100, "%e-%b-%Y %H:%M:%S", ::localtime(&timestamp))) {
+      std::cout << buf;
+    } else {
+      std::cout << "INVALID_TIME";
+    }
   }
   void operator()(const AlohalyticsBaseEvent & event) {
     PrintTime(event);
