@@ -74,8 +74,9 @@ public class Statistics {
     final SharedPreferences prefs = context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
     // Is it a real new install?
     if (id.second && installTime == updateTime) {
+      final LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
       logEvent("$install", new String[]{"version", versionName,
-          "secondsBeforeLaunch", String.valueOf((System.currentTimeMillis() - installTime) / 1000)});
+          "secondsBeforeLaunch", String.valueOf((System.currentTimeMillis() - installTime) / 1000)}, lm == null ? null : lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER));
       // Collect device info once on start.
       SystemInfo.getDeviceInfoAsync(context);
       prefs.edit().putLong(PREF_APP_UPDATE_TIME, updateTime).apply();
