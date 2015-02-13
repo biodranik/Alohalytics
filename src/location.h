@@ -33,6 +33,9 @@
 #include <string>
 #include <iomanip>
 #include <sstream>  // For ToDebugString()
+#include <exception>
+
+#include <iostream>
 
 namespace alohalytics {
 
@@ -47,6 +50,8 @@ class Location {
   } valid_values_mask_ = NOT_INITIALIZED;
 
  public:
+  class LocationDecodeException : public std::exception {};
+
   // Milliseconds from January 1, 1970.
   uint64_t timestamp_ms_;
   double latitude_deg_;
@@ -56,43 +61,45 @@ class Location {
   double vertical_accuracy_m_;
   // Positive degrees from the true North.
   double bearing_deg_;
-  // Metres per second.
+  // Meters per second.
   double speed_mps_;
+
+  // We use degrees with precision of 7 decimal places - it's approx 2cm precision on the Earth.
+  static constexpr double TEN_MILLION = 10000000.;
+  // Some params below can be stored with 2 decimal places precision.
+  static constexpr double ONE_HUNDRED = 100.;
 
   // Compacts location into the byte representation.
   // TODO(AlexZ): We don't care about endiannes for now.
   std::string Encode() const {
     std::string s;
     s.push_back(valid_values_mask_);
-    if (valid_values_mask_ == NOT_INITIALIZED) {
-      return s;
-    }
     if (valid_values_mask_ & HAS_LATLON) {
-      static_assert(sizeof(timestamp_ms_) == 8, "We are cutting off timestamp to 6 bytes instead of 8.");
-      s.append(reinterpret_cast<const char *>(&timestamp_ms_), sizeof(timestamp_ms_) - 2);
-      const int32_t lat10mil = latitude_deg_ * 10000000.;
-      s.append(reinterpret_cast<const char *>(&lat10mil), sizeof(lat10mil));
-      const int32_t lon10mil = longitude_deg_ * 10000000.;
-      s.append(reinterpret_cast<const char *>(&lon10mil), sizeof(lon10mil));
-      const uint32_t horizontal_accuracy_cm = horizontal_accuracy_m_ * 100.;
-      s.append(reinterpret_cast<const char *>(&horizontal_accuracy_cm), sizeof(horizontal_accuracy_cm));
+      static_assert(sizeof(timestamp_ms_) == 8, "We cut off timestamp from 8 bytes to 6 to save space.");
+      AppendToStringAsBinary(s, timestamp_ms_, sizeof(timestamp_ms_) - 2);
+      const int32_t lat10mil = latitude_deg_ * TEN_MILLION;
+      AppendToStringAsBinary(s, lat10mil);
+      const int32_t lon10mil = longitude_deg_ * TEN_MILLION;
+      AppendToStringAsBinary(s, lon10mil);
+      const uint32_t horizontal_accuracy_cm = horizontal_accuracy_m_ * ONE_HUNDRED;
+      AppendToStringAsBinary(s, horizontal_accuracy_cm);
       if (valid_values_mask_ & HAS_SOURCE) {
         s.push_back(source_);
       }
     }
     if (valid_values_mask_ & HAS_ALTITUDE) {
-      const int32_t altitude_cm = altitude_m_ * 100.;
-      s.append(reinterpret_cast<const char *>(&altitude_cm), sizeof(altitude_cm));
-      const uint16_t vertical_accuracy_cm = vertical_accuracy_m_ * 100.;
-      s.append(reinterpret_cast<const char *>(&vertical_accuracy_cm), sizeof(vertical_accuracy_cm));
+      const int32_t altitude_cm = altitude_m_ * ONE_HUNDRED;
+      AppendToStringAsBinary(s, altitude_cm);
+      const uint16_t vertical_accuracy_cm = vertical_accuracy_m_ * ONE_HUNDRED;
+      AppendToStringAsBinary(s, vertical_accuracy_cm);
     }
     if (valid_values_mask_ & HAS_BEARING) {
-      const uint32_t bearing10mil = bearing_deg_ * 10000000.;
-      s.append(reinterpret_cast<const char *>(&bearing10mil), sizeof(bearing10mil));
+      const uint32_t bearing10mil = bearing_deg_ * TEN_MILLION;
+      AppendToStringAsBinary(s, bearing10mil);
     }
     if (valid_values_mask_ & HAS_SPEED) {
-      const uint16_t speedx100mps = speed_mps_ * 100.;
-      s.append(reinterpret_cast<const char *>(&speedx100mps), sizeof(speedx100mps));
+      const uint16_t speedx100mps = speed_mps_ * ONE_HUNDRED;
+      AppendToStringAsBinary(s, speedx100mps);
     }
     return s;
   }
@@ -103,37 +110,52 @@ class Location {
 
   void Decode(const std::string &encoded) {
     if (encoded.empty()) {
-      return;
+      throw LocationDecodeException();
     }
     std::string::size_type i = 0;
+    const std::string::size_type size = encoded.size();
     valid_values_mask_ = static_cast<Mask>(encoded[i++]);
-    if (valid_values_mask_ == NOT_INITIALIZED) return;
     if (valid_values_mask_ & HAS_LATLON) {
+      if ((size - i) < 18) {
+        throw LocationDecodeException();
+      }
       timestamp_ms_ = *reinterpret_cast<const uint32_t *>(&encoded[i]) |
                       (static_cast<uint64_t>(*reinterpret_cast<const uint16_t *>(&encoded[i + 4])) << 32);
       i += sizeof(uint64_t) - 2;  // We use 6 bytes to store timestamps.
-      latitude_deg_ = *reinterpret_cast<const int32_t *>(&encoded[i]) / 10000000.;
+      latitude_deg_ = *reinterpret_cast<const int32_t *>(&encoded[i]) / TEN_MILLION;
       i += sizeof(int32_t);
-      longitude_deg_ = *reinterpret_cast<const int32_t *>(&encoded[i]) / 10000000.;
+      longitude_deg_ = *reinterpret_cast<const int32_t *>(&encoded[i]) / TEN_MILLION;
       i += sizeof(int32_t);
-      horizontal_accuracy_m_ = *reinterpret_cast<const uint32_t *>(&encoded[i]) / 100.;
+      horizontal_accuracy_m_ = *reinterpret_cast<const uint32_t *>(&encoded[i]) / ONE_HUNDRED;
       i += sizeof(uint32_t);
       if (valid_values_mask_ & HAS_SOURCE) {
+        if ((size - i) < 1) {
+          throw LocationDecodeException();
+        }
         source_ = static_cast<Source>(encoded[i++]);
       }
     }
     if (valid_values_mask_ & HAS_ALTITUDE) {
-      altitude_m_ = *reinterpret_cast<const int32_t *>(&encoded[i]) / 100.;
+      if ((size - i) < 6) {
+        throw LocationDecodeException();
+      }
+      altitude_m_ = *reinterpret_cast<const int32_t *>(&encoded[i]) / ONE_HUNDRED;
       i += sizeof(int32_t);
-      vertical_accuracy_m_ = *reinterpret_cast<const uint16_t *>(&encoded[i]) / 100.;
+      vertical_accuracy_m_ = *reinterpret_cast<const uint16_t *>(&encoded[i]) / ONE_HUNDRED;
       i += sizeof(uint16_t);
     }
     if (valid_values_mask_ & HAS_BEARING) {
-      bearing_deg_ = *reinterpret_cast<const uint32_t *>(&encoded[i]) / 10000000.;
+      if ((size - i) < 4) {
+        throw LocationDecodeException();
+      }
+      bearing_deg_ = *reinterpret_cast<const uint32_t *>(&encoded[i]) / TEN_MILLION;
       i += sizeof(uint32_t);
     }
     if (valid_values_mask_ & HAS_SPEED) {
-      speed_mps_ = *reinterpret_cast<const uint16_t *>(&encoded[i]) / 100.;
+      if ((size - i) < 2) {
+        throw LocationDecodeException();
+      }
+      speed_mps_ = *reinterpret_cast<const uint16_t *>(&encoded[i]) / ONE_HUNDRED;
       i += sizeof(uint16_t);
     }
   }
@@ -147,6 +169,7 @@ class Location {
                       double latitude_deg,
                       double longitude_deg,
                       double horizontal_accuracy_m) {
+    // We do not support values without known horizontal accuracy.
     if (horizontal_accuracy_m > 0.0) {
       timestamp_ms_ = timestamp_ms;
       latitude_deg_ = latitude_deg;
@@ -241,6 +264,12 @@ class Location {
     }
     stream << '>';
     return stream.str();
+  }
+
+ private:
+  template <typename T>
+  static inline void AppendToStringAsBinary(std::string &str, const T &value, size_t bytes = sizeof(T)) {
+    str.append(reinterpret_cast<const char *>(&value), bytes);
   }
 };
 }  // namespace alohalytics

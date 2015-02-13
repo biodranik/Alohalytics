@@ -30,8 +30,6 @@ SOFTWARE.
 #include "../../http_client.h"
 #include "../../logger.h"
 
-#define DEFAULT_ANDROID_VERTICAL_ACCURACY 0.0
-
 using std::string;
 using std::unique_ptr;
 
@@ -41,6 +39,8 @@ using namespace alohalytics;
 extern JavaVM* GetJVM();
 
 namespace {
+
+static constexpr double kDefaultAndroidVerticalAccuracy = 0.0;
 
 template <typename POINTER, typename DELETER>
 unique_ptr<POINTER, DELETER> MakePointerScopeGuard(POINTER* x, DELETER t) {
@@ -144,7 +144,7 @@ JNIEXPORT void JNICALL
     l.SetSource((alohalytics::Location::Source)source);
   }
   if (hasAltitude) {
-    l.SetAltitude(altitude, DEFAULT_ANDROID_VERTICAL_ACCURACY);
+    l.SetAltitude(altitude, kDefaultAndroidVerticalAccuracy);
   }
   if (hasBearing) {
     l.SetBearing(bearing);

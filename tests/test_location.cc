@@ -33,15 +33,15 @@ using std::cerr;
 using std::endl;
 using std::string;
 
-#define EQUAL(x, y)                                                                           \
-  if (x != y) {                                                                               \
-    cerr << "Test failed: " << #x << " != " << #y << " (" << x << " != " << y << ")" << endl; \
-    return -1;                                                                                \
+#define ASSERT_EQUAL(x, y)                                                                        \
+  if ((x) != (y)) {                                                                               \
+    cerr << "Test failed: " << #x << " != " << #y << " (" << (x) << " != " << (y) << ")" << endl; \
+    return -1;                                                                                    \
   }
-#define ALMOST_EQUAL(x, y, epsilon)                                                             \
-  if (fabs(x - y) > epsilon) {                                                                  \
-    cerr << "Test failed: " << #x << " ~!= " << #y << " (" << x << " ~!= " << y << ")" << endl; \
-    return -1;                                                                                  \
+#define ASSERT_ALMOST_EQUAL(x, y, epsilon)                                                          \
+  if (fabs((x) - (y)) > epsilon) {                                                                  \
+    cerr << "Test failed: " << #x << " ~!= " << #y << " (" << (x) << " ~!= " << (y) << ")" << endl; \
+    return -1;                                                                                      \
   }
 
 int main(int, char **) {
@@ -59,30 +59,29 @@ int main(int, char **) {
   const Location::Source source = alohalytics::Location::Source::NETWORK;
 
   Location l0;
-  l0.SetLatLon(timestamp, lat, lon, horizontal_accuracy)
-      .SetAltitude(alt, vertical_accuracy)
-      .SetSpeed(speed)
-      .SetBearing(bearing)
-      .SetSource(source);
-
-  const std::string serialized = l0.Encode();
-  EQUAL(serialized.size(), 32);
+  const std::string serialized = l0.SetLatLon(timestamp, lat, lon, horizontal_accuracy)
+                                     .SetAltitude(alt, vertical_accuracy)
+                                     .SetSpeed(speed)
+                                     .SetBearing(bearing)
+                                     .SetSource(source)
+                                     .Encode();
+  ASSERT_EQUAL(serialized.size(), 32);
 
   const alohalytics::Location l(serialized);
-  EQUAL(l.HasLatLon(), true);
-  EQUAL(l.timestamp_ms_, timestamp);
-  ALMOST_EQUAL(l.latitude_deg_, lat, 1e-7);
-  ALMOST_EQUAL(l.longitude_deg_, lon, 1e-7);
-  ALMOST_EQUAL(l.horizontal_accuracy_m_, horizontal_accuracy, 1e-2);
-  EQUAL(l.HasAltitude(), true);
-  ALMOST_EQUAL(l.altitude_m_, alt, 1e-2);
-  ALMOST_EQUAL(l.vertical_accuracy_m_, vertical_accuracy, 1e-2);
-  EQUAL(l.HasBearing(), true);
-  ALMOST_EQUAL(l.bearing_deg_, bearing, 1e-7);
-  EQUAL(l.HasSpeed(), true);
-  ALMOST_EQUAL(l.speed_mps_, speed, 1e-2);
-  EQUAL(l.HasSource(), true);
-  EQUAL(l.source_, source);
+  ASSERT_EQUAL(l.HasLatLon(), true);
+  ASSERT_EQUAL(l.timestamp_ms_, timestamp);
+  ASSERT_ALMOST_EQUAL(l.latitude_deg_, lat, 1e-7);
+  ASSERT_ALMOST_EQUAL(l.longitude_deg_, lon, 1e-7);
+  ASSERT_ALMOST_EQUAL(l.horizontal_accuracy_m_, horizontal_accuracy, 1e-2);
+  ASSERT_EQUAL(l.HasAltitude(), true);
+  ASSERT_ALMOST_EQUAL(l.altitude_m_, alt, 1e-2);
+  ASSERT_ALMOST_EQUAL(l.vertical_accuracy_m_, vertical_accuracy, 1e-2);
+  ASSERT_EQUAL(l.HasBearing(), true);
+  ASSERT_ALMOST_EQUAL(l.bearing_deg_, bearing, 1e-7);
+  ASSERT_EQUAL(l.HasSpeed(), true);
+  ASSERT_ALMOST_EQUAL(l.speed_mps_, speed, 1e-2);
+  ASSERT_EQUAL(l.HasSource(), true);
+  ASSERT_EQUAL(l.source_, source);
 
   std::cout << "All tests have passed." << endl;
   return 0;

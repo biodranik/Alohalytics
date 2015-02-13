@@ -76,7 +76,8 @@ public class Statistics {
     if (id.second && installTime == updateTime) {
       final LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
       logEvent("$install", new String[]{"version", versionName,
-          "secondsBeforeLaunch", String.valueOf((System.currentTimeMillis() - installTime) / 1000)}, lm == null ? null : lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER));
+          "secondsBeforeLaunch", String.valueOf((System.currentTimeMillis() - installTime) / 1000)},
+          lm == null ? null : lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER));
       // Collect device info once on start.
       SystemInfo.getDeviceInfoAsync(context);
       prefs.edit().putLong(PREF_APP_UPDATE_TIME, updateTime).apply();
@@ -92,13 +93,17 @@ public class Statistics {
   }
 
   public static native void logEvent(String eventName);
+
   public static native void logEvent(String eventName, String eventValue);
+
   // eventDictionary is a key,value,key,value array.
   public static native void logEvent(String eventName, String[] eventDictionary);
+
   private static native void logEvent(String eventName, String[] eventDictionary, boolean hasLatLon,
-                                     long timestamp, double lat, double lon, float accuracy,
-                                     boolean hasAltitude, double altitude, boolean hasBearing,
-                                     float bearing, boolean hasSpeed, float speed, byte source);
+                                      long timestamp, double lat, double lon, float accuracy,
+                                      boolean hasAltitude, double altitude, boolean hasBearing,
+                                      float bearing, boolean hasSpeed, float speed, byte source);
+
   public static void logEvent(String eventName, String[] eventDictionary, Location l) {
     if (l == null) {
       logEvent(eventName, eventDictionary);
@@ -106,15 +111,22 @@ public class Statistics {
       // See alohalytics::Location::Source in the location.h for enum constants.
       byte source = 0;
       switch (l.getProvider()) {
-        case LocationManager.GPS_PROVIDER: source = 1; break;
-        case LocationManager.NETWORK_PROVIDER: source = 2; break;
-        case LocationManager.PASSIVE_PROVIDER: source = 3; break;
+        case LocationManager.GPS_PROVIDER:
+          source = 1;
+          break;
+        case LocationManager.NETWORK_PROVIDER:
+          source = 2;
+          break;
+        case LocationManager.PASSIVE_PROVIDER:
+          source = 3;
+          break;
       }
       logEvent(eventName, eventDictionary, l.hasAccuracy(), l.getTime(), l.getLatitude(), l.getLongitude(),
           l.getAccuracy(), l.hasAltitude(), l.getAltitude(), l.hasBearing(), l.getBearing(),
           l.hasSpeed(), l.getSpeed(), source);
     }
   }
+
   public static void logEvent(String eventName, Map<String, String> eventDictionary) {
     // For faster native processing pass array of strings instead of a map.
     final String[] array = new String[eventDictionary.size() * 2];

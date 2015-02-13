@@ -76,7 +76,7 @@ struct Processor {
     for (const auto &pair : event.pairs) {
       std::cout << pair.first << '=' << pair.second << ' ';
     }
-    std::cout << ']' << event.location.ToDebugString() << std::endl;
+    std::cout << "] " << event.location.ToDebugString() << std::endl;
   }
 };
 
@@ -91,7 +91,7 @@ int main(int, char **) {
                                       AlohalyticsKeyPairsEvent, AlohalyticsIdEvent, AlohalyticsKeyValueEvent,
                                       AlohalyticsKeyEvent>::DispatchCall(*ptr, processor);
     }
-  } catch (const cereal::Exception &ex) {
+  } catch (const cereal::Exception &) {
   }
   return 0;
 }
