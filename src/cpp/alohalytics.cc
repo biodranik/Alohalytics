@@ -58,7 +58,7 @@ bool Stats::UploadBuffer(const std::string& url, std::string&& buffer, bool debu
   request.set_post_body(std::move(buffer), "application/alohalytics-binary-blob");
 
   try {
-    return request.RunHTTPRequest() && 200 == request.error_code();
+    return request.RunHTTPRequest() && 200 == request.error_code() && !request.was_redirected();
   } catch (const std::exception& ex) {
     if (debug_mode) {
       ALOG("Exception while trying to upload file", ex.what());
