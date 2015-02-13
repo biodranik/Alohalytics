@@ -1,7 +1,7 @@
 /*******************************************************************************
  The MIT License (MIT)
 
- Copyright (c) 2014 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
+ Copyright (c) 2015 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -26,42 +26,57 @@
 
 // This define is needed to preserve client's timestamps in events.
 #define ALOHALYTICS_SERVER
-#include "../event_base.h"
+#include "../../src/event_base.h"
 
-#include "../Bricks/rtti/dispatcher.h"
+#include "../../src/Bricks/rtti/dispatcher.h"
 
 #include <iostream>
 #include <iomanip>
 #include <typeinfo>
 
 struct Processor {
-  void PrintTime(const AlohalyticsBaseEvent & event) {
+  void PrintTime(const AlohalyticsBaseEvent &event) {
     const time_t timestamp = static_cast<const time_t>(event.timestamp / 1000);
-    std::cout << std::put_time(std::localtime(&timestamp), "%e-%b-%Y %H:%M:%S");
+    // std::put_time is not implemented in gcc4.8 yet.
+    // std::cout << std::put_time(std::localtime(&timestamp), "%e-%b-%Y %H:%M:%S");
+    char buf[100];
+    if (::strftime(buf, 100, "%e-%b-%Y %H:%M:%S", ::localtime(&timestamp))) {
+      std::cout << buf;
+    } else {
+      std::cout << "INVALID_TIME";
+    }
   }
-  void operator()(const AlohalyticsBaseEvent & event) {
+  void operator()(const AlohalyticsBaseEvent &event) {
     PrintTime(event);
     std::cout << "Unhandled event of type " << typeid(event).name() << std::endl;
   }
-  void operator()(const AlohalyticsIdEvent & event) {
+  void operator()(const AlohalyticsIdEvent &event) {
     PrintTime(event);
     std::cout << " ID: " << event.id << std::endl;
   }
-  void operator()(const AlohalyticsKeyEvent & event) {
+  void operator()(const AlohalyticsKeyEvent &event) {
     PrintTime(event);
     std::cout << ' ' << event.key << std::endl;
   }
-  void operator()(const AlohalyticsKeyValueEvent & event) {
+  void operator()(const AlohalyticsKeyValueEvent &event) {
     PrintTime(event);
     std::cout << ' ' << event.key << " = " << event.value << std::endl;
   }
-  void operator()(const AlohalyticsKeyPairsEvent & event) {
+  void operator()(const AlohalyticsKeyPairsEvent &event) {
     PrintTime(event);
     std::cout << ' ' << event.key << " [ ";
-    for (const auto & pair : event.pairs) {
+    for (const auto &pair : event.pairs) {
       std::cout << pair.first << '=' << pair.second << ' ';
     }
     std::cout << ']' << std::endl;
+  }
+  void operator()(const AlohalyticsKeyPairsLocationEvent &event) {
+    PrintTime(event);
+    std::cout << ' ' << event.key << " [ ";
+    for (const auto &pair : event.pairs) {
+      std::cout << pair.first << '=' << pair.second << ' ';
+    }
+    std::cout << "] " << event.location.ToDebugString() << std::endl;
   }
 };
 
@@ -72,13 +87,11 @@ int main(int, char **) {
     while (std::cin.good()) {
       std::unique_ptr<AlohalyticsBaseEvent> ptr;
       ar(ptr);
-      bricks::rtti::RuntimeDispatcher<AlohalyticsBaseEvent,
-                                      AlohalyticsKeyPairsEvent,
-                                      AlohalyticsIdEvent,
-                                      AlohalyticsKeyValueEvent,
+      bricks::rtti::RuntimeDispatcher<AlohalyticsBaseEvent, AlohalyticsKeyPairsLocationEvent,
+                                      AlohalyticsKeyPairsEvent, AlohalyticsIdEvent, AlohalyticsKeyValueEvent,
                                       AlohalyticsKeyEvent>::DispatchCall(*ptr, processor);
     }
-  } catch (const cereal::Exception & ex) {
+  } catch (const cereal::Exception &) {
   }
   return 0;
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  The MIT License (MIT)
 
- Copyright (c) 2014 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
+ Copyright (c) 2015 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,6 @@
 
 // Define ALOHALYTICS_SERVER when using this header on a server-side.
 
-#include <string>
 #include <chrono>
 
 #include "cereal/include/cereal.hpp"
@@ -36,6 +35,8 @@
 #include "cereal/include/archives/binary.hpp"
 #include "cereal/include/types/string.hpp"
 #include "cereal/include/types/map.hpp"
+
+#include "location.h"
 
 // For easier processing on a server side, every statistics event should derive from this base class.
 struct AlohalyticsBaseEvent {
@@ -109,5 +110,15 @@ struct AlohalyticsKeyPairsEvent : public AlohalyticsKeyEvent {
   }
 };
 CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyPairsEvent, "p");
+
+struct AlohalyticsKeyPairsLocationEvent : public AlohalyticsKeyPairsEvent {
+  alohalytics::Location location;
+  template <class Archive>
+  void serialize(Archive& ar) {
+    AlohalyticsKeyPairsEvent::serialize(ar);
+    ar(CEREAL_NVP(location));
+  }
+};
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyPairsLocationEvent, "l");
 
 #endif  // EVENT_BASE_H

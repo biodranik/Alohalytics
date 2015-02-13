@@ -1,7 +1,7 @@
 /*******************************************************************************
  The MIT License (MIT)
 
- Copyright (c) 2014 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
+ Copyright (c) 2015 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,8 @@ package org.alohalytics;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.location.Location;
+import android.location.LocationManager;
 import android.util.Pair;
 
 import java.io.File;
@@ -49,15 +51,7 @@ public class Statistics {
     return sDebugModeEnabled;
   }
 
-  // Use this setup if you are releasing a new application and/or don't bother about already existing installations
-  // prior to Alohalytics integration. Alohalytics will check new unique installations by internal logic only if use this function.
   public static void setup(final String serverUrl, final Context context) {
-    setup(serverUrl, context, true);
-  }
-
-  // Set firstAppLaunch to false if you definitely know that your app was previously installed
-  // (before integrating with Alohalytics) to correctly calculate new unique installations.
-  public static void setup(final String serverUrl, final Context context, boolean firstAppLaunch) {
     final String storagePath = context.getFilesDir().getAbsolutePath() + "/Alohalytics/";
     // Native code expects valid existing writable dir.
     (new File(storagePath)).mkdirs();
@@ -79,9 +73,11 @@ public class Statistics {
     }
     final SharedPreferences prefs = context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
     // Is it a real new install?
-    if (firstAppLaunch && id.second && installTime == updateTime) {
+    if (id.second && installTime == updateTime) {
+      final LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
       logEvent("$install", new String[]{"version", versionName,
-          "secondsBeforeLaunch", String.valueOf((System.currentTimeMillis() - installTime) / 1000)});
+          "secondsBeforeLaunch", String.valueOf((System.currentTimeMillis() - installTime) / 1000)},
+          lm == null ? null : lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER));
       // Collect device info once on start.
       SystemInfo.getDeviceInfoAsync(context);
       prefs.edit().putLong(PREF_APP_UPDATE_TIME, updateTime).apply();
@@ -96,14 +92,42 @@ public class Statistics {
     }
   }
 
-  native static public void logEvent(String eventName);
+  public static native void logEvent(String eventName);
 
-  native static public void logEvent(String eventName, String eventValue);
+  public static native void logEvent(String eventName, String eventValue);
 
   // eventDictionary is a key,value,key,value array.
-  native static public void logEvent(String eventName, String[] eventDictionary);
+  public static native void logEvent(String eventName, String[] eventDictionary);
 
-  static public void logEvent(String eventName, Map<String, String> eventDictionary) {
+  private static native void logEvent(String eventName, String[] eventDictionary, boolean hasLatLon,
+                                      long timestamp, double lat, double lon, float accuracy,
+                                      boolean hasAltitude, double altitude, boolean hasBearing,
+                                      float bearing, boolean hasSpeed, float speed, byte source);
+
+  public static void logEvent(String eventName, String[] eventDictionary, Location l) {
+    if (l == null) {
+      logEvent(eventName, eventDictionary);
+    } else {
+      // See alohalytics::Location::Source in the location.h for enum constants.
+      byte source = 0;
+      switch (l.getProvider()) {
+        case LocationManager.GPS_PROVIDER:
+          source = 1;
+          break;
+        case LocationManager.NETWORK_PROVIDER:
+          source = 2;
+          break;
+        case LocationManager.PASSIVE_PROVIDER:
+          source = 3;
+          break;
+      }
+      logEvent(eventName, eventDictionary, l.hasAccuracy(), l.getTime(), l.getLatitude(), l.getLongitude(),
+          l.getAccuracy(), l.hasAltitude(), l.getAltitude(), l.hasBearing(), l.getBearing(),
+          l.hasSpeed(), l.getSpeed(), source);
+    }
+  }
+
+  public static void logEvent(String eventName, Map<String, String> eventDictionary) {
     // For faster native processing pass array of strings instead of a map.
     final String[] array = new String[eventDictionary.size() * 2];
     int index = 0;
