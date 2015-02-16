@@ -30,7 +30,7 @@
 #ifndef CEREAL_TYPES_UNORDERED_MAP_HPP_
 #define CEREAL_TYPES_UNORDERED_MAP_HPP_
 
-#include "../cereal.hpp"
+#include <cereal/cereal.hpp>
 #include <unordered_map>
 
 namespace cereal
@@ -70,28 +70,28 @@ namespace cereal
 
   //! Saving for std::unordered_map
   template <class Archive, class K, class T, class H, class KE, class A> inline
-  void save( Archive & ar, std::unordered_map<K, T, H, KE, A> const & unordered_map )
+  void CEREAL_SAVE_FUNCTION_NAME( Archive & ar, std::unordered_map<K, T, H, KE, A> const & unordered_map )
   {
     unordered_map_detail::save( ar, unordered_map );
   }
 
   //! Loading for std::unordered_map
   template <class Archive, class K, class T, class H, class KE, class A> inline
-  void load( Archive & ar, std::unordered_map<K, T, H, KE, A> & unordered_map )
+  void CEREAL_LOAD_FUNCTION_NAME( Archive & ar, std::unordered_map<K, T, H, KE, A> & unordered_map )
   {
     unordered_map_detail::load( ar, unordered_map );
   }
 
   //! Saving for std::unordered_multimap
   template <class Archive, class K, class T, class H, class KE, class A> inline
-  void save( Archive & ar, std::unordered_multimap<K, T, H, KE, A> const & unordered_multimap )
+  void CEREAL_SAVE_FUNCTION_NAME( Archive & ar, std::unordered_multimap<K, T, H, KE, A> const & unordered_multimap )
   {
     unordered_map_detail::save( ar, unordered_multimap );
   }
 
   //! Loading for std::unordered_multimap
   template <class Archive, class K, class T, class H, class KE, class A> inline
-  void load( Archive & ar, std::unordered_multimap<K, T, H, KE, A> & unordered_multimap )
+  void CEREAL_LOAD_FUNCTION_NAME( Archive & ar, std::unordered_multimap<K, T, H, KE, A> & unordered_multimap )
   {
     unordered_map_detail::load( ar, unordered_multimap );
   }
