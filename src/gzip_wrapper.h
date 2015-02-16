@@ -28,7 +28,23 @@ SOFTWARE.
 
 namespace alohalytics {
 
-// Returns empty string on error.
+static constexpr size_t kGzipBufferSize = 32768;
+
+struct GzipErrorException : public std::exception {
+int err_;
+std::string msg_;
+GzipErrorException(int err, const char * msg) : err_(err), msg_(msg ? msg : "") {}
+virtual char const * what() const noexcept { return ("ERROR " + std::to_string(err_) + " while gzipping with zlib. " + msg_).c_str(); }
+};
+
+struct GunzipErrorException : public std::exception {
+int err_;
+std::string msg_;
+GunzipErrorException(int err, const char * msg) : err_(err), msg_(msg ? msg : "") {}
+virtual char const * what() const noexcept { return ("ERROR " + std::to_string(err_) + " while gunzipping with zlib. " + msg_).c_str(); }
+};
+
+// Throws GzipErrorException.
 inline std::string Gzip(const std::string& data_to_compress) {
   z_stream z = {};
   int res = ::deflateInit2(&z, Z_BEST_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
@@ -36,7 +52,6 @@ inline std::string Gzip(const std::string& data_to_compress) {
     z.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(data_to_compress.data()));
     z.avail_in = data_to_compress.size();
     std::string compressed;
-    static const size_t kGzipBufferSize = 32768;
     char buffer[std::min(data_to_compress.size(), kGzipBufferSize)];
     do {
       z.next_out = reinterpret_cast<Bytef*>(buffer);
@@ -51,8 +66,33 @@ inline std::string Gzip(const std::string& data_to_compress) {
       return compressed;
     }
   }
-  ALOG("ERROR", res, "while gzipping with zlib.", z.msg ? z.msg : "");
-  return std::string();
+  throw GzipErrorException(res, z.msg);
+}
+
+// Returns empty string on error.
+inline std::string Gunzip(const std::string& data_to_decompress)
+{
+  z_stream z = {};
+  int res = ::inflateInit2(&z, 16 + MAX_WBITS);
+  if (Z_OK == res) {
+    z.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(data_to_decompress.data()));
+    z.avail_in = data_to_decompress.size();
+    std::string decompressed;
+    char buffer[std::min(data_to_decompress.size(), kGzipBufferSize)];
+    do {
+      z.next_out = reinterpret_cast<Bytef*>(buffer);
+      z.avail_out = sizeof(buffer) / sizeof(buffer[0]);
+      res = ::inflate(&z, Z_NO_FLUSH);
+      if (decompressed.size() < z.total_out) {
+        decompressed.append(buffer, z.total_out - decompressed.size());
+      }
+    } while (Z_OK == res);
+    ::inflateEnd(&z);
+    if (Z_STREAM_END == res) {
+      return decompressed;
+    }
+  }
+  throw GunzipErrorException(res, z.msg);
 }
 
 }  // namespace alohalytics
