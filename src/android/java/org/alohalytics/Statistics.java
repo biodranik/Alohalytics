@@ -83,6 +83,7 @@ public class Statistics {
       prefs.edit().putLong(PREF_APP_UPDATE_TIME, updateTime).apply();
     } else if (updateTime != installTime && updateTime != prefs.getLong(PREF_APP_UPDATE_TIME, 0)) {
       logEvent("$update", new String[]{"version", versionName,
+          "secondsBeforeLaunch", String.valueOf((System.currentTimeMillis() - updateTime) / 1000),
           "userAgeInSeconds", String.valueOf((System.currentTimeMillis() - installTime) / 1000)});
       // Also collect device info on update.
       SystemInfo.getDeviceInfoAsync(context);
