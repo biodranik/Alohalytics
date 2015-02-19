@@ -91,9 +91,8 @@ public class Statistics {
       // Also collect device info on update.
       SystemInfo.getDeviceInfoAsync(context);
       prefs.edit().putLong(PREF_APP_UPDATE_TIME, updateTime).apply();
-    } else {
-      logEvent("$launch");
     }
+    logEvent("$launch", SystemInfo.getConnectionInfo(context), lastKnownLocation);
   }
 
   public static native void logEvent(String eventName);

@@ -27,6 +27,8 @@ package org.alohalytics;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Build;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
@@ -229,4 +231,34 @@ public class SystemInfo {
     Statistics.logEvent("$androidDeviceInfo", kvs.mPairs);
   }
 
+  // Requires ACCESS_NETWORK_STATE permission.
+  public static String[] getConnectionInfo(final Context context) {
+    final ConnectivityManager cm = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
+    if (cm == null) {
+      return new String[]{"null", "cm"};
+    }
+    final NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+    if (activeNetwork == null) {
+      return new String[]{"null", "activeNetwork"};
+    }
+    final boolean isConnected = activeNetwork.isConnected();
+    final boolean isRoaming = activeNetwork.isRoaming();
+    String type = "unknown";
+    switch (activeNetwork.getType()) {
+      case ConnectivityManager.TYPE_BLUETOOTH: type = "bluetooth"; break;
+      case ConnectivityManager.TYPE_DUMMY: type = "dummy"; break;
+      case ConnectivityManager.TYPE_ETHERNET: type = "ethernet"; break;
+      case ConnectivityManager.TYPE_MOBILE: type = "mobile"; break;
+      case ConnectivityManager.TYPE_MOBILE_DUN: type = "dun"; break;
+      case ConnectivityManager.TYPE_MOBILE_HIPRI: type = "hipri"; break;
+      case ConnectivityManager.TYPE_MOBILE_MMS: type = "mms"; break;
+      case ConnectivityManager.TYPE_MOBILE_SUPL: type = "supl"; break;
+      case ConnectivityManager.TYPE_VPN: type = "vpn"; break;
+      case ConnectivityManager.TYPE_WIFI: type = "wifi"; break;
+      case ConnectivityManager.TYPE_WIMAX: type = "wimax"; break;
+    }
+    return new String[]{"connected", isConnected ? "yes" : "no",
+        "roaming", isRoaming ? "yes" : "no",
+        "ctype", type};
+  }
 }
