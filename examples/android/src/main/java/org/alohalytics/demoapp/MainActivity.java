@@ -51,9 +51,9 @@ public class MainActivity extends Activity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    Statistics.setup(STATISTICS_SERVER_URL, this);
     // Optionally enable debug mode for easier integration (but don't forget to remove it in production!).
     Statistics.setDebugMode(true);
+    Statistics.setup(STATISTICS_SERVER_URL, this);
 
     // To handle Enter key for convenience testing on emulator
     findViewById(R.id.eventNameEditor).setOnKeyListener(new View.OnKeyListener() {
