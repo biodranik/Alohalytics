@@ -83,20 +83,23 @@ string ToStdString(JNIEnv* env, jstring str) {
   return result;
 }
 
+// keyValuePairs can be null!
 TStringMap FillMapHelper(JNIEnv* env, jobjectArray keyValuePairs) {
   TStringMap map;
-  const jsize count = env->GetArrayLength(keyValuePairs);
-  string key;
-  for (jsize i = 0; i < count; ++i) {
-    const jstring jni_string = static_cast<jstring>(env->GetObjectArrayElement(keyValuePairs, i));
-    if ((i + 1) % 2) {
-      key = ToStdString(env, jni_string);
-      map[key] = "";
-    } else {
-      map[key] = ToStdString(env, jni_string);
-    }
-    if (jni_string) {
-      env->DeleteLocalRef(jni_string);
+  if (keyValuePairs) {
+    const jsize count = env->GetArrayLength(keyValuePairs);
+    string key;
+    for (jsize i = 0; i < count; ++i) {
+      const jstring jni_string = static_cast<jstring>(env->GetObjectArrayElement(keyValuePairs, i));
+      if ((i + 1) % 2) {
+        key = ToStdString(env, jni_string);
+        map[key] = "";
+      } else {
+        map[key] = ToStdString(env, jni_string);
+      }
+      if (jni_string) {
+        env->DeleteLocalRef(jni_string);
+      }
     }
   }
   return map;
@@ -152,6 +155,7 @@ JNIEXPORT void JNICALL
   if (hasSpeed) {
     l.SetSpeed(speed);
   }
+
   LogEvent(ToStdString(env, eventName), FillMapHelper(env, keyValuePairs), l);
 }
 
