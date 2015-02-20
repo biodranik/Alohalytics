@@ -60,7 +60,7 @@ struct AlohalyticsBaseEvent {
   // To use polymorphism on a server side.
   virtual ~AlohalyticsBaseEvent() = default;
 };
-CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsBaseEvent, "b");
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsBaseEvent, "b")
 
 // Special event in the beginning of each block (file) sent to stats server.
 // Designed to mark all events in this data block as belonging to one user with specified id.
@@ -73,7 +73,7 @@ struct AlohalyticsIdEvent : public AlohalyticsBaseEvent {
     ar(CEREAL_NVP(id));
   }
 };
-CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsIdEvent, "i");
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsIdEvent, "i")
 
 // Simple event with a string name (key) only.
 struct AlohalyticsKeyEvent : public AlohalyticsBaseEvent {
@@ -85,7 +85,7 @@ struct AlohalyticsKeyEvent : public AlohalyticsBaseEvent {
     ar(CEREAL_NVP(key));
   }
 };
-CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyEvent, "k");
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyEvent, "k")
 
 // Simple event with a string key/value pair.
 struct AlohalyticsKeyValueEvent : public AlohalyticsKeyEvent {
@@ -97,7 +97,7 @@ struct AlohalyticsKeyValueEvent : public AlohalyticsKeyEvent {
     ar(CEREAL_NVP(value));
   }
 };
-CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyValueEvent, "v");
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyValueEvent, "v")
 
 // Simple event with a string key and map<string, string> value.
 struct AlohalyticsKeyPairsEvent : public AlohalyticsKeyEvent {
@@ -109,16 +109,42 @@ struct AlohalyticsKeyPairsEvent : public AlohalyticsKeyEvent {
     ar(CEREAL_NVP(pairs));
   }
 };
-CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyPairsEvent, "p");
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyPairsEvent, "p")
 
+// Key + location.
+struct AlohalyticsKeyLocationEvent : public AlohalyticsKeyEvent {
+  alohalytics::Location location;
+
+  template <class Archive>
+  void serialize(Archive& ar) {
+    AlohalyticsKeyEvent::serialize(ar);
+    ar(CEREAL_NVP(location));
+  }
+};
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyLocationEvent, "kl")
+
+// Key=value + location.
+struct AlohalyticsKeyValueLocationEvent : public AlohalyticsKeyValueEvent {
+  alohalytics::Location location;
+
+  template <class Archive>
+  void serialize(Archive& ar) {
+    AlohalyticsKeyValueEvent::serialize(ar);
+    ar(CEREAL_NVP(location));
+  }
+};
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyValueLocationEvent, "vl")
+
+// Key=[key1=value1,key2=value2,...] + location.
 struct AlohalyticsKeyPairsLocationEvent : public AlohalyticsKeyPairsEvent {
   alohalytics::Location location;
+
   template <class Archive>
   void serialize(Archive& ar) {
     AlohalyticsKeyPairsEvent::serialize(ar);
     ar(CEREAL_NVP(location));
   }
 };
-CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyPairsLocationEvent, "l");
+CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyPairsLocationEvent, "pl")
 
 #endif  // EVENT_BASE_H

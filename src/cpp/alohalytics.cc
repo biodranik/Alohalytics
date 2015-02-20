@@ -179,16 +179,28 @@ Stats& Stats::SetClientId(const std::string& unique_client_id) {
   return *this;
 }
 
+static inline void LogEventImpl(AlohalyticsBaseEvent const& event, MessageQueue<Stats>& msq) {
+  std::ostringstream sstream;
+  {
+    // unique_ptr is used to correctly serialize polymorphic types.
+    cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent const, NoOpDeleter>(&event);
+  }
+  msq.PushMessage(std::move(sstream.str()));
+}
+
 void Stats::LogEvent(std::string const& event_name) {
   LOG_IF_DEBUG("LogEvent:", event_name);
   AlohalyticsKeyEvent event;
   event.key = event_name;
-  std::ostringstream sstream;
-  {
-    // unique_ptr is used to correctly serialize polymorphic types.
-    cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event);
-  }
-  message_queue_.PushMessage(std::move(sstream.str()));
+  LogEventImpl(event, message_queue_);
+}
+
+void Stats::LogEvent(std::string const& event_name, Location const& location) {
+  LOG_IF_DEBUG("LogEvent:", event_name, location.ToDebugString());
+  AlohalyticsKeyLocationEvent event;
+  event.key = event_name;
+  event.location = location;
+  LogEventImpl(event, message_queue_);
 }
 
 void Stats::LogEvent(std::string const& event_name, std::string const& event_value) {
@@ -196,9 +208,16 @@ void Stats::LogEvent(std::string const& event_name, std::string const& event_val
   AlohalyticsKeyValueEvent event;
   event.key = event_name;
   event.value = event_value;
-  std::ostringstream sstream;
-  { cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event); }
-  message_queue_.PushMessage(std::move(sstream.str()));
+  LogEventImpl(event, message_queue_);
+}
+
+void Stats::LogEvent(std::string const& event_name, std::string const& event_value, Location const& location) {
+  LOG_IF_DEBUG("LogEvent:", event_name, "=", event_value, location.ToDebugString());
+  AlohalyticsKeyValueLocationEvent event;
+  event.key = event_name;
+  event.value = event_value;
+  event.location = location;
+  LogEventImpl(event, message_queue_);
 }
 
 void Stats::LogEvent(std::string const& event_name, TStringMap const& value_pairs) {
@@ -206,9 +225,7 @@ void Stats::LogEvent(std::string const& event_name, TStringMap const& value_pair
   AlohalyticsKeyPairsEvent event;
   event.key = event_name;
   event.pairs = value_pairs;
-  std::ostringstream sstream;
-  { cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event); }
-  message_queue_.PushMessage(std::move(sstream.str()));
+  LogEventImpl(event, message_queue_);
 }
 
 void Stats::LogEvent(std::string const& event_name, TStringMap const& value_pairs, Location const& location) {
@@ -217,9 +234,7 @@ void Stats::LogEvent(std::string const& event_name, TStringMap const& value_pair
   event.key = event_name;
   event.pairs = value_pairs;
   event.location = location;
-  std::ostringstream sstream;
-  { cereal::BinaryOutputArchive(sstream) << std::unique_ptr<AlohalyticsBaseEvent, NoOpDeleter>(&event); }
-  message_queue_.PushMessage(std::move(sstream.str()));
+  LogEventImpl(event, message_queue_);
 }
 
 // Forcedly tries to upload all stored data to the server.
