@@ -28,6 +28,7 @@
 // Define ALOHALYTICS_SERVER when using this header on a server-side.
 
 #include <chrono>
+#include <sstream>
 
 #include "cereal/include/cereal.hpp"
 #include "cereal/include/types/base_class.hpp"
@@ -41,6 +42,16 @@
 // For easier processing on a server side, every statistics event should derive from this base class.
 struct AlohalyticsBaseEvent {
   uint64_t timestamp;
+
+  virtual std::string ToString() const {
+    const time_t timet = static_cast<const time_t>(timestamp / 1000);
+    char buf[100];
+    if (::strftime(buf, 100, "%e-%b-%Y %H:%M:%S", ::gmtime(&timet))) {
+      return buf;
+    } else {
+      return "INVALID_TIME";
+    }
+  }
 
   static uint64_t CurrentTimestamp() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -67,6 +78,10 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsBaseEvent, "b")
 struct AlohalyticsIdEvent : public AlohalyticsBaseEvent {
   std::string id;
 
+  virtual std::string ToString() const {
+    return AlohalyticsBaseEvent::ToString() + " ID: " + id;
+  }
+
   template <class Archive>
   void serialize(Archive& ar) {
     AlohalyticsBaseEvent::serialize(ar);
@@ -78,6 +93,10 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsIdEvent, "i")
 // Simple event with a string name (key) only.
 struct AlohalyticsKeyEvent : public AlohalyticsBaseEvent {
   std::string key;
+
+  virtual std::string ToString() const {
+    return AlohalyticsBaseEvent::ToString() + " " + key;
+  }
 
   template <class Archive>
   void serialize(Archive& ar) {
@@ -91,6 +110,10 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyEvent, "k")
 struct AlohalyticsKeyValueEvent : public AlohalyticsKeyEvent {
   std::string value;
 
+  virtual std::string ToString() const {
+    return AlohalyticsKeyEvent::ToString() + " = " + value;
+  }
+
   template <class Archive>
   void serialize(Archive& ar) {
     AlohalyticsKeyEvent::serialize(ar);
@@ -102,6 +125,16 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyValueEvent, "v")
 // Simple event with a string key and map<string, string> value.
 struct AlohalyticsKeyPairsEvent : public AlohalyticsKeyEvent {
   std::map<std::string, std::string> pairs;
+
+  virtual std::string ToString() const {
+    std::ostringstream stream;
+    stream << AlohalyticsKeyEvent::ToString() << " [ ";
+    for (const auto &pair : pairs) {
+      stream << pair.first << '=' << pair.second << ' ';
+    }
+    stream << ']';
+    return stream.str();
+  }
 
   template <class Archive>
   void serialize(Archive& ar) {
@@ -115,6 +148,10 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyPairsEvent, "p")
 struct AlohalyticsKeyLocationEvent : public AlohalyticsKeyEvent {
   alohalytics::Location location;
 
+  virtual std::string ToString() const {
+    return AlohalyticsKeyEvent::ToString() + ' ' + location.ToDebugString();
+  }
+
   template <class Archive>
   void serialize(Archive& ar) {
     AlohalyticsKeyEvent::serialize(ar);
@@ -127,6 +164,10 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyLocationEvent, "kl")
 struct AlohalyticsKeyValueLocationEvent : public AlohalyticsKeyValueEvent {
   alohalytics::Location location;
 
+  virtual std::string ToString() const {
+    return AlohalyticsKeyValueEvent::ToString() + ' ' + location.ToDebugString();
+  }
+
   template <class Archive>
   void serialize(Archive& ar) {
     AlohalyticsKeyValueEvent::serialize(ar);
@@ -138,6 +179,10 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyValueLocationEvent, "vl")
 // Key=[key1=value1,key2=value2,...] + location.
 struct AlohalyticsKeyPairsLocationEvent : public AlohalyticsKeyPairsEvent {
   alohalytics::Location location;
+
+  virtual std::string ToString() const {
+    return AlohalyticsKeyPairsEvent::ToString() + ' ' + location.ToDebugString();
+  }
 
   template <class Archive>
   void serialize(Archive& ar) {
