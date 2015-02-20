@@ -88,13 +88,19 @@ void Stats::OnMessage(const std::string& message, size_t dropped_events) {
 // Called by file storage engine to upload file with collected data.
 // Should return true if upload has been successful.
 // TODO(AlexZ): Refactor FSQ to make this method private.
-bool Stats::OnFileReady(const std::string& full_path_to_file, uint64_t file_size) {
+bool Stats::OnFileReady(const std::string& full_path_to_file) {
   if (upload_url_.empty()) {
-    LOG_IF_DEBUG("Warning: upload server url was not set and file of", file_size, "bytes was not uploaded.");
+    LOG_IF_DEBUG("Warning: upload server url was not set and file", full_path_to_file, "was not uploaded.");
     return false;
   }
   if (unique_client_id_event_.empty()) {
     LOG_IF_DEBUG("Warning: unique client ID is not set so statistics was not uploaded.");
+    return false;
+  }
+  // TODO(AlexZ): Refactor to use crossplatform and safe/non-throwing version.
+  const uint64_t file_size = bricks::FileSystem::GetFileSize(full_path_to_file);
+  if (0 == file_size) {
+    LOG_IF_DEBUG("ERROR: Trying to upload file of size 0?", full_path_to_file);
     return false;
   }
 

@@ -66,7 +66,7 @@ class Stats final {
   // Called by file storage engine to upload file with collected data.
   // Should return true if upload has been successful.
   // TODO(AlexZ): Refactor FSQ to make this method private.
-  bool OnFileReady(const std::string& full_path_to_file, uint64_t file_size);
+  bool OnFileReady(const std::string& full_path_to_file);
 
   static Stats& Instance();
 

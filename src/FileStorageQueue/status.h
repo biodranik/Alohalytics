@@ -16,8 +16,8 @@ struct FileInfo {
   std::string full_path_name = std::string("");
   T_TIMESTAMP timestamp = T_TIMESTAMP(0);
   uint64_t size = 0;
-  FileInfo(const std::string& name, const std::string& full_path_name, T_TIMESTAMP timestamp, uint64_t size)
-      : name(name), full_path_name(full_path_name), timestamp(timestamp), size(size) {}
+  FileInfo(const std::string& aname, const std::string& afull_path_name, T_TIMESTAMP atimestamp, uint64_t asize)
+      : name(aname), full_path_name(afull_path_name), timestamp(atimestamp), size(asize) {}
   inline std::tuple<T_TIMESTAMP, std::string, std::string, uint64_t> AsTuple() const {
     return std::tie(timestamp, name, full_path_name, size);
   }
