@@ -26,6 +26,7 @@ package org.alohalytics;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -115,13 +116,15 @@ public class SystemInfo {
       handleException(ex);
     }
 
-    try {
-      // This code works only if the app has READ_PHONE_STATE permission.
-      final TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-      ids.put("device_id", tm.getDeviceId());
-      ids.put("sim_serial_number", tm.getSimSerialNumber());
-    } catch (Exception ex) {
-      handleException(ex);
+    if (SystemInfo.hasPermission("android.permission.READ_PHONE_STATE", context)) {
+      try {
+        // This code works only if the app has READ_PHONE_STATE permission.
+        final TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+        ids.put("device_id", tm.getDeviceId());
+        ids.put("sim_serial_number", tm.getSimSerialNumber());
+      } catch (Exception ex) {
+        handleException(ex);
+      }
     }
 
     Statistics.logEvent("$androidIds", ids.mPairs);
@@ -260,5 +263,9 @@ public class SystemInfo {
     return new String[]{"connected", isConnected ? "yes" : "no",
         "roaming", isRoaming ? "yes" : "no",
         "ctype", type};
+  }
+
+  public static boolean hasPermission(final String permission, final Context context) {
+    return PackageManager.PERMISSION_GRANTED == context.checkCallingOrSelfPermission(permission);
   }
 }
