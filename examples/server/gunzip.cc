@@ -41,17 +41,15 @@ int main(int argc, char ** argv) {
     std::cout << "Usage: " << argv[0] << " <gzipped_cereal_file>" << std::endl;
     return -1;
   }
-  std::string ungzipped;
   try {
-    {
-      const std::string gzipped = bricks::ReadFileAsString(argv[1]);
-      ungzipped = alohalytics::Gunzip(gzipped);
-    }
+    const std::string ungzipped = alohalytics::Gunzip(bricks::ReadFileAsString(argv[1]));
     std::istringstream in_stream(ungzipped);
-    cereal::BinaryInputArchive ar(in_stream);
+    cereal::BinaryInputArchive in_archive(in_stream);
     std::unique_ptr<AlohalyticsBaseEvent> ptr;
-    while (static_cast<std::streamoff>(ungzipped.size()) > in_stream.tellg()) {
-      ar(ptr);
+    // Cereal can't detect the end of the stream without our help.
+    // If tellg returns -1 we will exit safely.
+    while (ungzipped.size() > static_cast<size_t>(in_stream.tellg())) {
+      in_archive(ptr);
       std::cout << ptr->ToString() << std::endl;
     }
   } catch (const std::exception & ex) {

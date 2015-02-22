@@ -413,7 +413,7 @@ class FSQ final : public CONFIG::T_FILE_NAMING_STRATEGY,
       if (next_file) {
         //      const FileProcessingResult result = processor_.OnFileReady(*next_file.get(),
         //      time_manager_.Now());
-        // AlexZ: we can't believe next_file->size here. Debugging shows that it can be greater than real file size.
+        // AlexZ: we can't trust next_file->size here. Debugging shows that it can be greater than the real file size.
         // TODO: refactor FSQ or capture a bug.
         const bool successfully_processed = processor_.OnFileReady(next_file->full_path_name);
         // Important to clear force_processing_, in a locked way.

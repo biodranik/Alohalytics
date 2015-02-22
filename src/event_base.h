@@ -160,7 +160,7 @@ struct AlohalyticsKeyLocationEvent : public AlohalyticsKeyEvent {
 };
 CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyLocationEvent, "kl")
 
-// Key=value + location.
+// Key + value + location.
 struct AlohalyticsKeyValueLocationEvent : public AlohalyticsKeyValueEvent {
   alohalytics::Location location;
 
@@ -176,7 +176,7 @@ struct AlohalyticsKeyValueLocationEvent : public AlohalyticsKeyValueEvent {
 };
 CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyValueLocationEvent, "vl")
 
-// Key=[key1=value1,key2=value2,...] + location.
+// Key + pairs of key/value + location.
 struct AlohalyticsKeyPairsLocationEvent : public AlohalyticsKeyPairsEvent {
   alohalytics::Location location;
 
