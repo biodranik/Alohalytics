@@ -72,24 +72,31 @@ public class Statistics {
       ex.printStackTrace();
     }
     final SharedPreferences prefs = context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
+    Location lastKnownLocation = null;
+    if (SystemInfo.hasPermission("android.permission.ACCESS_FINE_LOCATION", context)) {
+      // Requires ACCESS_FINE_LOCATION permission.
+      final LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+      lastKnownLocation = (lm == null) ? null : lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
+    }
     // Is it a real new install?
     if (id.second && installTime == updateTime) {
-      final LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
       logEvent("$install", new String[]{"version", versionName,
           "secondsBeforeLaunch", String.valueOf((System.currentTimeMillis() - installTime) / 1000)},
-          lm == null ? null : lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER));
+          lastKnownLocation);
       // Collect device info once on start.
       SystemInfo.getDeviceInfoAsync(context);
       prefs.edit().putLong(PREF_APP_UPDATE_TIME, updateTime).apply();
     } else if (updateTime != installTime && updateTime != prefs.getLong(PREF_APP_UPDATE_TIME, 0)) {
       logEvent("$update", new String[]{"version", versionName,
-          "userAgeInSeconds", String.valueOf((System.currentTimeMillis() - installTime) / 1000)});
+          "secondsBeforeLaunch", String.valueOf((System.currentTimeMillis() - updateTime) / 1000),
+          "userAgeInSeconds", String.valueOf((System.currentTimeMillis() - installTime) / 1000)},
+          lastKnownLocation);
       // Also collect device info on update.
       SystemInfo.getDeviceInfoAsync(context);
       prefs.edit().putLong(PREF_APP_UPDATE_TIME, updateTime).apply();
-    } else {
-      logEvent("$launch");
     }
+    logEvent("$launch", SystemInfo.hasPermission("android.permission.ACCESS_NETWORK_STATE", context)
+        ? SystemInfo.getConnectionInfo(context) : null, lastKnownLocation);
   }
 
   public static native void logEvent(String eventName);

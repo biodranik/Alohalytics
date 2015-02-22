@@ -22,44 +22,39 @@
  SOFTWARE.
  *******************************************************************************/
 
-// Small demo which prints raw (ungzipped) cereal stream from stdin.
+// Small demo which ungzips and prints cereal stream from file.
 
 // This define is needed to preserve client's timestamps in events.
 #define ALOHALYTICS_SERVER
 #include "../../src/event_base.h"
+#include "../../src/gzip_wrapper.h"
 
-#include "../../src/Bricks/rtti/dispatcher.h"
+#include "../../src/Bricks/file/file.h"
 
 #include <iostream>
 #include <iomanip>
 #include <typeinfo>
+#include <fstream>
 
-// If you use only virtual functions in your events, you don't need any Processor at all.
-// Here we process some events with Processor for example only.
-struct Processor {
-  void operator()(const AlohalyticsBaseEvent &event) {
-    std::cout << "Unhandled event of type " << typeid(event).name() << " with timestamp " << event.ToString()
-              << std::endl;
+int main(int argc, char** argv) {
+  if (argc < 2) {
+    std::cout << "Usage: " << argv[0] << " <gzipped_cereal_file>" << std::endl;
+    return -1;
   }
-  void operator()(const AlohalyticsIdEvent &event) { std::cout << event.ToString() << std::endl; }
-  void operator()(const AlohalyticsKeyEvent &event) { std::cout << event.ToString() << std::endl; }
-  void operator()(const AlohalyticsKeyValueEvent &event) { std::cout << event.ToString() << std::endl; }
-  void operator()(const AlohalyticsKeyPairsEvent &event) { std::cout << event.ToString() << std::endl; }
-  void operator()(const AlohalyticsKeyPairsLocationEvent &event) { std::cout << event.ToString() << std::endl; }
-};
-
-int main(int, char **) {
-  cereal::BinaryInputArchive ar(std::cin);
-  Processor processor;
   try {
-    while (std::cin.good()) {
-      std::unique_ptr<AlohalyticsBaseEvent> ptr;
-      ar(ptr);
-      bricks::rtti::RuntimeDispatcher<AlohalyticsBaseEvent, AlohalyticsKeyPairsLocationEvent,
-                                      AlohalyticsKeyPairsEvent, AlohalyticsIdEvent, AlohalyticsKeyValueEvent,
-                                      AlohalyticsKeyEvent>::DispatchCall(*ptr, processor);
+    const std::string ungzipped = alohalytics::Gunzip(bricks::ReadFileAsString(argv[1]));
+    std::istringstream in_stream(ungzipped);
+    cereal::BinaryInputArchive in_archive(in_stream);
+    std::unique_ptr<AlohalyticsBaseEvent> ptr;
+    // Cereal can't detect the end of the stream without our help.
+    // If tellg returns -1 we will exit safely.
+    while (ungzipped.size() > static_cast<size_t>(in_stream.tellg())) {
+      in_archive(ptr);
+      std::cout << ptr->ToString() << std::endl;
     }
-  } catch (const cereal::Exception &) {
+  } catch (const std::exception& ex) {
+    std::cerr << "Exception: " << ex.what() << std::endl;
+    return -1;
   }
   return 0;
 }
