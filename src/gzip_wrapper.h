@@ -34,18 +34,22 @@ static constexpr size_t kGzipBufferSize = 32768;
 struct GzipErrorException : public std::exception {
   int err_;
   std::string msg_;
-  GzipErrorException(int err, const char * msg) : err_(err), msg_(msg ? msg : "") {}
-  virtual char const * what() const noexcept { return ("ERROR " + std::to_string(err_) + " while gzipping with zlib. " + msg_).c_str(); }
+  GzipErrorException(int err, const char* msg) : err_(err), msg_(msg ? msg : "") {}
+  virtual char const* what() const noexcept {
+    return ("ERROR " + std::to_string(err_) + " while gzipping with zlib. " + msg_).c_str();
+  }
 };
 
 struct GunzipErrorException : public std::exception {
   int err_;
   std::string msg_;
-  GunzipErrorException(int err, const char * msg) : err_(err), msg_(msg ? msg : "") {}
-  virtual char const * what() const noexcept { return ("ERROR " + std::to_string(err_) + " while gunzipping with zlib. " + msg_).c_str(); }
+  GunzipErrorException(int err, const char* msg) : err_(err), msg_(msg ? msg : "") {}
+  virtual char const* what() const noexcept {
+    return ("ERROR " + std::to_string(err_) + " while gunzipping with zlib. " + msg_).c_str();
+  }
 };
 
-inline std::string Gzip(const std::string& data_to_compress) throw (GzipErrorException) {
+inline std::string Gzip(const std::string& data_to_compress) throw(GzipErrorException) {
   z_stream z = {};
   int res = ::deflateInit2(&z, Z_BEST_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
   if (Z_OK == res) {
@@ -70,7 +74,7 @@ inline std::string Gzip(const std::string& data_to_compress) throw (GzipErrorExc
   throw GzipErrorException(res, z.msg);
 }
 
-inline std::string Gunzip(const std::string& data_to_decompress) throw (GzipErrorException) {
+inline std::string Gunzip(const std::string& data_to_decompress) throw(GzipErrorException) {
   z_stream z = {};
   int res = ::inflateInit2(&z, 16 + MAX_WBITS);
   if (Z_OK == res) {
@@ -84,7 +88,7 @@ inline std::string Gunzip(const std::string& data_to_decompress) throw (GzipErro
       z.avail_out = buffer.size();
       res = ::inflate(&z, Z_NO_FLUSH);
       if (decompressed.size() < z.total_out) {
-        decompressed.append(reinterpret_cast<char const *>(buffer.data()), z.total_out - decompressed.size());
+        decompressed.append(reinterpret_cast<char const*>(buffer.data()), z.total_out - decompressed.size());
       }
     } while (Z_OK == res);
     ::inflateEnd(&z);

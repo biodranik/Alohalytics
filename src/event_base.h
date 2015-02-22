@@ -78,9 +78,7 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsBaseEvent, "b")
 struct AlohalyticsIdEvent : public AlohalyticsBaseEvent {
   std::string id;
 
-  virtual std::string ToString() const {
-    return AlohalyticsBaseEvent::ToString() + " ID: " + id;
-  }
+  virtual std::string ToString() const { return AlohalyticsBaseEvent::ToString() + " ID: " + id; }
 
   template <class Archive>
   void serialize(Archive& ar) {
@@ -94,9 +92,7 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsIdEvent, "i")
 struct AlohalyticsKeyEvent : public AlohalyticsBaseEvent {
   std::string key;
 
-  virtual std::string ToString() const {
-    return AlohalyticsBaseEvent::ToString() + " " + key;
-  }
+  virtual std::string ToString() const { return AlohalyticsBaseEvent::ToString() + " " + key; }
 
   template <class Archive>
   void serialize(Archive& ar) {
@@ -110,9 +106,7 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsKeyEvent, "k")
 struct AlohalyticsKeyValueEvent : public AlohalyticsKeyEvent {
   std::string value;
 
-  virtual std::string ToString() const {
-    return AlohalyticsKeyEvent::ToString() + " = " + value;
-  }
+  virtual std::string ToString() const { return AlohalyticsKeyEvent::ToString() + " = " + value; }
 
   template <class Archive>
   void serialize(Archive& ar) {
@@ -129,7 +123,7 @@ struct AlohalyticsKeyPairsEvent : public AlohalyticsKeyEvent {
   virtual std::string ToString() const {
     std::ostringstream stream;
     stream << AlohalyticsKeyEvent::ToString() << " [ ";
-    for (const auto &pair : pairs) {
+    for (const auto& pair : pairs) {
       stream << pair.first << '=' << pair.second << ' ';
     }
     stream << ']';
