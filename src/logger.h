@@ -77,7 +77,13 @@ class Logger {
   }
 
   // String specialization to avoid printing every character as a container's element.
-  void Log(const std::string& t) { out_ << t; }
+  void Log(const std::string& t) {
+    if (t.empty()) {
+      out_ << "<EMPTY_STRING>";
+    } else {
+      out_ << t;
+    }
+  }
 
   // Pretty-printing for containers.
   template <template <typename, typename...> class ContainerType, typename ValueType, typename... Args>
