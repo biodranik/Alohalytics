@@ -100,6 +100,27 @@ static Location ExtractLocation(CLLocation * l) {
   }
   return extracted;
 }
+// uint64_t timestamp of Documents folder modification date in millis from 1970, represented as a string.
+// Can be interpreted as a "first app launch time" or an approx. "app install time".
+std::string documentsTimestampMillis() {
+  NSArray * paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+  NSDictionary * attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:[paths firstObject] error:nil];
+  if (attributes) {
+    NSDate * date = [attributes objectForKey:NSFileModificationDate];
+    return std::to_string(static_cast<uint64_t>([date timeIntervalSince1970] * 1000.));
+  }
+  return std::string("0");
+}
+// uint64_t timestamp of app bundle folder modification date in millis from 1970, represented as a string.
+// Can be interpreted as an "app update time".
+std::string bundleTimestampMillis() {
+  NSDictionary * attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:[[NSBundle mainBundle] executablePath] error:nil];
+  if (attributes) {
+    NSDate * date = [attributes objectForKey:NSFileModificationDate];
+    return std::to_string(static_cast<uint64_t>([date timeIntervalSince1970] * 1000.));
+  }
+  return std::string("0");
+}
 } // namespace
 
 
@@ -179,13 +200,17 @@ static Location ExtractLocation(CLLocation * l) {
   NSString * installedVersion = [userDataBase objectForKey:@"AlohalyticsInstalledVersion"];
   if (installationId.second && isFirstLaunch && installedVersion == nil) {
     NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
-    instance.LogEvent("$install", {{"CFBundleVersion", [version UTF8String]}});
+    instance.LogEvent("$install", {{"CFBundleShortVersionString", [version UTF8String]},
+                                   {"documentsTimestampMillis", documentsTimestampMillis()},
+                                   {"bundleTimestampMillis", bundleTimestampMillis()}});
     [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
     [userDataBase synchronize];
   } else {
     NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
     if (installedVersion == nil || ![installedVersion isEqualToString:version]) {
-      instance.LogEvent("$update", {{"CFBundleVersion", [version UTF8String]}});
+      instance.LogEvent("$update", {{"CFBundleShortVersionString", [version UTF8String]},
+                                    {"documentsTimestampMillis", documentsTimestampMillis()},
+                                    {"bundleTimestampMillis", bundleTimestampMillis()}});
       [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
       [userDataBase synchronize];
     }
