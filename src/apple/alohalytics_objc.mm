@@ -46,6 +46,7 @@ static std::string ToStdString(NSString * nsString) {
   }
   return std::string();
 }
+
 // Additional check if object can be represented as a string.
 static std::string ToStdStringSafe(id object) {
   if ([object isKindOfClass:[NSString class]]) {
@@ -55,6 +56,7 @@ static std::string ToStdStringSafe(id object) {
   }
   return "ERROR: Trying to log neither NSString nor NSObject-inherited object.";
 }
+
 // Safe conversion from [possible nil] NSDictionary.
 static TStringMap ToStringMap(NSDictionary * nsDictionary) {
   TStringMap map;
@@ -63,6 +65,7 @@ static TStringMap ToStringMap(NSDictionary * nsDictionary) {
   }
   return map;
 }
+
 // Safe conversion from [possible nil] NSArray.
 static TStringMap ToStringMap(NSArray * nsArray) {
   TStringMap map;
@@ -78,6 +81,7 @@ static TStringMap ToStringMap(NSArray * nsArray) {
   }
   return map;
 }
+
 // Safe extraction from [possible nil] CLLocation to alohalytics::Location.
 static Location ExtractLocation(CLLocation * l) {
   Location extracted;
@@ -100,6 +104,7 @@ static Location ExtractLocation(CLLocation * l) {
   }
   return extracted;
 }
+
 // uint64_t timestamp of Documents folder modification date in millis from 1970, represented as a string.
 // Can be interpreted as a "first app launch time" or an approx. "app install time".
 std::string documentsTimestampMillis() {
@@ -111,6 +116,7 @@ std::string documentsTimestampMillis() {
   }
   return std::string("0");
 }
+
 // uint64_t timestamp of app bundle folder modification date in millis from 1970, represented as a string.
 // Can be interpreted as an "app update time".
 std::string bundleTimestampMillis() {
@@ -122,7 +128,6 @@ std::string bundleTimestampMillis() {
   return std::string("0");
 }
 } // namespace
-
 
 @implementation Alohalytics
 
