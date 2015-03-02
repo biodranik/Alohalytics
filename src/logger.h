@@ -92,8 +92,12 @@ class Logger {
     size_t index = 0;
     const size_t count = c.size();
     for (const auto& v : c) {
-      out_ << v << (++index == count ? '}' : ',');
+      out_ << v;
+      if (++index != count) {
+        out_ << ',';
+      }
     }
+    out_ << '}';
   }
 };
 
