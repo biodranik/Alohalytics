@@ -32,9 +32,13 @@ SOFTWARE.
 
 #include <utility> // std::pair
 #include <sys/xattr.h>
-#include <CoreFoundation/CoreFoundation.h>
-#include <CoreFoundation/CFURL.h>
 #include <TargetConditionals.h> // TARGET_OS_IPHONE
+
+#import <CoreFoundation/CoreFoundation.h>
+#import <CoreFoundation/CFURL.h>
+#import <UIKit/UIDevice.h>
+#import <UIKit/UIScreen.h>
+#import <AdSupport/ASIdentifierManager.h>
 
 using namespace alohalytics;
 
@@ -127,6 +131,72 @@ std::string bundleTimestampMillis() {
   }
   return std::string("0");
 }
+
+std::string rectToString(CGRect const & rect) {
+  return std::to_string(rect.origin.x) + " " + std::to_string(rect.origin.y) + " "
+  + std::to_string(rect.size.width) + " " + std::to_string(rect.size.height);
+}
+
+// Logs some basic device's info.
+void logSystemInformation() {
+  UIDevice * device = [UIDevice currentDevice];
+  UIScreen * screen = [UIScreen mainScreen];
+  std::string preferredLanguages;
+  for (NSString * lang in [NSLocale preferredLanguages]) {
+    preferredLanguages += [lang UTF8String] + std::string(" ");
+  }
+  std::string preferredLocalizations;
+  for (NSString * loc in [[NSBundle mainBundle] preferredLocalizations]) {
+    preferredLocalizations += [loc UTF8String] + std::string(" ");
+  }
+  NSLocale * locale = [NSLocale currentLocale];
+  std::string userInterfaceIdiom = "phone";
+  if (device.userInterfaceIdiom == UIUserInterfaceIdiomPad) {
+    userInterfaceIdiom = "pad";
+  } else if (device.userInterfaceIdiom == UIUserInterfaceIdiomUnspecified) {
+    userInterfaceIdiom = "unspecified";
+  }
+  alohalytics::TStringMap info = {{"deviceName", ToStdString(device.name)},
+    {"deviceSystemName", ToStdString(device.systemName)},
+    {"deviceSystemVersion", ToStdString(device.systemVersion)},
+    {"deviceModel", ToStdString(device.model)},
+    {"deviceUserInterfaceIdiom", userInterfaceIdiom},
+    {"screens", std::to_string([UIScreen screens].count)},
+    {"screenBounds", rectToString(screen.bounds)},
+    {"screenScale", std::to_string(screen.scale)},
+    {"preferredLanguages", preferredLanguages},
+    {"preferredLocalizations", preferredLocalizations},
+    {"localeIdentifier", ToStdString([locale objectForKey:NSLocaleIdentifier])},
+    {"calendarIdentifier", ToStdString([[locale objectForKey:NSLocaleCalendar] calendarIdentifier])},
+    {"localeMeasurementSystem", ToStdString([locale objectForKey:NSLocaleMeasurementSystem])},
+    {"localeDecimalSeparator", ToStdString([locale objectForKey:NSLocaleDecimalSeparator])},
+  };
+  if (device.systemVersion.floatValue >= 8.0) {
+    info.emplace("screenNativeBounds", rectToString(screen.nativeBounds));
+    info.emplace("screenNativeScale", std::to_string(screen.nativeScale));
+  }
+  Stats & instance = Stats::Instance();
+  instance.LogEvent("$iosDeviceInfo", info);
+
+  info.clear();
+  if (device.systemVersion.floatValue >= 6.0) {
+    if (device.identifierForVendor) {
+      info.emplace("identifierForVendor", ToStdString(device.identifierForVendor.UUIDString));
+    }
+    if (NSClassFromString(@"ASIdentifierManager")) {
+      ASIdentifierManager * manager = [ASIdentifierManager sharedManager];
+      info.emplace("isAdvertisingTrackingEnabled", manager.isAdvertisingTrackingEnabled ? "YES" : "NO");
+      if (manager.advertisingIdentifier) {
+        info.emplace("advertisingIdentifier", ToStdString(manager.advertisingIdentifier.UUIDString));
+      }
+    }
+  }
+  if (!info.empty()) {
+    instance.LogEvent("$iosDeviceIds", info);
+  }
+  // Force uploading to get first-time install information before uninstall.
+  instance.Upload();
+}
 } // namespace
 
 @implementation Alohalytics
@@ -210,6 +280,7 @@ std::string bundleTimestampMillis() {
                                    {"bundleTimestampMillis", bundleTimestampMillis()}});
     [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
     [userDataBase synchronize];
+    logSystemInformation();
   } else {
     NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
     if (installedVersion == nil || ![installedVersion isEqualToString:version]) {
@@ -218,6 +289,7 @@ std::string bundleTimestampMillis() {
                                     {"bundleTimestampMillis", bundleTimestampMillis()}});
       [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
       [userDataBase synchronize];
+      logSystemInformation();
     }
   }
   instance.LogEvent("$launch");

@@ -15,6 +15,7 @@
 		6BD1AAF51A8E571A000CB093 /* http_client_apple.mm in Sources */ = {isa = PBXBuildFile; fileRef = 6BD1AAF21A8E571A000CB093 /* http_client_apple.mm */; };
 		6BD1AAF61A8E571A000CB093 /* http_client_apple.mm in Sources */ = {isa = PBXBuildFile; fileRef = 6BD1AAF21A8E571A000CB093 /* http_client_apple.mm */; };
 		6BD1AAFD1A8E5AD8000CB093 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6BD1AAFC1A8E5AD8000CB093 /* libz.dylib */; };
+		6BDB7FDC1AA4884B0036C3CB /* AdSupport.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6BDB7FDB1AA4884B0036C3CB /* AdSupport.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		6BDEF0571A3CF2D100054FAC /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BDEF0561A3CF2D100054FAC /* main.m */; };
 		6BDEF05A1A3CF2D100054FAC /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BDEF0591A3CF2D100054FAC /* AppDelegate.m */; };
 		6BDEF05D1A3CF2D100054FAC /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BDEF05C1A3CF2D100054FAC /* ViewController.m */; };
@@ -48,6 +49,7 @@
 		6BD1AAFB1A8E5ABE000CB093 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/LaunchScreen.xib; sourceTree = "<group>"; };
 		6BD1AAFC1A8E5AD8000CB093 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
 		6BD1AAFE1A8E5AF7000CB093 /* gzip_wrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzip_wrapper.h; path = ../../../src/gzip_wrapper.h; sourceTree = "<group>"; };
+		6BDB7FDB1AA4884B0036C3CB /* AdSupport.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AdSupport.framework; path = System/Library/Frameworks/AdSupport.framework; sourceTree = SDKROOT; };
 		6BDEF0511A3CF2D100054FAC /* SampleClient.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SampleClient.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6BDEF0551A3CF2D100054FAC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		6BDEF0561A3CF2D100054FAC /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
@@ -66,6 +68,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6BDB7FDC1AA4884B0036C3CB /* AdSupport.framework in Frameworks */,
 				6BD1AAFD1A8E5AD8000CB093 /* libz.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -135,6 +138,7 @@
 		6BDEF0541A3CF2D100054FAC /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				6BDB7FDB1AA4884B0036C3CB /* AdSupport.framework */,
 				6BD1AAFC1A8E5AD8000CB093 /* libz.dylib */,
 				6BDEF0551A3CF2D100054FAC /* Info.plist */,
 				6BDEF0561A3CF2D100054FAC /* main.m */,
