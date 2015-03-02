@@ -36,8 +36,10 @@ SOFTWARE.
 
 #import <CoreFoundation/CoreFoundation.h>
 #import <CoreFoundation/CFURL.h>
+#import <Foundation/NSURL.h>
 #import <UIKit/UIDevice.h>
 #import <UIKit/UIScreen.h>
+#import <UIKit/UIApplication.h>
 #import <AdSupport/ASIdentifierManager.h>
 
 using namespace alohalytics;
@@ -257,6 +259,18 @@ static std::string StoragePath() {
   return std::string("Alohalytics ERROR: Can't retrieve valid storage path.");
 }
 
+static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
+  TStringMap parsed;
+  NSURL * url = [options objectForKey:UIApplicationLaunchOptionsURLKey];
+  if (url) {
+    parsed.emplace("UIApplicationLaunchOptionsURLKey", ToStdString([url absoluteString]));
+  }
+  NSString * source = [options objectForKey:UIApplicationLaunchOptionsSourceApplicationKey];
+  if (source) {
+    parsed.emplace("UIApplicationLaunchOptionsSourceApplicationKey", ToStdString(source));
+  }
+  return parsed;
+}
 } // namespace
 
 @implementation Alohalytics
@@ -265,11 +279,11 @@ static std::string StoragePath() {
   Stats::Instance().SetDebugMode(enable);
 }
 
-+ (void)setup:(NSString *)serverUrl {
-  [Alohalytics setup:serverUrl andFirstLaunch:YES];
++ (void)setup:(NSString *)serverUrl withLaunchOptions:(NSDictionary *)options {
+  [Alohalytics setup:serverUrl andFirstLaunch:YES withLaunchOptions:options];
 }
 
-+ (void)setup:(NSString *)serverUrl andFirstLaunch:(BOOL)isFirstLaunch {
++ (void)setup:(NSString *)serverUrl andFirstLaunch:(BOOL)isFirstLaunch withLaunchOptions:(NSDictionary *)options {
   const auto installationId = InstallationId();
   Stats & instance = Stats::Instance();
   instance.SetClientId(installationId.first)
@@ -298,7 +312,7 @@ static std::string StoragePath() {
       LogSystemInformation();
     }
   }
-  instance.LogEvent("$launch");
+  instance.LogEvent("$launch", ParseLaunchOptions(options));
 }
 
 + (void)forceUpload {

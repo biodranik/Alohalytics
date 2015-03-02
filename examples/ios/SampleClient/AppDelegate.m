@@ -36,7 +36,7 @@
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
   // Override point for customization after application launch.
   [Alohalytics setDebugMode:YES];
-  [Alohalytics setup:@"http://localhost:8080/"];
+  [Alohalytics setup:@"http://localhost:8080/" withLaunchOptions:launchOptions];
 
   UIDevice * device = [UIDevice currentDevice];
   [Alohalytics logEvent:@"deviceInfo" withKeyValueArray:@[@"deviceName", device.name, @"systemName", device.systemName, @"systemVersion", device.systemVersion]];
