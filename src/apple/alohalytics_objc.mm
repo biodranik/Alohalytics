@@ -111,7 +111,7 @@ static Location ExtractLocation(CLLocation * l) {
 
 // uint64_t timestamp of Documents folder modification date in millis from 1970, represented as a string.
 // Can be interpreted as a "first app launch time" or an approx. "app install time".
-std::string documentsTimestampMillis() {
+static std::string DocumentsTimestampMillis() {
   NSArray * paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
   NSDictionary * attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:[paths firstObject] error:nil];
   if (attributes) {
@@ -123,7 +123,7 @@ std::string documentsTimestampMillis() {
 
 // uint64_t timestamp of app bundle folder modification date in millis from 1970, represented as a string.
 // Can be interpreted as an "app update time".
-std::string bundleTimestampMillis() {
+static std::string BundleTimestampMillis() {
   NSDictionary * attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:[[NSBundle mainBundle] executablePath] error:nil];
   if (attributes) {
     NSDate * date = [attributes objectForKey:NSFileModificationDate];
@@ -132,13 +132,13 @@ std::string bundleTimestampMillis() {
   return std::string("0");
 }
 
-std::string rectToString(CGRect const & rect) {
+static std::string RectToString(CGRect const & rect) {
   return std::to_string(rect.origin.x) + " " + std::to_string(rect.origin.y) + " "
   + std::to_string(rect.size.width) + " " + std::to_string(rect.size.height);
 }
 
 // Logs some basic device's info.
-void logSystemInformation() {
+static void LogSystemInformation() {
   UIDevice * device = [UIDevice currentDevice];
   UIScreen * screen = [UIScreen mainScreen];
   std::string preferredLanguages;
@@ -162,7 +162,7 @@ void logSystemInformation() {
     {"deviceModel", ToStdString(device.model)},
     {"deviceUserInterfaceIdiom", userInterfaceIdiom},
     {"screens", std::to_string([UIScreen screens].count)},
-    {"screenBounds", rectToString(screen.bounds)},
+    {"screenBounds", RectToString(screen.bounds)},
     {"screenScale", std::to_string(screen.scale)},
     {"preferredLanguages", preferredLanguages},
     {"preferredLocalizations", preferredLocalizations},
@@ -172,7 +172,7 @@ void logSystemInformation() {
     {"localeDecimalSeparator", ToStdString([locale objectForKey:NSLocaleDecimalSeparator])},
   };
   if (device.systemVersion.floatValue >= 8.0) {
-    info.emplace("screenNativeBounds", rectToString(screen.nativeBounds));
+    info.emplace("screenNativeBounds", RectToString(screen.nativeBounds));
     info.emplace("screenNativeScale", std::to_string(screen.nativeScale));
   }
   Stats & instance = Stats::Instance();
@@ -197,11 +197,9 @@ void logSystemInformation() {
   // Force uploading to get first-time install information before uninstall.
   instance.Upload();
 }
-} // namespace
 
-@implementation Alohalytics
-
-+ (std::pair<std::string, bool>)installationId {
+// Returns <unique id, true if it's the very-first app launch>.
+static std::pair<std::string, bool> InstallationId() {
   bool firstLaunch = false;
   NSUserDefaults * userDataBase = [NSUserDefaults standardUserDefaults];
   NSString * installationId = [userDataBase objectForKey:@"AlohalyticsInstallationId"];
@@ -217,7 +215,8 @@ void logSystemInformation() {
   return std::make_pair([installationId UTF8String], firstLaunch);
 }
 
-+ (NSString *)storagePath {
+// Returns path to store statistics files.
+static std::string StoragePath() {
   // Store files in special directory which is not backed up automatically.
   NSArray * paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
   NSString * directory = [[paths firstObject] stringByAppendingString:@"/Alohalytics/"];
@@ -252,8 +251,15 @@ void logSystemInformation() {
     }
 #endif // TARGET_OS_IPHONE
   }
-  return directory;
+  if (directory) {
+    return [directory UTF8String];
+  }
+  return std::string("Alohalytics ERROR: Can't retrieve valid storage path.");
 }
+
+} // namespace
+
+@implementation Alohalytics
 
 + (void)setDebugMode:(BOOL)enable {
   Stats::Instance().SetDebugMode(enable);
@@ -264,10 +270,10 @@ void logSystemInformation() {
 }
 
 + (void)setup:(NSString *)serverUrl andFirstLaunch:(BOOL)isFirstLaunch {
-  const auto installationId = [Alohalytics installationId];
+  const auto installationId = InstallationId();
   Stats & instance = Stats::Instance();
   instance.SetClientId(installationId.first)
-          .SetStoragePath([[Alohalytics storagePath] UTF8String])
+          .SetStoragePath(StoragePath())
           .SetServerUrl([serverUrl UTF8String]);
 
   // Calculate some basic statistics about installations/updates/launches.
@@ -276,20 +282,20 @@ void logSystemInformation() {
   if (installationId.second && isFirstLaunch && installedVersion == nil) {
     NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
     instance.LogEvent("$install", {{"CFBundleShortVersionString", [version UTF8String]},
-                                   {"documentsTimestampMillis", documentsTimestampMillis()},
-                                   {"bundleTimestampMillis", bundleTimestampMillis()}});
+                                   {"documentsTimestampMillis", DocumentsTimestampMillis()},
+                                   {"bundleTimestampMillis", BundleTimestampMillis()}});
     [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
     [userDataBase synchronize];
-    logSystemInformation();
+    LogSystemInformation();
   } else {
     NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
     if (installedVersion == nil || ![installedVersion isEqualToString:version]) {
       instance.LogEvent("$update", {{"CFBundleShortVersionString", [version UTF8String]},
-                                    {"documentsTimestampMillis", documentsTimestampMillis()},
-                                    {"bundleTimestampMillis", bundleTimestampMillis()}});
+                                    {"documentsTimestampMillis", DocumentsTimestampMillis()},
+                                    {"bundleTimestampMillis", BundleTimestampMillis()}});
       [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
       [userDataBase synchronize];
-      logSystemInformation();
+      LogSystemInformation();
     }
   }
   instance.LogEvent("$launch");
