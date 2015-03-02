@@ -83,7 +83,7 @@ static Location ExtractLocation(CLLocation * l) {
   Location extracted;
   if (l) {
     if (l.horizontalAccuracy >= 0) {
-      extracted.SetLatLon([l.timestamp timeIntervalSince1970] * 1000,
+      extracted.SetLatLon([l.timestamp timeIntervalSince1970] * 1000.,
                            l.coordinate.latitude, l.coordinate.longitude,
                            l.horizontalAccuracy);
     }
@@ -169,9 +169,28 @@ static Location ExtractLocation(CLLocation * l) {
 
 + (void)setup:(NSString *)serverUrl andFirstLaunch:(BOOL)isFirstLaunch {
   const auto installationId = [Alohalytics installationId];
-  Stats::Instance().SetClientId(installationId.first)
-                   .SetStoragePath([[Alohalytics storagePath] UTF8String])
-                   .SetServerUrl([serverUrl UTF8String]);
+  Stats & instance = Stats::Instance();
+  instance.SetClientId(installationId.first)
+          .SetStoragePath([[Alohalytics storagePath] UTF8String])
+          .SetServerUrl([serverUrl UTF8String]);
+
+  // Calculate some basic statistics about installations/updates/launches.
+  NSUserDefaults * userDataBase = [NSUserDefaults standardUserDefaults];
+  NSString * installedVersion = [userDataBase objectForKey:@"AlohalyticsInstalledVersion"];
+  if (installationId.second && isFirstLaunch && installedVersion == nil) {
+    NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
+    instance.LogEvent("$install", {{"CFBundleVersion", [version UTF8String]}});
+    [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
+    [userDataBase synchronize];
+  } else {
+    NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
+    if (installedVersion == nil || ![installedVersion isEqualToString:version]) {
+      instance.LogEvent("$update", {{"CFBundleVersion", [version UTF8String]}});
+      [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
+      [userDataBase synchronize];
+    }
+  }
+  instance.LogEvent("$launch");
 }
 
 + (void)logEvent:(NSString *)event {
