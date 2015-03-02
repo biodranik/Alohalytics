@@ -40,6 +40,10 @@
 
   UIDevice * device = [UIDevice currentDevice];
   [Alohalytics logEvent:@"deviceInfo" withKeyValueArray:@[@"deviceName", device.name, @"systemName", device.systemName, @"systemVersion", device.systemVersion]];
+
+  // Used for example purposes only to upload statistics in background.
+  [application setMinimumBackgroundFetchInterval:UIApplicationBackgroundFetchIntervalMinimum];
+
   return YES;
 }
 
@@ -68,6 +72,13 @@
 - (void)applicationWillTerminate:(UIApplication *)application {
   // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
   [Alohalytics logEvent:@"$willTerminate"];
+}
+
+// You need to set "fetch" in UIBackgroundsModes in your plist.
+-(void)application:(UIApplication *)application performFetchWithCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
+{
+  [Alohalytics forceUpload];
+  completionHandler(UIBackgroundFetchResultNewData);
 }
 
 @end

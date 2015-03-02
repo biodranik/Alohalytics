@@ -218,6 +218,10 @@ std::string bundleTimestampMillis() {
   instance.LogEvent("$launch");
 }
 
++ (void)forceUpload {
+  Stats::Instance().Upload();
+}
+
 + (void)logEvent:(NSString *)event {
   Stats::Instance().LogEvent(ToStdString(event));
 }
