@@ -137,8 +137,8 @@ static std::string BundleTimestampMillis() {
 }
 
 static std::string RectToString(CGRect const & rect) {
-  return std::to_string(rect.origin.x) + " " + std::to_string(rect.origin.y) + " "
-  + std::to_string(rect.size.width) + " " + std::to_string(rect.size.height);
+  return std::to_string(static_cast<int>(rect.origin.x)) + " " + std::to_string(static_cast<int>(rect.origin.y)) + " "
+  + std::to_string(static_cast<int>(rect.size.width)) + " " + std::to_string(static_cast<int>(rect.size.height));
 }
 
 // Logs some basic device's info.
