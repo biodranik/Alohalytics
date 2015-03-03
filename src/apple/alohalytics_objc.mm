@@ -198,8 +198,6 @@ static void LogSystemInformation() {
   if (!info.empty()) {
     instance.LogEvent("$iosDeviceIds", info);
   }
-  // Force uploading to get first-time install information before uninstall.
-  instance.Upload();
 }
 
 // Returns <unique id, true if it's the very-first app launch>.
@@ -296,6 +294,7 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
   // Calculate some basic statistics about installations/updates/launches.
   NSUserDefaults * userDataBase = [NSUserDefaults standardUserDefaults];
   NSString * installedVersion = [userDataBase objectForKey:@"AlohalyticsInstalledVersion"];
+  bool forceUpload = false;
   if (installationId.second && isFirstLaunch && installedVersion == nil) {
     NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
     instance.LogEvent("$install", {{"CFBundleShortVersionString", [version UTF8String]},
@@ -304,6 +303,7 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
     [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
     [userDataBase synchronize];
     LogSystemInformation();
+    forceUpload = true;
   } else {
     NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
     if (installedVersion == nil || ![installedVersion isEqualToString:version]) {
@@ -313,9 +313,14 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
       [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
       [userDataBase synchronize];
       LogSystemInformation();
+      forceUpload = true;
     }
   }
   instance.LogEvent("$launch", ParseLaunchOptions(options));
+  // Force uploading to get first-time install information before uninstall.
+  if (forceUpload) {
+    instance.Upload();
+  }
 }
 
 + (void)forceUpload {
