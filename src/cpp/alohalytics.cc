@@ -108,12 +108,13 @@ bool Stats::OnFileReady(const std::string& full_path_to_file) {
 
   // Append unique installation id in the beginning of each file sent to the server.
   // It can be empty so all stats data will become anonymous.
-  // TODO(AlexZ): Refactor fsq to silently add it in the beginning of each file.
+  // TODO(AlexZ): Refactor fsq to silently add it in the beginning of each file
+  // and to avoid not-enough-memory situation for bigger files.
   std::ifstream fi(full_path_to_file, std::ifstream::in | std::ifstream::binary);
   std::string buffer(unique_client_id_event_);
   const size_t id_size = unique_client_id_event_.size();
-  buffer.resize(id_size + file_size);
-  fi.read(&buffer[id_size], file_size);
+  buffer.resize(id_size + static_cast<std::string::size_type>(file_size));
+  fi.read(&buffer[id_size], static_cast<std::streamsize>(file_size));
   if (fi.good()) {
     fi.close();
     return UploadBuffer(upload_url_, std::move(buffer), debug_mode_);
