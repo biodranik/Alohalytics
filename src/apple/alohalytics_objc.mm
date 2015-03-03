@@ -287,8 +287,8 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
   const auto installationId = InstallationId();
   Stats & instance = Stats::Instance();
   instance.SetClientId(installationId.first)
-          .SetStoragePath(StoragePath())
-          .SetServerUrl([serverUrl UTF8String]);
+          .SetServerUrl([serverUrl UTF8String])
+          .SetStoragePath(StoragePath());
 
   // Calculate some basic statistics about installations/updates/launches.
   NSUserDefaults * userDataBase = [NSUserDefaults standardUserDefaults];
