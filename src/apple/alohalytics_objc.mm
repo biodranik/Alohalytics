@@ -113,22 +113,9 @@ static Location ExtractLocation(CLLocation * l) {
   return extracted;
 }
 
-// uint64_t timestamp of Documents folder modification date in millis from 1970, represented as a string.
-// Can be interpreted as a "first app launch time" or an approx. "app install time".
-static std::string DocumentsTimestampMillis() {
-  NSArray * paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-  NSDictionary * attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:[paths firstObject] error:nil];
-  if (attributes) {
-    NSDate * date = [attributes objectForKey:NSFileModificationDate];
-    return std::to_string(static_cast<uint64_t>([date timeIntervalSince1970] * 1000.));
-  }
-  return std::string("0");
-}
-
-// uint64_t timestamp of app bundle folder modification date in millis from 1970, represented as a string.
-// Can be interpreted as an "app update time".
-static std::string BundleTimestampMillis() {
-  NSDictionary * attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:[[NSBundle mainBundle] executablePath] error:nil];
+// Returns uint64_t timestamp of given file or directory (modification date in millis from 1970), represented as a string.
+static std::string PathTimestampMillis(NSString * path) {
+  NSDictionary * attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:nil];
   if (attributes) {
     NSDate * date = [attributes objectForKey:NSFileModificationDate];
     return std::to_string(static_cast<uint64_t>([date timeIntervalSince1970] * 1000.));
@@ -297,9 +284,11 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
   bool forceUpload = false;
   if (installationId.second && isFirstLaunch && installedVersion == nil) {
     NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
+    // Documents folder modification time can be interpreted as a "first app launch time" or an approx. "app install time".
+    // App bundle modification time can be interpreted as an "app update time".
     instance.LogEvent("$install", {{"CFBundleShortVersionString", [version UTF8String]},
-                                   {"documentsTimestampMillis", DocumentsTimestampMillis()},
-                                   {"bundleTimestampMillis", BundleTimestampMillis()}});
+        {"documentsTimestampMillis", PathTimestampMillis([NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject])},
+        {"bundleTimestampMillis", PathTimestampMillis([[NSBundle mainBundle] executablePath])}});
     [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
     [userDataBase synchronize];
     LogSystemInformation();
@@ -308,8 +297,8 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
     NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
     if (installedVersion == nil || ![installedVersion isEqualToString:version]) {
       instance.LogEvent("$update", {{"CFBundleShortVersionString", [version UTF8String]},
-                                    {"documentsTimestampMillis", DocumentsTimestampMillis()},
-                                    {"bundleTimestampMillis", BundleTimestampMillis()}});
+          {"documentsTimestampMillis", PathTimestampMillis([NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject])},
+          {"bundleTimestampMillis", PathTimestampMillis([[NSBundle mainBundle] executablePath])}});
       [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
       [userDataBase synchronize];
       LogSystemInformation();
