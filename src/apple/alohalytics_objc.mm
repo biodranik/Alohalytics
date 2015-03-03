@@ -92,10 +92,12 @@ static TStringMap ToStringMap(NSArray * nsArray) {
 static Location ExtractLocation(CLLocation * l) {
   Location extracted;
   if (l) {
+    // Validity of values is checked according to Apple's documentation:
+    // https://developer.apple.com/library/ios/documentation/CoreLocation/Reference/CLLocation_Class/
     if (l.horizontalAccuracy >= 0) {
       extracted.SetLatLon([l.timestamp timeIntervalSince1970] * 1000.,
-                           l.coordinate.latitude, l.coordinate.longitude,
-                           l.horizontalAccuracy);
+                          l.coordinate.latitude, l.coordinate.longitude,
+                          l.horizontalAccuracy);
     }
     if (l.verticalAccuracy >= 0) {
       extracted.SetAltitude(l.altitude, l.verticalAccuracy);
@@ -225,9 +227,10 @@ static std::string StoragePath() {
   NSFileManager * fm = [NSFileManager defaultManager];
   if (![fm fileExistsAtPath:directory]) {
     if (![fm createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:nil]) {
+      // TODO(AlexZ): Probably we need to log this case to the server in the future.
       NSLog(@"Alohalytics ERROR: Can't create directory %@.", directory);
     }
-#if (TARGET_OS_IPHONE > 0)
+#if (TARGET_OS_IPHONE > 0) // Works for all iOS devices, including iPAD.
     // Disable iCloud backup for storage folder: https://developer.apple.com/library/iOS/qa/qa1719/_index.html
     const std::string storagePath = [directory UTF8String];
     if (NSFoundationVersionNumber >= NSFoundationVersionNumber_iOS_5_1) {
@@ -236,8 +239,8 @@ static std::string StoragePath() {
                                                              storagePath.size(),
                                                              0);
       CFErrorRef err;
-      signed char valueRaw = 1; // BOOL YES
-      CFNumberRef value = CFNumberCreate(kCFAllocatorDefault, kCFNumberCharType, &valueRaw);
+      signed char valueOfCFBooleanYes = 1;
+      CFNumberRef value = CFNumberCreate(kCFAllocatorDefault, kCFNumberCharType, &valueOfCFBooleanYes);
       if (!CFURLSetResourcePropertyForKey(url, kCFURLIsExcludedFromBackupKey, value, &err)) {
         NSLog(@"Alohalytics ERROR while disabling iCloud backup for directory %@", directory);
       }
@@ -245,8 +248,8 @@ static std::string StoragePath() {
       CFRelease(url);
     } else {
       static char const * attrName = "com.apple.MobileBackup";
-      u_int8_t attrValue = 1;
-      const int result = ::setxattr(storagePath.c_str(), attrName, &attrValue, sizeof(attrValue), 0, 0);
+      u_int8_t valueOfBooleanYes = 1;
+      const int result = ::setxattr(storagePath.c_str(), attrName, &valueOfBooleanYes, sizeof(valueOfBooleanYes), 0, 0);
       if (result != 0) {
         NSLog(@"Alohalytics ERROR while disabling iCloud backup for directory %@", directory);
       }

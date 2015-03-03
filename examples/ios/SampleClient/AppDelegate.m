@@ -74,7 +74,8 @@
   [Alohalytics logEvent:@"$willTerminate"];
 }
 
-// You need to set "fetch" in UIBackgroundsModes in your plist.
+// You have to set "fetch" in UIBackgroundsModes in your plist so system will call this method.
+// See https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/iPhoneOSKeys.html for more details.
 -(void)application:(UIApplication *)application performFetchWithCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
 {
   [Alohalytics forceUpload];
