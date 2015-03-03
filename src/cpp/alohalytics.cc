@@ -254,6 +254,7 @@ void Stats::Upload() {
     LOG_IF_DEBUG("Warning: unique client ID is not set so statistics was not uploaded.");
     return;
   }
+  LOG_IF_DEBUG("Forcing statistics uploading.");
   if (file_storage_queue_) {
     file_storage_queue_->ForceProcessing();
   } else {
@@ -264,6 +265,7 @@ void Stats::Upload() {
     for (const auto& evt : copy) {
       buffer.append(evt);
     }
+    LOG_IF_DEBUG("Forcing in-memory statistics uploading.");
     if (!UploadBuffer(upload_url_, std::move(buffer), debug_mode_)) {
       // If failed, merge events we tried to upload with possible new ones.
       memory_storage_.splice(memory_storage_.end(), std::move(copy));
