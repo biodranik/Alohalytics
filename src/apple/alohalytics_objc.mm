@@ -37,10 +37,12 @@ SOFTWARE.
 #import <CoreFoundation/CoreFoundation.h>
 #import <CoreFoundation/CFURL.h>
 #import <Foundation/NSURL.h>
+#if (TARGET_OS_IPHONE > 0)  // Works for all iOS devices, including iPad.
 #import <UIKit/UIDevice.h>
 #import <UIKit/UIScreen.h>
 #import <UIKit/UIApplication.h>
 #import <AdSupport/ASIdentifierManager.h>
+#endif  // TARGET_OS_IPHONE
 
 using namespace alohalytics;
 
@@ -123,6 +125,7 @@ static std::string PathTimestampMillis(NSString * path) {
   return std::string("0");
 }
 
+#if (TARGET_OS_IPHONE > 0)
 static std::string RectToString(CGRect const & rect) {
   return std::to_string(static_cast<int>(rect.origin.x)) + " " + std::to_string(static_cast<int>(rect.origin.y)) + " "
   + std::to_string(static_cast<int>(rect.size.width)) + " " + std::to_string(static_cast<int>(rect.size.height));
@@ -186,6 +189,7 @@ static void LogSystemInformation() {
     instance.LogEvent("$iosDeviceIds", info);
   }
 }
+#endif  // TARGET_OS_IPHONE
 
 // Returns <unique id, true if it's the very-first app launch>.
 static std::pair<std::string, bool> InstallationId() {
@@ -215,7 +219,7 @@ static std::string StoragePath() {
       // TODO(AlexZ): Probably we need to log this case to the server in the future.
       NSLog(@"Alohalytics ERROR: Can't create directory %@.", directory);
     }
-#if (TARGET_OS_IPHONE > 0) // Works for all iOS devices, including iPAD.
+#if (TARGET_OS_IPHONE > 0)
     // Disable iCloud backup for storage folder: https://developer.apple.com/library/iOS/qa/qa1719/_index.html
     const std::string storagePath = [directory UTF8String];
     if (NSFoundationVersionNumber >= NSFoundationVersionNumber_iOS_5_1) {
@@ -239,7 +243,7 @@ static std::string StoragePath() {
         NSLog(@"Alohalytics ERROR while disabling iCloud backup for directory %@", directory);
       }
     }
-#endif // TARGET_OS_IPHONE
+#endif  // TARGET_OS_IPHONE
   }
   if (directory) {
     return [directory UTF8String];
@@ -247,8 +251,10 @@ static std::string StoragePath() {
   return std::string("Alohalytics ERROR: Can't retrieve valid storage path.");
 }
 
+#if (TARGET_OS_IPHONE > 0)
 static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
   TStringMap parsed;
+
   NSURL * url = [options objectForKey:UIApplicationLaunchOptionsURLKey];
   if (url) {
     parsed.emplace("UIApplicationLaunchOptionsURLKey", ToStdString([url absoluteString]));
@@ -259,6 +265,7 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
   }
   return parsed;
 }
+#endif  // TARGET_OS_IPHONE
 } // namespace
 
 @implementation Alohalytics
@@ -291,7 +298,11 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
         {"bundleTimestampMillis", PathTimestampMillis([[NSBundle mainBundle] executablePath])}});
     [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
     [userDataBase synchronize];
+#if (TARGET_OS_IPHONE > 0)
     LogSystemInformation();
+#else
+    static_cast<void>(options);  // Unused variable warning fix.
+#endif  // TARGET_OS_IPHONE
     forceUpload = true;
   } else {
     NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
@@ -301,11 +312,17 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
           {"bundleTimestampMillis", PathTimestampMillis([[NSBundle mainBundle] executablePath])}});
       [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
       [userDataBase synchronize];
+#if (TARGET_OS_IPHONE > 0)
       LogSystemInformation();
+#endif  // TARGET_OS_IPHONE
       forceUpload = true;
     }
   }
-  instance.LogEvent("$launch", ParseLaunchOptions(options));
+  instance.LogEvent("$launch"
+#if (TARGET_OS_IPHONE > 0)
+                    , ParseLaunchOptions(options)
+#endif  // TARGET_OS_IPHONE
+                    );
   // Force uploading to get first-time install information before uninstall.
   if (forceUpload) {
     instance.Upload();
