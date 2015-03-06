@@ -93,29 +93,30 @@ static TStringMap ToStringMap(NSArray * nsArray) {
 // Safe extraction from [possible nil] CLLocation to alohalytics::Location.
 static Location ExtractLocation(CLLocation * l) {
   Location extracted;
-  if (l) {
-    // Validity of values is checked according to Apple's documentation:
-    // https://developer.apple.com/library/ios/documentation/CoreLocation/Reference/CLLocation_Class/
-    if (l.horizontalAccuracy >= 0) {
-      extracted.SetLatLon([l.timestamp timeIntervalSince1970] * 1000.,
-                          l.coordinate.latitude, l.coordinate.longitude,
-                          l.horizontalAccuracy);
-    }
-    if (l.verticalAccuracy >= 0) {
-      extracted.SetAltitude(l.altitude, l.verticalAccuracy);
-    }
-    if (l.speed >= 0) {
-      extracted.SetSpeed(l.speed);
-    }
-    if (l.course >= 0) {
-      extracted.SetBearing(l.course);
-    }
-    // We don't know location source on iOS.
+  if (!l) {
+    return extracted;
   }
+  // Validity of values is checked according to Apple's documentation:
+  // https://developer.apple.com/library/ios/documentation/CoreLocation/Reference/CLLocation_Class/
+  if (l.horizontalAccuracy >= 0) {
+    extracted.SetLatLon([l.timestamp timeIntervalSince1970] * 1000.,
+                        l.coordinate.latitude, l.coordinate.longitude,
+                        l.horizontalAccuracy);
+  }
+  if (l.verticalAccuracy >= 0) {
+    extracted.SetAltitude(l.altitude, l.verticalAccuracy);
+  }
+  if (l.speed >= 0) {
+    extracted.SetSpeed(l.speed);
+  }
+  if (l.course >= 0) {
+    extracted.SetBearing(l.course);
+  }
+  // We don't know location source on iOS.
   return extracted;
 }
 
-// Returns uint64_t timestamp of given file or directory (modification date in millis from 1970), represented as a string.
+// Returns string representing uint64_t timestamp of given file or directory (modification date in millis from 1970).
 static std::string PathTimestampMillis(NSString * path) {
   NSDictionary * attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:nil];
   if (attributes) {
