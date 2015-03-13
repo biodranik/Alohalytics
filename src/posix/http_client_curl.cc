@@ -27,10 +27,13 @@
 #include <stdio.h>  // popen
 #include <fstream>
 #include <iostream>  // std::cerr
+#include <stdexcept> // std::runtime_error
 
 #ifdef _MSC_VER
 #define popen _popen
 #define pclose _pclose
+#else
+#include <unistd.h> // write, close
 #endif
 
 // Used as a test stub for basic HTTP client implementation.
@@ -41,12 +44,15 @@ std::string RunCurl(const std::string& cmd) {
   FILE* pipe = ::popen(cmd.c_str(), "r");
   assert(pipe);
   char s[8 * 1024];
-  ::fgets(s, sizeof(s) / sizeof(s[0]), pipe);
+  std::string result;
+  while (nullptr != ::fgets(s, sizeof(s) / sizeof(s[0]), pipe)) {
+    result += s;
+  }
   const int err = ::pclose(pipe);
   if (err) {
-    std::cerr << "Error " << err << " while calling " << cmd << std::endl;
+    throw std::runtime_error("Error " + std::to_string(err) + " while calling " + cmd);
   }
-  return s;
+  return result;
 }
 
 // Not fully implemented.
@@ -58,13 +64,19 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   }
   if (!post_body_.empty()) {
     // POST body through tmp file to avoid breaking command line.
-    char tmp_file[L_tmpnam];
 #ifdef _MSC_VER
+    char tmp_file[L_tmpnam];
     ::tmpnam_s(tmp_file, L_tmpnam);
-#else
-    ::tmpnam(tmp_file);
-#endif
     std::ofstream(tmp_file) << post_body_;
+#else
+    char tmp_file[] = "curltmp-XXXXXX";
+    int fd = ::mkstemp(tmp_file);
+    if (fd < 0) {
+      return false;
+    }
+    ::write(fd, post_body_.data(), post_body_.size());
+    ::close(fd);
+#endif
     post_file_ = tmp_file;
   }
   if (!post_file_.empty()) {
@@ -72,22 +84,32 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   }
 
   cmd += url_requested_;
-  server_response_ = RunCurl(cmd);
+  try {
+    server_response_ = RunCurl(cmd);
 
-  // Clean up tmp file if any was created.
-  if (!post_body_.empty() && !post_file_.empty()) {
-    ::remove(post_file_.c_str());
+    // Clean up tmp file if any was created.
+    if (!post_body_.empty() && !post_file_.empty()) {
+      ::remove(post_file_.c_str());
+    }
+
+    error_code_ = -1;
+    std::string & s = server_response_;
+    if (s.size() < 3) {
+      return false;
+    }
+    // Extract http status code from the last response line.
+    error_code_ = std::stoi(s.substr(s.size() - 3));
+    s.resize(s.size() - 3);
+
+    if (!received_file_.empty()) {
+      std::ofstream file(received_file_);
+      file.exceptions(std::ios::failbit | std::ios::badbit);
+      file << server_response_;
+    }
+  } catch (std::exception const & ex) {
+    std::cerr << "Exception " << ex.what() << std::endl;
+    return false;
   }
-
-  // TODO(AlexZ): Detect if we did not make any connection and return false.
-  // Extract http status code from the last response line.
-  error_code_ = std::stoi(server_response_.substr(server_response_.size() - 3));
-  server_response_.resize(server_response_.size() - 4);
-
-  if (!received_file_.empty()) {
-    std::ofstream(received_file_) << server_response_;
-  }
-
   return true;
 }
 
