@@ -14,6 +14,10 @@ ifeq ($(OS),Darwin)
   CPPFLAGS += -x objective-c++ -fobjc-arc
   LDFLAGS += -framework Foundation
   MORE_SOURCES += ../../src/apple/http_client_apple.mm
+else
+  ifeq ($(OS),Linux)
+    MORE_SOURCES += ../../src/posix/http_client_curl.cc
+  endif
 endif
 
 run: all
