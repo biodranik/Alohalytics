@@ -40,6 +40,15 @@
 
 namespace alohalytics {
 
+struct ScopedTmpFileDeleter {
+  std::string file;
+  ~ScopedTmpFileDeleter() {
+    if (!file.empty()) {
+      ::remove(file.c_str());
+    }
+  }
+};
+
 std::string RunCurl(const std::string& cmd) {
   FILE* pipe = ::popen(cmd.c_str(), "r");
   assert(pipe);
@@ -55,13 +64,15 @@ std::string RunCurl(const std::string& cmd) {
   return result;
 }
 
-// Not fully implemented.
+// TODO(AlexZ): Not a production-ready implementation.
 bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   // Last 3 chars in server's response will be http status code
   std::string cmd = "curl -s -w '%{http_code}' ";
   if (!content_type_.empty()) {
     cmd += "-H 'Content-Type: application/json' ";
   }
+
+  ScopedTmpFileDeleter deleter;
   if (!post_body_.empty()) {
     // POST body through tmp file to avoid breaking command line.
 #ifdef _MSC_VER
@@ -78,6 +89,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     ::close(fd);
 #endif
     post_file_ = tmp_file;
+    deleter.file = post_file_;
   }
   if (!post_file_.empty()) {
     cmd += "--data-binary @" + post_file_ + " ";
@@ -86,12 +98,6 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   cmd += url_requested_;
   try {
     server_response_ = RunCurl(cmd);
-
-    // Clean up tmp file if any was created.
-    if (!post_body_.empty() && !post_file_.empty()) {
-      ::remove(post_file_.c_str());
-    }
-
     error_code_ = -1;
     std::string & s = server_response_;
     if (s.size() < 3) {
