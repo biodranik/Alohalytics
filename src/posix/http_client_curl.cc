@@ -28,6 +28,7 @@
 #include <fstream>
 #include <iostream>  // std::cerr
 #include <stdexcept> // std::runtime_error
+#include <array>
 
 #ifdef _MSC_VER
 #define popen _popen
@@ -52,10 +53,10 @@ struct ScopedTmpFileDeleter {
 std::string RunCurl(const std::string& cmd) {
   FILE* pipe = ::popen(cmd.c_str(), "r");
   assert(pipe);
-  char s[8 * 1024];
+  std::array<char, 8 * 1024> s;
   std::string result;
-  while (nullptr != ::fgets(s, sizeof(s) / sizeof(s[0]), pipe)) {
-    result += s;
+  while (nullptr != ::fgets(s.data(), s.size(), pipe)) {
+    result += s.data();
   }
   const int err = ::pclose(pipe);
   if (err) {
