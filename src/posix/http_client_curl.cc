@@ -24,11 +24,11 @@
 
 #include "../http_client.h"
 
-#include <stdio.h>  // popen
+#include <array>
 #include <fstream>
 #include <iostream>  // std::cerr
 #include <stdexcept> // std::runtime_error
-#include <array>
+#include <stdio.h>  // popen
 
 #ifdef _MSC_VER
 #define popen _popen

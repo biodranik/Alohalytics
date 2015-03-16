@@ -256,6 +256,7 @@ void Stats::Upload() {
   }
   LOG_IF_DEBUG("Forcing statistics uploading.");
   if (file_storage_queue_) {
+    // Upload all data, including 'current' file.
     file_storage_queue_->ForceProcessing(true);
   } else {
     std::string buffer = unique_client_id_event_;
