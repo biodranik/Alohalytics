@@ -68,6 +68,7 @@ std::string RunCurl(const std::string& cmd) {
 // TODO(AlexZ): Not a production-ready implementation.
 bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   // Last 3 chars in server's response will be http status code
+  static constexpr size_t kCurlHttpCodeSize = 3;
   std::string cmd = "curl --max-redirs 0 -s -w '%{http_code}' ";
   if (!content_type_.empty()) {
     cmd += "-H 'Content-Type: application/json' ";
@@ -104,12 +105,12 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     server_response_ = RunCurl(cmd);
     error_code_ = -1;
     std::string & s = server_response_;
-    if (s.size() < 3) {
+    if (s.size() < kCurlHttpCodeSize) {
       return false;
     }
     // Extract http status code from the last response line.
-    error_code_ = std::stoi(s.substr(s.size() - 3));
-    s.resize(s.size() - 3);
+    error_code_ = std::stoi(s.substr(s.size() - kCurlHttpCodeSize));
+    s.resize(s.size() - kCurlHttpCodeSize);
 
     if (!received_file_.empty()) {
       std::ofstream file(received_file_);
