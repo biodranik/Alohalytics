@@ -68,7 +68,7 @@ std::string RunCurl(const std::string& cmd) {
 // TODO(AlexZ): Not a production-ready implementation.
 bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   // Last 3 chars in server's response will be http status code
-  std::string cmd = "curl -s -w '%{http_code}' ";
+  std::string cmd = "curl --max-redirs 0 -s -w '%{http_code}' ";
   if (!content_type_.empty()) {
     cmd += "-H 'Content-Type: application/json' ";
   }
@@ -120,6 +120,8 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     std::cerr << "Exception " << ex.what() << std::endl;
     return false;
   }
+  // Should be safe here as we disabled redirects in curl's command line.
+  url_received_ = url_requested_;
   return true;
 }
 
