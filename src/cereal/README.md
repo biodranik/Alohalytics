@@ -20,30 +20,30 @@ Installation and use of of cereal is fully documented on the [main web page](htt
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
 #include <fstream>
-    
+
 struct MyRecord
 {
   uint8_t x, y;
   float z;
-  
+
   template <class Archive>
   void serialize( Archive & ar )
   {
     ar( x, y, z );
   }
 };
-    
+
 struct SomeData
 {
   int32_t id;
   std::shared_ptr<std::unordered_map<uint32_t, MyRecord>> data;
-  
+
   template <class Archive>
   void save( Archive & ar ) const
   {
     ar( data );
   }
-      
+
   template <class Archive>
   void load( Archive & ar )
   {
@@ -63,7 +63,7 @@ int main()
 
   return 0;
 }
-```    
+```
 
 ### cereal has a mailing list
 
