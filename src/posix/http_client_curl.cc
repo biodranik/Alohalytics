@@ -86,8 +86,11 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     if (fd < 0) {
       return false;
     }
-    ::write(fd, post_body_.data(), post_body_.size());
+    ssize_t const written = ::write(fd, post_body_.data(), post_body_.size());
     ::close(fd);
+    if (written != static_cast<ssize_t>(post_body_.size())) {
+      return false;
+    }
 #endif
     post_file_ = tmp_file;
     deleter.file = post_file_;
