@@ -34,11 +34,12 @@
 #define popen _popen
 #define pclose _pclose
 #else
-#include <unistd.h> // write, close
+#include <unistd.h> // close
 #endif
 
 // Used as a test stub for basic HTTP client implementation.
-
+// Make sure that you have curl installed in the PATH.
+// TODO(AlexZ): Not a production-ready implementation.
 namespace alohalytics {
 
 struct ScopedTmpFileDeleter {
@@ -65,7 +66,6 @@ std::string RunCurl(const std::string& cmd) {
   return result;
 }
 
-// TODO(AlexZ): Not a production-ready implementation.
 bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   // Last 3 chars in server's response will be http status code
   static constexpr size_t kCurlHttpCodeSize = 3;
@@ -80,21 +80,21 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
 #ifdef _MSC_VER
     char tmp_file[L_tmpnam];
     ::tmpnam_s(tmp_file, L_tmpnam);
-    std::ofstream(tmp_file) << post_body_;
 #else
-    char tmp_file[] = "curltmp-XXXXXX";
-    int fd = ::mkstemp(tmp_file);
+    char tmp_file[] = "/tmp/alohalyticstmp-XXXXXX";
+    int fd = ::mkstemp(tmp_file); // tmpnam is deprecated and insecure.
     if (fd < 0) {
+      std::cerr << "Error: failed to create temporary file." << std::endl;
       return false;
     }
-    ssize_t const written = ::write(fd, post_body_.data(), post_body_.size());
     ::close(fd);
-    if (written != static_cast<ssize_t>(post_body_.size())) {
+#endif
+    deleter.file = tmp_file;
+    if (!(std::ofstream(deleter.file) << post_body_).good()) {
+      std::cerr << "Error: failed to write into a temporary file." << std::endl;
       return false;
     }
-#endif
-    post_file_ = tmp_file;
-    deleter.file = post_file_;
+    post_file_ = deleter.file;
   }
   if (!post_file_.empty()) {
     cmd += "--data-binary @" + post_file_ + " ";
