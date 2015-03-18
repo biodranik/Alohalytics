@@ -54,11 +54,15 @@ struct ScopedTmpFileDeleter {
 std::string RunCurl(const std::string& cmd) {
   FILE* pipe = ::popen(cmd.c_str(), "r");
   assert(pipe);
-  std::array<char, 8 * 1024> s;
+  std::array<char, 8 * 1024> arr;
   std::string result;
-  while (nullptr != ::fgets(s.data(), s.size(), pipe)) {
-    result += s.data();
-  }
+  size_t read;
+  do {
+    read = ::fread(arr.data(), 1, arr.size(), pipe);
+    if (read > 0) {
+      result.append(arr.data(), read);
+    }
+  } while (read == arr.size());
   const int err = ::pclose(pipe);
   if (err) {
     throw std::runtime_error("Error " + std::to_string(err) + " while calling " + cmd);
@@ -102,6 +106,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
 
   cmd += url_requested_;
   try {
+    // TODO(AlexZ): Do not store data in memory if received_file_ was specified.
     server_response_ = RunCurl(cmd);
     error_code_ = -1;
     std::string & s = server_response_;
