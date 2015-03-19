@@ -70,12 +70,16 @@ std::string RunCurl(const std::string& cmd) {
   return result;
 }
 
+// TODO(AlexZ): Add support for content_type_received_ and content_encoding_received_.
 bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   // Last 3 chars in server's response will be http status code
   static constexpr size_t kCurlHttpCodeSize = 3;
   std::string cmd = "curl --max-redirs 0 -s -w '%{http_code}' ";
   if (!content_type_.empty()) {
-    cmd += "-H 'Content-Type: application/json' ";
+    cmd += "-H 'Content-Type: " + content_type_ + "' ";
+  }
+  if (!content_encoding_.empty()) {
+    cmd += "-H 'Content-Encoding: " + content_encoding_ + "' ";
   }
 
   ScopedTmpFileDeleter deleter;
