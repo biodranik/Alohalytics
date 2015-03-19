@@ -39,8 +39,15 @@ public class HttpTransportTest extends InstrumentationTestCase {
     HttpTransport.TIMEOUT_IN_MILLISECONDS = 3000;
   }
 
+  public static final String CACHE_DIR = "/data/data/org.alohalytics.demoapp/cache/";
+
+  @Override
+  protected void setUp() {
+    new File(CACHE_DIR).mkdirs();
+  }
+
   private String getFullWritablePathForFile(String fileName) {
-    return getInstrumentation().getContext().getCacheDir().getAbsolutePath() + "/" + fileName;
+    return CACHE_DIR + fileName;
   }
 
   public void testGetIntoMemory() throws Exception {
