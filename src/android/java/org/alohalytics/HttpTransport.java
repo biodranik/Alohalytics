@@ -52,8 +52,8 @@ public class HttpTransport {
       Log.d(TAG, "Connecting to " + p.url);
     try {
       connection = (HttpURLConnection) new URL(p.url).openConnection(); // NullPointerException, MalformedUrlException, IOException
-      // TODO(AlexZ): Customize redirects following in the future implementation for safer transfers.
-      connection.setInstanceFollowRedirects(true);
+      // We DO NOT follow any redirects for safer data transfer.
+      connection.setInstanceFollowRedirects(false);
       connection.setConnectTimeout(TIMEOUT_IN_MILLISECONDS);
       connection.setReadTimeout(TIMEOUT_IN_MILLISECONDS);
       connection.setUseCaches(false);
