@@ -100,7 +100,7 @@ class HTTPClientPlatformWrapper {
   // This method is mutually exclusive with set_post_file().
   HTTPClientPlatformWrapper& set_post_body(std::string&& post_body, const std::string& content_type,
                                            const std::string& content_encoding = "") {
-    post_body_ = post_body;
+    post_body_ = std::move(post_body);
     post_file_.clear();
     content_type_ = content_type;
     content_encoding_ = content_encoding;
