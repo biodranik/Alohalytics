@@ -21,6 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
+#include <cstring> // std::memset
 #include <string>
 #include <vector>
 #include <zlib.h>
@@ -52,7 +53,8 @@ struct GunzipErrorException : public std::exception {
 };
 
 inline std::string Gzip(const std::string& data_to_compress) throw(GzipErrorException) {
-  z_stream z = {};
+  z_stream z;
+  std::memset(&z, 0, sizeof(z));
   int res = ::deflateInit2(&z, Z_BEST_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
   if (Z_OK == res) {
     z.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(data_to_compress.data()));
@@ -78,7 +80,8 @@ inline std::string Gzip(const std::string& data_to_compress) throw(GzipErrorExce
 }
 
 inline std::string Gunzip(const std::string& data_to_decompress) throw(GunzipErrorException) {
-  z_stream z = {};
+  z_stream z;
+  std::memset(&z, 0, sizeof(z));
   int res = ::inflateInit2(&z, 16 + MAX_WBITS);
   if (Z_OK == res) {
     z.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(data_to_decompress.data()));
