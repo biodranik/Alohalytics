@@ -21,6 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
+#include <cstring> // std::memset
 #include <string>
 #include <vector>
 #include <zlib.h>
@@ -41,18 +42,10 @@ struct GzipErrorException : public std::exception {
   }
 };
 
-struct GunzipErrorException : public std::exception {
-  std::string msg_;
-  GunzipErrorException(int err, const char* msg) {
-    msg_ = std::string("ERROR ") + std::to_string(err) + " while gzipping with zlib. " + (msg ? msg : "");
-  }
-  virtual char const* what() const noexcept {
-    return msg_.c_str();
-  }
-};
-
-inline std::string Gzip(const std::string& data_to_compress) throw(GzipErrorException) {
-  z_stream z = {};
+// Throws GzipErrorException on any gzip processing error.
+inline std::string Gzip(const std::string& data_to_compress) {
+  z_stream z;
+  std::memset(&z, 0, sizeof(z));
   int res = ::deflateInit2(&z, Z_BEST_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
   if (Z_OK == res) {
     z.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(data_to_compress.data()));
@@ -77,8 +70,20 @@ inline std::string Gzip(const std::string& data_to_compress) throw(GzipErrorExce
   throw GzipErrorException(res, z.msg);
 }
 
-inline std::string Gunzip(const std::string& data_to_decompress) throw(GunzipErrorException) {
-  z_stream z = {};
+struct GunzipErrorException : public std::exception {
+  std::string msg_;
+  GunzipErrorException(int err, const char* msg) {
+    msg_ = std::string("ERROR ") + std::to_string(err) + " while gzipping with zlib. " + (msg ? msg : "");
+  }
+  virtual char const* what() const noexcept {
+    return msg_.c_str();
+  }
+};
+
+// Throws GunzipErrorException on any gunzip processing error.
+inline std::string Gunzip(const std::string& data_to_decompress) {
+  z_stream z;
+  std::memset(&z, 0, sizeof(z));
   int res = ::inflateInit2(&z, 16 + MAX_WBITS);
   if (Z_OK == res) {
     z.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(data_to_decompress.data()));
