@@ -156,15 +156,6 @@ class FSQ final : public CONFIG::T_FILE_NAMING_STRATEGY,
     } else {
       const T_TIMESTAMP now = time_manager_.Now();
       const uint64_t message_size_in_bytes = T_FILE_APPEND_STRATEGY::MessageSizeInBytes(message);
-      {
-        // Take current message size into consideration when making file finalization decision.
-        status_.appended_file_size += message_size_in_bytes;
-        const bool should_finalize = T_FINALIZE_STRATEGY::ShouldFinalize(status_, now);
-        status_.appended_file_size -= message_size_in_bytes;
-        if (should_finalize) {
-          FinalizeCurrentFile();
-        }
-      }
       EnsureCurrentFileIsOpen(now);
       if (!current_file_ || current_file_->bad()) {
         throw FSQException();
@@ -296,6 +287,8 @@ class FSQ final : public CONFIG::T_FILE_NAMING_STRATEGY,
       current_file_name_ =
           T_FILE_SYSTEM::JoinPath(working_directory_, T_FILE_NAMING_STRATEGY::current.GenerateFileName(now));
       // TODO(dkorolev): This relies on OutputFile being std::ofstream. Fine for now anyway.
+      // AlexZ: Correctly close file before recreating it in case when GenerateFileName() returns equal file name.
+      current_file_.reset(nullptr);
       current_file_.reset(new typename T_FILE_SYSTEM::OutputFile(current_file_name_,
                                                                  std::ofstream::trunc | std::ofstream::binary));
       status_.appended_file_timestamp = now;
