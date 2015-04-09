@@ -83,7 +83,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   }
 
   ScopedTmpFileDeleter deleter;
-  if (!post_body_.empty()) {
+  if (!body_data_.empty()) {
 // POST body through tmp file to avoid breaking command line.
 #ifdef _MSC_VER
     char tmp_file[L_tmpnam];
@@ -98,14 +98,14 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     ::close(fd);
 #endif
     deleter.file = tmp_file;
-    if (!(std::ofstream(deleter.file) << post_body_).good()) {
+    if (!(std::ofstream(deleter.file) << body_data_).good()) {
       std::cerr << "Error: failed to write into a temporary file." << std::endl;
       return false;
     }
-    post_file_ = deleter.file;
+    body_file_ = deleter.file;
   }
-  if (!post_file_.empty()) {
-    cmd += "--data-binary @" + post_file_ + " ";
+  if (!body_file_.empty()) {
+    cmd += "--data-binary @" + body_file_ + " ";
   }
 
   cmd += url_requested_;

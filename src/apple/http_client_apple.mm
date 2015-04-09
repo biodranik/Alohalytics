@@ -57,12 +57,12 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     if (!user_agent_.empty())
       [request setValue:[NSString stringWithUTF8String:user_agent_.c_str()] forHTTPHeaderField:@"User-Agent"];
 
-    if (!post_body_.empty()) {
-      request.HTTPBody = [NSData dataWithBytes:post_body_.data() length:post_body_.size()];
+    if (!body_data_.empty()) {
+      request.HTTPBody = [NSData dataWithBytes:body_data_.data() length:body_data_.size()];
       request.HTTPMethod = @"POST";
-    } else if (!post_file_.empty()) {
+    } else if (!body_file_.empty()) {
       NSError * err = nil;
-      NSString * path = [NSString stringWithUTF8String:post_file_.c_str()];
+      NSString * path = [NSString stringWithUTF8String:body_file_.c_str()];
       const unsigned long long file_size = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:&err].fileSize;
       if (err) {
         error_code_ = static_cast<int>(err.code);
