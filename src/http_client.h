@@ -26,7 +26,6 @@ SOFTWARE.
 #define HTTP_CLIENT_H
 
 #include <string>
-#include <cassert>
 
 namespace alohalytics {
 
@@ -80,11 +79,10 @@ class HTTPClientPlatformWrapper {
                                            const std::string& http_method = "POST",
                                            const std::string& content_encoding = "") {
     body_file_ = body_file;
+    body_data_.clear();
     content_type_ = content_type;
     http_method_ = http_method;
     content_encoding_ = content_encoding;
-    // TODO (dkorolev) replace with exceptions as discussed offline.
-    assert(body_data_.empty());
     return *this;
   }
   // If set, stores server reply in file specified.
@@ -102,11 +100,10 @@ class HTTPClientPlatformWrapper {
                                            const std::string& http_method = "POST",
                                            const std::string& content_encoding = "") {
     body_data_ = body_data;
+    body_file_.clear();
     content_type_ = content_type;
     http_method_ = http_method;
     content_encoding_ = content_encoding;
-    // TODO (dkorolev) replace with exceptions as discussed offline.
-    assert(body_file_.empty());
     return *this;
   }
   // Move version to avoid string copying.

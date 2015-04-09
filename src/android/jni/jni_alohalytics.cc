@@ -25,6 +25,7 @@ SOFTWARE.
 #include <jni.h>
 #include <string>
 #include <memory>
+#include <cassert>
 
 #include "../../alohalytics.h"
 #include "../../http_client.h"
