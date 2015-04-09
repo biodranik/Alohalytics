@@ -257,6 +257,17 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
   }
 
+  assert(http_method_.empty());
+  const static jfieldID httpMethodField =
+      env->GetFieldID(g_httpParamsClass, "httpMethod", "Ljava/lang/String;");
+  {
+    const auto jniHttpMethod = MakePointerScopeGuard(env->NewStringUTF(http_method_.c_str()), deleteLocalRef);
+    CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
+
+    env->SetObjectField(httpParamsObject.get(), httpMethodField, jniHttpMethod.get());
+    CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
+  }
+
   const static jfieldID contentTypeField =
       env->GetFieldID(g_httpParamsClass, "contentType", "Ljava/lang/String;");
   if (!content_type_.empty()) {

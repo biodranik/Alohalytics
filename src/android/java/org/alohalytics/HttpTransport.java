@@ -46,6 +46,9 @@ public class HttpTransport {
   public static int TIMEOUT_IN_MILLISECONDS = 30000;
 
   public static Params run(final Params p) throws IOException, NullPointerException {
+    if (p.httpMethod == null) {
+      throw new NullPointerException("Please set valid HTTP method for request at Params.httpMethod field.");
+    }
     HttpURLConnection connection = null;
     if (p.debugMode)
       Log.d(TAG, "Connecting to " + p.url);
@@ -56,13 +59,14 @@ public class HttpTransport {
       connection.setConnectTimeout(TIMEOUT_IN_MILLISECONDS);
       connection.setReadTimeout(TIMEOUT_IN_MILLISECONDS);
       connection.setUseCaches(false);
+      connection.setRequestMethod(p.httpMethod);
       if (p.userAgent != null) {
         connection.setRequestProperty("User-Agent", p.userAgent);
       }
       if (p.inputFilePath != null || p.data != null) {
-        // POST data to the server.
+        // Send (POST, PUT...) data to the server.
         if (p.contentType == null) {
-          throw new NullPointerException("Please set Content-Type for POST requests.");
+          throw new NullPointerException("Please set Content-Type for request.");
         }
         connection.setRequestProperty("Content-Type", p.contentType);
         if (p.contentEncoding != null) {
@@ -78,7 +82,7 @@ public class HttpTransport {
             os.close();
           }
           if (p.debugMode)
-            Log.d(TAG, "Sent POST with content of size " + p.data.length);
+            Log.d(TAG, "Sent " + p.httpMethod + " with content of size " + p.data.length);
         } else {
           final File file = new File(p.inputFilePath);
           assert (file.length() == (int) file.length());
@@ -93,10 +97,10 @@ public class HttpTransport {
           istream.close(); // IOException
           ostream.close(); // IOException
           if (p.debugMode)
-            Log.d(TAG, "Sent POST with file of size " + file.length());
+            Log.d(TAG, "Sent " + p.httpMethod + " with file of size " + file.length());
         }
       }
-      // GET data from the server or receive POST response body
+      // GET data from the server or receive response body
       p.httpResponseCode = connection.getResponseCode();
       if (p.debugMode)
         Log.d(TAG, "Received HTTP " + p.httpResponseCode + " from server.");
@@ -150,14 +154,13 @@ public class HttpTransport {
     public String url = null;
     // Can be different from url in case of redirects.
     public String receivedUrl = null;
-    // SHOULD be specified for any POST request (any request where we send data to the server).
+    public String httpMethod = null;
+    // SHOULD be specified for any POST-like request (any request where we send data to the server).
     // On return, contains received Content-Type or null.
     public String contentType = null;
-    // Can be specified for any POST request (any request where we send data to the server).
+    // Can be specified for any POST-like request (any request where we send data to the server).
     // On return, contains received Content-Encoding or null.
     public String contentEncoding = null;
-    // GET if null and inputFilePath is null.
-    // Sent in POST otherwise.
     public byte[] data = null;
     // Send from input file if specified instead of data.
     public String inputFilePath = null;

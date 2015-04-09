@@ -52,6 +52,7 @@ class HTTPClientPlatformWrapper {
   std::string content_encoding_received_;
   std::string user_agent_;
   std::string body_data_;
+  std::string http_method_ = "GET";
   bool debug_mode_ = false;
 
   HTTPClientPlatformWrapper(const HTTPClientPlatformWrapper&) = delete;
@@ -69,12 +70,18 @@ class HTTPClientPlatformWrapper {
     url_requested_ = url;
     return *this;
   }
+  HTTPClientPlatformWrapper& set_http_method(const std::string& method) {
+    http_method_ = method;
+    return *this;
+  }
   // This method is mutually exclusive with set_body_data().
   HTTPClientPlatformWrapper& set_body_file(const std::string& body_file,
                                            const std::string& content_type,
+                                           const std::string& http_method = "POST",
                                            const std::string& content_encoding = "") {
     body_file_ = body_file;
     content_type_ = content_type;
+    http_method_ = http_method;
     content_encoding_ = content_encoding;
     // TODO (dkorolev) replace with exceptions as discussed offline.
     assert(body_data_.empty());
@@ -92,9 +99,11 @@ class HTTPClientPlatformWrapper {
   // This method is mutually exclusive with set_body_file().
   HTTPClientPlatformWrapper& set_body_data(const std::string& body_data,
                                            const std::string& content_type,
+                                           const std::string& http_method = "POST",
                                            const std::string& content_encoding = "") {
     body_data_ = body_data;
     content_type_ = content_type;
+    http_method_ = http_method;
     content_encoding_ = content_encoding;
     // TODO (dkorolev) replace with exceptions as discussed offline.
     assert(body_file_.empty());
@@ -104,10 +113,12 @@ class HTTPClientPlatformWrapper {
   // This method is mutually exclusive with set_body_file().
   HTTPClientPlatformWrapper& set_body_data(std::string&& body_data,
                                            const std::string& content_type,
+                                           const std::string& http_method = "POST",
                                            const std::string& content_encoding = "") {
     body_data_ = std::move(body_data);
     body_file_.clear();
     content_type_ = content_type;
+    http_method_ = http_method;
     content_encoding_ = content_encoding;
     return *this;
   }

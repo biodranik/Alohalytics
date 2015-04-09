@@ -50,6 +50,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
         [NSURL URLWithString:[NSString stringWithUTF8String:url_requested_.c_str()]]
         cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:TIMEOUT_IN_SECONDS];
 
+    request.HTTPMethod = [NSString stringWithUTF8String:http_method_.c_str()];
     if (!content_type_.empty())
       [request setValue:[NSString stringWithUTF8String:content_type_.c_str()] forHTTPHeaderField:@"Content-Type"];
     if (!content_encoding_.empty())
@@ -59,7 +60,6 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
 
     if (!body_data_.empty()) {
       request.HTTPBody = [NSData dataWithBytes:body_data_.data() length:body_data_.size()];
-      request.HTTPMethod = @"POST";
     } else if (!body_file_.empty()) {
       NSError * err = nil;
       NSString * path = [NSString stringWithUTF8String:body_file_.c_str()];
@@ -72,7 +72,6 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
         return false;
       }
       request.HTTPBodyStream = [NSInputStream inputStreamWithFileAtPath:path];
-      request.HTTPMethod = @"POST";
       [request setValue:[NSString stringWithFormat:@"%llu", file_size] forHTTPHeaderField:@"Content-Length"];
     }
 

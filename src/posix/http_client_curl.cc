@@ -74,7 +74,7 @@ std::string RunCurl(const std::string& cmd) {
 bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   // Last 3 chars in server's response will be http status code
   static constexpr size_t kCurlHttpCodeSize = 3;
-  std::string cmd = "curl --max-redirs 0 -s -w '%{http_code}' ";
+  std::string cmd = "curl --max-redirs 0 -s -w '%{http_code}' -X " + http_method_ + " ";
   if (!content_type_.empty()) {
     cmd += "-H 'Content-Type: " + content_type_ + "' ";
   }
@@ -84,7 +84,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
 
   ScopedTmpFileDeleter deleter;
   if (!body_data_.empty()) {
-// POST body through tmp file to avoid breaking command line.
+    // POST body through tmp file to avoid breaking command line.
 #ifdef _MSC_VER
     char tmp_file[L_tmpnam];
     ::tmpnam_s(tmp_file, L_tmpnam);
