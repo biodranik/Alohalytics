@@ -175,8 +175,22 @@ public class HttpTransport {
     public int httpResponseCode = -1;
     public boolean debugMode = false;
 
+    // Simple GET request constructor.
     public Params(String url) {
       this.url = url;
+      httpMethod = "GET";
+    }
+
+    public void setData(byte[] data, String contentType, String httpMethod) {
+      this.data = data;
+      this.contentType = contentType;
+      this.httpMethod = httpMethod;
+    }
+
+    public void setInputFilePath(String path, String contentType, String httpMethod) {
+      this.inputFilePath = path;
+      this.contentType = contentType;
+      this.httpMethod = httpMethod;
     }
   }
 
