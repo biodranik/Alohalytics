@@ -70,9 +70,12 @@ class HTTPClientPlatformWrapper {
     return *this;
   }
   // This method is mutually exclusive with set_body_data().
-  HTTPClientPlatformWrapper& set_body_file(const std::string& body_file, const std::string& content_type) {
+  HTTPClientPlatformWrapper& set_body_file(const std::string& body_file,
+                                           const std::string& content_type,
+                                           const std::string& content_encoding = "") {
     body_file_ = body_file;
     content_type_ = content_type;
+    content_encoding_ = content_encoding;
     // TODO (dkorolev) replace with exceptions as discussed offline.
     assert(body_data_.empty());
     return *this;
