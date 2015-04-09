@@ -104,7 +104,11 @@ public class HttpTransport {
       p.httpResponseCode = connection.getResponseCode();
       if (p.debugMode)
         Log.d(TAG, "Received HTTP " + p.httpResponseCode + " from server.");
-      p.receivedUrl = connection.getURL().toString();
+      if (p.httpResponseCode >= 300 && p.httpResponseCode < 400) {
+        p.receivedUrl = connection.getHeaderField("Location");
+      } else {
+        p.receivedUrl = connection.getURL().toString();
+      }
       p.contentType = connection.getContentType();
       p.contentEncoding = connection.getContentEncoding();
       // This implementation receives any data only if we have HTTP::OK (200).
@@ -155,10 +159,10 @@ public class HttpTransport {
     // Can be different from url in case of redirects.
     public String receivedUrl = null;
     public String httpMethod = null;
-    // SHOULD be specified for any POST-like request (any request where we send data to the server).
+    // Should be specified for any request whose method allows non-empty body.
     // On return, contains received Content-Type or null.
     public String contentType = null;
-    // Can be specified for any POST-like request (any request where we send data to the server).
+    // Can be specified for any request whose method allows non-empty body.
     // On return, contains received Content-Encoding or null.
     public String contentEncoding = null;
     public byte[] data = null;
