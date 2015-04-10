@@ -24,6 +24,7 @@
 
 package org.alohalytics;
 
+import android.util.Base64;
 import android.util.Log;
 
 import java.io.BufferedInputStream;
@@ -60,6 +61,10 @@ public class HttpTransport {
       connection.setReadTimeout(TIMEOUT_IN_MILLISECONDS);
       connection.setUseCaches(false);
       connection.setRequestMethod(p.httpMethod);
+      if (p.basicAuthUser != null) {
+        final String encoded = Base64.encodeToString((p.basicAuthUser + ":" + p.basicAuthPassword).getBytes(), Base64.NO_WRAP);
+        connection.setRequestProperty("Authorization", "Basic " + encoded);
+      }
       if (p.userAgent != null) {
         connection.setRequestProperty("User-Agent", p.userAgent);
       }
@@ -172,6 +177,8 @@ public class HttpTransport {
     public String outputFilePath = null;
     // Optionally client can override default HTTP User-Agent.
     public String userAgent = null;
+    public String basicAuthUser = null;
+    public String basicAuthPassword = null;
     public int httpResponseCode = -1;
     public boolean debugMode = false;
 

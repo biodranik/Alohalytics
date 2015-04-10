@@ -52,6 +52,8 @@ class HTTPClientPlatformWrapper {
   std::string user_agent_;
   std::string body_data_;
   std::string http_method_ = "GET";
+  std::string basic_auth_user_;
+  std::string basic_auth_password_;
   bool debug_mode_ = false;
 
   HTTPClientPlatformWrapper(const HTTPClientPlatformWrapper&) = delete;
@@ -117,6 +119,12 @@ class HTTPClientPlatformWrapper {
     content_type_ = content_type;
     http_method_ = http_method;
     content_encoding_ = content_encoding;
+    return *this;
+  }
+  // HTTP Basic Auth.
+  HTTPClientPlatformWrapper& set_user_and_password(const std::string& user, const std::string& password) {
+    basic_auth_user_ = user;
+    basic_auth_password_ = password;
     return *this;
   }
 

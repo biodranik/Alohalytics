@@ -324,6 +324,30 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
   }
 
+  if (!basic_auth_user_.empty()) {
+    const static jfieldID basicAuthUserField =
+        env->GetFieldID(g_httpParamsClass, "basicAuthUser", "Ljava/lang/String;");
+
+    const auto jniBasicAuthUser =
+        MakePointerScopeGuard(env->NewStringUTF(basic_auth_user_.c_str()), deleteLocalRef);
+    CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
+
+    env->SetObjectField(httpParamsObject.get(), basicAuthUserField, jniBasicAuthUser.get());
+    CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
+  }
+
+  if (!basic_auth_password_.empty()) {
+    const static jfieldID basicAuthPasswordField =
+        env->GetFieldID(g_httpParamsClass, "basicAuthPassword", "Ljava/lang/String;");
+
+    const auto jniBasicAuthPassword =
+        MakePointerScopeGuard(env->NewStringUTF(basic_auth_password_.c_str()), deleteLocalRef);
+    CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
+
+    env->SetObjectField(httpParamsObject.get(), basicAuthPasswordField, jniBasicAuthPassword.get());
+    CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
+  }
+
   const static jfieldID debugModeField = env->GetFieldID(g_httpParamsClass, "debugMode", "Z");
   env->SetBooleanField(httpParamsObject.get(), debugModeField, debug_mode_);
   CLEAR_AND_RETURN_FALSE_ON_EXCEPTION

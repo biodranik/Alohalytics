@@ -246,4 +246,17 @@ public class HttpTransportTest extends InstrumentationTestCase {
     assertEquals("application/json", r.contentType);
   }
 
+  public void testHttpBasicAuth() throws Exception {
+    final String user = "user";
+    final String password = "password";
+    final HttpTransport.Params p = new HttpTransport.Params("http://httpbin.org/basic-auth/" + user + "/" + password);
+    p.basicAuthUser = user;
+    p.basicAuthPassword = password;
+    final HttpTransport.Params r = HttpTransport.run(p);
+    assertEquals(200, r.httpResponseCode);
+    assertEquals(p.url, r.receivedUrl);
+    final String receivedBody = new String(r.data);
+    assertTrue(receivedBody, receivedBody.contains("\"authenticated\": true"));
+  }
+
 }

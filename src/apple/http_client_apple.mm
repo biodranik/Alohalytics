@@ -51,13 +51,19 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
         cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:TIMEOUT_IN_SECONDS];
 
     request.HTTPMethod = [NSString stringWithUTF8String:http_method_.c_str()];
-    if (!content_type_.empty())
+    if (!content_type_.empty()) {
       [request setValue:[NSString stringWithUTF8String:content_type_.c_str()] forHTTPHeaderField:@"Content-Type"];
-    if (!content_encoding_.empty())
+    }
+    if (!content_encoding_.empty()) {
       [request setValue:[NSString stringWithUTF8String:content_encoding_.c_str()] forHTTPHeaderField:@"Content-Encoding"];
-    if (!user_agent_.empty())
+    }
+    if (!user_agent_.empty()) {
       [request setValue:[NSString stringWithUTF8String:user_agent_.c_str()] forHTTPHeaderField:@"User-Agent"];
-
+    }
+    if (!basic_auth_user_.empty()) {
+      NSData * loginAndPassword = [[NSString stringWithUTF8String:(basic_auth_user_ + ":" + basic_auth_password_).c_str()] dataUsingEncoding:NSUTF8StringEncoding];
+      [request setValue:[NSString stringWithFormat:@"Basic %@", [loginAndPassword base64Encoding]] forHTTPHeaderField:@"Authorization"];
+    }
     if (!body_data_.empty()) {
       request.HTTPBody = [NSData dataWithBytes:body_data_.data() length:body_data_.size()];
     } else if (!body_file_.empty()) {

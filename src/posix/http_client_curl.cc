@@ -81,6 +81,9 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   if (!content_encoding_.empty()) {
     cmd += "-H 'Content-Encoding: " + content_encoding_ + "' ";
   }
+  if (!basic_auth_user_.empty()) {
+    cmd += "-u '" + basic_auth_user_ + ":" + basic_auth_password_ + "' ";
+  }
 
   ScopedTmpFileDeleter deleter;
   if (!body_data_.empty()) {
