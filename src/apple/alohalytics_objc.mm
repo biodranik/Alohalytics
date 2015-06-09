@@ -228,27 +228,18 @@ static std::string StoragePath() {
 #if (TARGET_OS_IPHONE > 0)
     // Disable iCloud backup for storage folder: https://developer.apple.com/library/iOS/qa/qa1719/_index.html
     const std::string storagePath = [directory UTF8String];
-    if (NSFoundationVersionNumber >= NSFoundationVersionNumber_iOS_5_1) {
-      CFURLRef url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault,
-                                                             reinterpret_cast<unsigned char const *>(storagePath.c_str()),
-                                                             storagePath.size(),
-                                                             0);
-      CFErrorRef err;
-      signed char valueOfCFBooleanYes = 1;
-      CFNumberRef value = CFNumberCreate(kCFAllocatorDefault, kCFNumberCharType, &valueOfCFBooleanYes);
-      if (!CFURLSetResourcePropertyForKey(url, kCFURLIsExcludedFromBackupKey, value, &err)) {
-        NSLog(@"Alohalytics ERROR while disabling iCloud backup for directory %@", directory);
-      }
-      CFRelease(value);
-      CFRelease(url);
-    } else {
-      static char const * attrName = "com.apple.MobileBackup";
-      u_int8_t valueOfBooleanYes = 1;
-      const int result = ::setxattr(storagePath.c_str(), attrName, &valueOfBooleanYes, sizeof(valueOfBooleanYes), 0, 0);
-      if (result != 0) {
-        NSLog(@"Alohalytics ERROR while disabling iCloud backup for directory %@", directory);
-      }
+    CFURLRef url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault,
+                                                           reinterpret_cast<unsigned char const *>(storagePath.c_str()),
+                                                           storagePath.size(),
+                                                           0);
+    CFErrorRef err;
+    signed char valueOfCFBooleanYes = 1;
+    CFNumberRef value = CFNumberCreate(kCFAllocatorDefault, kCFNumberCharType, &valueOfCFBooleanYes);
+    if (!CFURLSetResourcePropertyForKey(url, kCFURLIsExcludedFromBackupKey, value, &err)) {
+      NSLog(@"Alohalytics ERROR while disabling iCloud backup for directory %@", directory);
     }
+    CFRelease(value);
+    CFRelease(url);
 #endif  // TARGET_OS_IPHONE
   }
   if (directory) {
