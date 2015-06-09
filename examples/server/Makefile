@@ -2,7 +2,8 @@
 
 CPP=g++
 CPPFLAGS=-std=c++11 -Wall -W
-LDFLAGS=-lz
+LDFLAGS=-lz -pthread
+MORE_SOURCES=../../src/posix/file_manager_posix_impl.cc
 
 PWD=$(shell pwd)
 SRC=$(wildcard *.cc)
