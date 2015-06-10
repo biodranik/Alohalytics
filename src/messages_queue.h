@@ -22,8 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
-#ifndef MESSAGES_QUEUE_HPP
-#define MESSAGES_QUEUE_HPP
+#ifndef MESSAGES_QUEUE_H
+#define MESSAGES_QUEUE_H
 
 #include <condition_variable>  // condition_variable
 #include <cstdio>              // rename, remove
@@ -43,8 +43,7 @@ namespace alohalytics {
 // Archiver function, should process first parameter's file, remove it and store result in the second parameter.
 typedef std::function<void(const std::string & file_to_archive, const std::string & archived_file)> TFileArchiver;
 // Processor should return true if file was processed successfully.
-// If file_name_in_content is true, then second parameter is a full path to a
-// file instead of a buffer.
+// If file_name_in_content is true, then second parameter is a full path to a file instead of a buffer.
 typedef std::function<bool(bool file_name_in_content, const std::string & content)> TArchivedFileProcessor;
 enum class ProcessingResult { EProcessedSuccessfully, EProcessingError, ENothingToProcess };
 typedef std::function<void(ProcessingResult)> TFileProcessingFinishedCallback;
@@ -53,12 +52,10 @@ typedef std::function<void(ProcessingResult)> TFileProcessingFinishedCallback;
 constexpr char kCurrentFileName[] = "alohalytics_messages";
 constexpr char kArchivedFilesExtension[] = ".archived";
 
-class MessagesQueue {
+class MessagesQueue final {
  public:
-  // Size limit (before gzip) when we archive "current" file and create a new
-  // one for appending.
-  // Optimal size is the one which (gzipped) can be POSTed to the server as one
-  // HTTP request.
+  // Size limit (before gzip) when we archive "current" file and create a new one for appending.
+  // Optimal size is the one which (gzipped) can be POSTed to the server as one HTTP request.
   const std::ofstream::pos_type kMaxFileSizeInBytes = 100 * 1024;
 
   // Default archiving simply renames original file without any additional processing.
@@ -67,7 +64,7 @@ class MessagesQueue {
     std::rename(original_file.c_str(), out_archive.c_str());
   }
 
-  //
+  // Pass custom processing function here, e.g. append IDs, gzip everything before archiving file etc.
   MessagesQueue(TFileArchiver file_archiver = &ArchiveFileByRenamingIt) : file_archiver_(file_archiver) {}
 
   ~MessagesQueue() {
@@ -87,8 +84,7 @@ class MessagesQueue {
     commands_queue_.push_back(std::bind(&MessagesQueue::ProcessInitializeStorageCommand, this, directory));
     condition_variable_.notify_all();
   }
-  // Stores message into a file archive (if SetStorageDirectory was called with
-  // a valid directory),
+  // Stores message into a file archive (if SetStorageDirectory was called with a valid directory),
   // otherwise stores messages in-memory.
   // Executed on the WorkerThread.
   void PushMessage(const std::string & message) {
@@ -98,8 +94,7 @@ class MessagesQueue {
     condition_variable_.notify_all();
   }
 
-  // Processor should return true if file was successfully processed (e.g.
-  // uploaded to a server, etc.).
+  // Processor should return true if file was successfully processed (e.g. uploaded to a server, etc.).
   // File is deleted if processor has returned true.
   // Processing stops if processor returns false.
   // Optional callback is called when all files are processed.
@@ -136,7 +131,7 @@ class MessagesQueue {
   void StoreMessages(std::string const & messages_buffer) {
     if (current_file_) {
       *current_file_ << messages_buffer << std::flush;
-      if (current_file_->tellp() > kMaxFileSizeInBytes) {
+      if (current_file_->tellp() >= kMaxFileSizeInBytes) {
         ArchiveCurrentFile();
       }
     } else {
@@ -146,18 +141,16 @@ class MessagesQueue {
 
   void ProcessInitializeStorageCommand(const std::string & directory) {
     current_file_.reset(nullptr);
-    std::ofstream * new_current_file =
-        new std::ofstream(directory + kCurrentFileName, std::ios_base::app | std::ios_base::binary);
+    std::unique_ptr<std::ofstream> new_current_file(
+        new std::ofstream(directory + kCurrentFileName, std::ios_base::app | std::ios_base::binary));
     if (new_current_file->fail()) {
       // If file can't be created, fall back to the in-memory storage.
       storage_directory_.clear();
-      // TODO(AlexZ): DebugLog it!
-      delete new_current_file;
+      // TODO(AlexZ): DebugLog this bad situation!
     } else {
       storage_directory_ = directory;
-      current_file_.reset(new_current_file);
-      // Also check if there are any messages in the memory storage, and save them
-      // to file.
+      current_file_ = std::move(new_current_file);
+      // Also check if there are any messages in the memory storage, and save them to file.
       if (!messages_storage_.empty()) {
         StoreMessages(messages_storage_);
         messages_storage_.clear();
@@ -178,25 +171,20 @@ class MessagesQueue {
     }
   }
 
-  // If there is no file storage directory set, it should also process messages
-  // from the memory buffer.
+  // If there is no file storage directory set, it should also process messages from the memory buffer.
   void ProcessArchivedFilesCommand(TArchivedFileProcessor processor, TFileProcessingFinishedCallback callback) {
     ProcessingResult result = ProcessingResult::ENothingToProcess;
     // Process in-memory messages, if any.
-    // TODO(AlexZ): Append user ID to every bunch of data sent to processor.
     if (!messages_storage_.empty()) {
-      // TODO(AlexZ): gzip it before processing.
       if (processor(false /* in-memory buffer */, messages_storage_)) {
         messages_storage_.clear();
         result = ProcessingResult::EProcessedSuccessfully;
       } else {
         result = ProcessingResult::EProcessingError;
       }
-      // If in-memory storage is used, then file storage directory was not set
-      // and we can't process files.
+      // If in-memory storage is used, then file storage directory was not set and we can't process files.
       // So here we notify callback and return.
-      // TODO(AlexZ): Do we need to use in-memory storage if storage is
-      // initialized but full/not accessible?
+      // TODO(AlexZ): Do we need to use in-memory storage if storage is initialized but full/not accessible?
       if (callback) {
         callback(result);
       }
@@ -210,7 +198,7 @@ class MessagesQueue {
       if (full_path_to_file.find(kArchivedFilesExtension) == std::string::npos) {
         return true;
       }
-      if (processor(true /* file path */, full_path_to_file)) {
+      if (processor(true /* true here means that second parameter is file path */, full_path_to_file)) {
         result = ProcessingResult::EProcessedSuccessfully;
         // Also delete successfully processed archive.
         std::remove(full_path_to_file.c_str());
@@ -233,9 +221,8 @@ class MessagesQueue {
         std::unique_lock<std::mutex> lock(mutex_);
         condition_variable_.wait(lock, [this] { return !commands_queue_.empty() || worker_thread_should_exit_; });
         if (worker_thread_should_exit_) {
-          // TODO(AlexZ): Should we execute commands (if any) on exit? What if
-          // they will be too long (e.g.
-          // network connection)?
+          // TODO(AlexZ): Should we execute commands (if any) on exit?
+          // What if they will be too long (e.g. network connection)?
           return;
         }
         command_to_execute = commands_queue_.front();
@@ -249,24 +236,22 @@ class MessagesQueue {
   TFileArchiver file_archiver_;
   // Synchronized buffer to pass messages between threads.
   std::string messages_buffer_;
-  // Directory with a slash at the end, where we store "current" file and
-  // archived files.
+  // Directory with a slash at the end, where we store "current" file and archived files.
   std::string storage_directory_;
   // Used as an in-memory storage if storage_dir_ was not set.
   std::string messages_storage_;
   typedef std::function<void()> TCommand;
   std::list<TCommand> commands_queue_;
 
-  bool worker_thread_should_exit_ = false;
+  volatile bool worker_thread_should_exit_ = false;
   std::mutex mutex_;
   std::condition_variable condition_variable_;
   // Only WorkerThread accesses this variable.
   std::unique_ptr<std::ofstream> current_file_;
-  // Should be the last member of the class to initialize after all other
-  // members.
+  // Should be the last member of the class to initialize after all other members.
   std::thread worker_thread_ = std::thread(&MessagesQueue::WorkerThread, this);
 };
 
 }  // namespace alohalytics
 
-#endif  // MESSAGES_QUEUE_HPP
+#endif  // MESSAGES_QUEUE_H

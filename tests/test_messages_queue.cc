@@ -205,7 +205,16 @@ using alohalytics::ProcessingResult;
 
 bool EndsWith(const std::string & str, const std::string & suffix) {
   const std::string::size_type str_size = str.size(), suffix_size = suffix.size();
-  return str_size >= suffix_size && str.find_last_of(suffix) == str_size - suffix_size;
+  return str_size >= suffix_size && std::equal(suffix.begin(), suffix.end(), str.end() - suffix.length());
+}
+
+void Test_EndsWith() {
+  TEST_EQUAL(true, EndsWith("", ""));
+  TEST_EQUAL(true, EndsWith("Hello, World!", " World!"));
+  TEST_EQUAL(true, EndsWith("Hello", "Hello"));
+  TEST_EQUAL(false, EndsWith("Hello, World!", " World! "));
+  TEST_EQUAL(false, EndsWith("Hell", "Hello"));
+  TEST_EQUAL(false, EndsWith("ello", "Hello"));
 }
 
 // Removes all MessagesQueue's files in the directory.
@@ -362,8 +371,7 @@ void Test_MessagesQueue_SwitchFromInMemoryToFile_and_OfflineEmulation() {
         second_archived_file = full_file_path;
         archive2_processed = true;
       }
-      return true;  // Archives should be deleted by queue after successful
-                    // processing.
+      return true;  // Archives should be deleted by queue after successful processing.
     }, std::bind(&FinishedCallback, std::placeholders::_1, std::ref(finish_task)));
     TEST_EQUAL(ProcessingResult::EProcessedSuccessfully, finish_task.get());
     TEST_EQUAL(true, archive1_processed);
@@ -390,9 +398,9 @@ void Test_MessagesQueue_CreateArchiveOnSizeLimitHit() {
     }
     size += generated_size;
   };
-  static const std::ofstream::pos_type limit = q.kMaxFileSizeInBytes / 2 + 100;
-  std::thread worker([&generator]() { generator(kTestWorkerMessage, limit); });
-  generator(kTestMessage, limit);
+  static const std::ofstream::pos_type number_of_bytes_to_generate = q.kMaxFileSizeInBytes / 2 + 100;
+  std::thread worker([&generator]() { generator(kTestWorkerMessage, number_of_bytes_to_generate); });
+  generator(kTestMessage, number_of_bytes_to_generate);
   worker.join();
 
   std::vector<std::ofstream::pos_type> file_sizes;
@@ -405,24 +413,19 @@ void Test_MessagesQueue_CreateArchiveOnSizeLimitHit() {
   TEST_EQUAL(ProcessingResult::EProcessedSuccessfully, finish_task.get());
   TEST_EQUAL(size_t(2), file_sizes.size());
   TEST_EQUAL(size, file_sizes[0] + file_sizes[1]);
-  if (file_sizes[0] < q.kMaxFileSizeInBytes) {
-    TEST_EQUAL(true, file_sizes[1] > q.kMaxFileSizeInBytes);
-  } else {
-    TEST_EQUAL(true, file_sizes[0] > q.kMaxFileSizeInBytes);
-  }
+  TEST_EQUAL(true, (file_sizes[0] > q.kMaxFileSizeInBytes) != (file_sizes[1] > q.kMaxFileSizeInBytes));
 }
 
 void Test_MessagesQueue_HighLoadAndIntegrity() {
   // TODO(AlexZ): This test can be improved by generating really a lot of data
-  // so many archives will be created. But it will make everything much more
-  // complex now.
+  // so many archives will be created. But it will make everything much more complex now.
   const std::string tmpdir = FileManager::GetDirectoryFromFilePath(GenerateTemporaryFileName());
   CleanUpQueueFiles(tmpdir);
   ScopedRemoveFile remover(tmpdir + alohalytics::kCurrentFileName);
   MessagesQueue q;
   const int kMaxThreads = 300;
   std::mt19937 gen(std::mt19937::default_seed);
-  std::uniform_int_distribution<> dis(1, std::numeric_limits<char>::max());
+  std::uniform_int_distribution<> dis('A', 'Z');
   auto const generator = [&q](char c) { q.PushMessage(std::string(static_cast<size_t>(c), c)); };
   std::vector<std::thread> threads;
   size_t total_size = 0;
@@ -430,8 +433,7 @@ void Test_MessagesQueue_HighLoadAndIntegrity() {
     char c = dis(gen);
     total_size += static_cast<size_t>(c);
     if (i == kMaxThreads / 2) {
-      // At first, messages go into the in-memory queue. Then we initialize
-      // files storage.
+      // At first, messages go into the in-memory queue. Then we initialize files storage.
       q.SetStorageDirectory(tmpdir);
     }
     std::thread worker([&generator, c]() { generator(c); });
@@ -462,6 +464,7 @@ void Test_MessagesQueue_HighLoadAndIntegrity() {
 }
 
 int main(int, char * []) {
+  // TODO(AlexZ): Split unit tests into two separate files.
   Test_ScopedRemoveFile();
   Test_GetDirectoryFromFilePath();
   Test_CreateTemporaryFile();
@@ -470,6 +473,7 @@ int main(int, char * []) {
   Test_ForEachFileInDir();
   Test_GetFileSize();
 
+  Test_EndsWith();
   Test_MessagesQueue_InMemory_Empty();
   Test_MessagesQueue_InMemory_SuccessfulProcessing();
   Test_MessagesQueue_InMemory_FailedProcessing();

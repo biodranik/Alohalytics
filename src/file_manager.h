@@ -22,8 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
-#ifndef FILE_MANAGER_HPP
-#define FILE_MANAGER_HPP
+#ifndef FILE_MANAGER_H
+#define FILE_MANAGER_H
 
 #include <string>
 #include <functional>
@@ -36,8 +36,7 @@ struct FileManager {
   // Initialized separately for each platform.
   static const char kDirectorySeparator;
 
-  // Checks and appends if necessary platform-dependent slash at the end of the
-  // path.
+  // Checks and appends if necessary platform-dependent slash at the end of the path.
   static void AppendDirectorySlash(std::string & directory) {
     // Fix missing slash if necessary.
     if (!directory.empty() && directory.back() != kDirectorySeparator) {
@@ -52,7 +51,7 @@ struct FileManager {
     if (file_path.empty()) {
       return std::string();
     }
-    std::string::size_type slash = file_path.find_last_of(kDirectorySeparator);
+    const std::string::size_type slash = file_path.find_last_of(kDirectorySeparator);
     if (slash == std::string::npos) {
       return std::string(".");
     }
@@ -81,14 +80,14 @@ struct FileManager {
     return std::string();
   }
 
-  // Executes lambda for each regular file in the directory and stops
-  // immediately if lambda returns false.
+  // Executes lambda for each regular file in the directory and stops immediately if lambda returns false.
   static void ForEachFileInDir(std::string directory, std::function<bool(const std::string & full_path)> lambda);
 
   // Returns negative value on error and if full_path_to_file is a directory.
+  // TODO(AlexZ): Should consider approach with exceptions and uint64_t return type.
   static int64_t GetFileSize(const std::string & full_path_to_file);
 };
 
 }  // namespace alohalytics
 
-#endif  // FILE_MANAGER_HPP
+#endif  // FILE_MANAGER_H
