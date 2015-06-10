@@ -41,8 +41,15 @@ SOFTWARE.
 #import <UIKit/UIDevice.h>
 #import <UIKit/UIScreen.h>
 #import <UIKit/UIApplication.h>
+#import <UiKit/UIWebView.h>
 #import <AdSupport/ASIdentifierManager.h>
+// Export user agent for HTTP module.
+NSString * gBrowserUserAgent = nil;
 #endif  // TARGET_OS_IPHONE
+
+#import <sys/socket.h>
+#import <netinet/in.h>
+#import <SystemConfiguration/SystemConfiguration.h>
 
 using namespace alohalytics;
 
@@ -151,7 +158,9 @@ static void LogSystemInformation() {
   } else if (device.userInterfaceIdiom == UIUserInterfaceIdiomUnspecified) {
     userInterfaceIdiom = "unspecified";
   }
-  alohalytics::TStringMap info = {{"deviceName", ToStdString(device.name)},
+  alohalytics::TStringMap info = {
+    {"bundleIdentifier", ToStdString([[NSBundle mainBundle] bundleIdentifier])},
+    {"deviceName", ToStdString(device.name)},
     {"deviceSystemName", ToStdString(device.systemName)},
     {"deviceSystemVersion", ToStdString(device.systemVersion)},
     {"deviceModel", ToStdString(device.model)},
@@ -223,27 +232,18 @@ static std::string StoragePath() {
 #if (TARGET_OS_IPHONE > 0)
     // Disable iCloud backup for storage folder: https://developer.apple.com/library/iOS/qa/qa1719/_index.html
     const std::string storagePath = [directory UTF8String];
-    if (NSFoundationVersionNumber >= NSFoundationVersionNumber_iOS_5_1) {
-      CFURLRef url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault,
-                                                             reinterpret_cast<unsigned char const *>(storagePath.c_str()),
-                                                             storagePath.size(),
-                                                             0);
-      CFErrorRef err;
-      signed char valueOfCFBooleanYes = 1;
-      CFNumberRef value = CFNumberCreate(kCFAllocatorDefault, kCFNumberCharType, &valueOfCFBooleanYes);
-      if (!CFURLSetResourcePropertyForKey(url, kCFURLIsExcludedFromBackupKey, value, &err)) {
-        NSLog(@"Alohalytics ERROR while disabling iCloud backup for directory %@", directory);
-      }
-      CFRelease(value);
-      CFRelease(url);
-    } else {
-      static char const * attrName = "com.apple.MobileBackup";
-      u_int8_t valueOfBooleanYes = 1;
-      const int result = ::setxattr(storagePath.c_str(), attrName, &valueOfBooleanYes, sizeof(valueOfBooleanYes), 0, 0);
-      if (result != 0) {
-        NSLog(@"Alohalytics ERROR while disabling iCloud backup for directory %@", directory);
-      }
+    CFURLRef url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault,
+                                                           reinterpret_cast<unsigned char const *>(storagePath.c_str()),
+                                                           storagePath.size(),
+                                                           0);
+    CFErrorRef err;
+    signed char valueOfCFBooleanYes = 1;
+    CFNumberRef value = CFNumberCreate(kCFAllocatorDefault, kCFNumberCharType, &valueOfCFBooleanYes);
+    if (!CFURLSetResourcePropertyForKey(url, kCFURLIsExcludedFromBackupKey, value, &err)) {
+      NSLog(@"Alohalytics ERROR while disabling iCloud backup for directory %@", directory);
     }
+    CFRelease(value);
+    CFRelease(url);
 #endif  // TARGET_OS_IPHONE
   }
   if (directory) {
@@ -255,7 +255,6 @@ static std::string StoragePath() {
 #if (TARGET_OS_IPHONE > 0)
 static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
   TStringMap parsed;
-
   NSURL * url = [options objectForKey:UIApplicationLaunchOptionsURLKey];
   if (url) {
     parsed.emplace("UIApplicationLaunchOptionsURLKey", ToStdString([url absoluteString]));
@@ -266,6 +265,60 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
   }
   return parsed;
 }
+
+// Need it to effectively upload data when app goes into background.
+static UIBackgroundTaskIdentifier sBackgroundTaskId = UIBackgroundTaskInvalid;
+static void EndBackgroundTask() {
+  [[UIApplication sharedApplication] endBackgroundTask:sBackgroundTaskId];
+  sBackgroundTaskId = UIBackgroundTaskInvalid;
+}
+static void OnUploadFinished(alohalytics::ProcessingResult result) {
+  if (Stats::Instance().DebugMode()) {
+    const char * str;
+    switch (result) {
+      case alohalytics::ProcessingResult::ENothingToProcess: str = "There is no data to upload."; break;
+      case alohalytics::ProcessingResult::EProcessedSuccessfully: str = "Data was uploaded successfully."; break;
+      case alohalytics::ProcessingResult::EProcessingError: str = "Error while uploading data."; break;
+    }
+    ALOG(str);
+  }
+  if (sBackgroundTaskId != UIBackgroundTaskInvalid) {
+    EndBackgroundTask();
+  }
+}
+
+// Quick check if device has any active connection.
+// Does not guarantee actual reachability of any host.
+// Inspired by Apple's Reachability example:
+// https://developer.apple.com/library/ios/samplecode/Reachability/Introduction/Intro.html
+bool IsConnectionActive() {
+  struct sockaddr_in zero;
+  bzero(&zero, sizeof(zero));
+  zero.sin_len = sizeof(zero);
+  zero.sin_family = AF_INET;
+  SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithAddress(kCFAllocatorDefault, (const struct sockaddr*)&zero);
+  if (!reachability) {
+    return false;
+  }
+  SCNetworkReachabilityFlags flags;
+  const bool gotFlags = SCNetworkReachabilityGetFlags(reachability, &flags);
+  CFRelease(reachability);
+  if (!gotFlags || ((flags & kSCNetworkReachabilityFlagsReachable) == 0)) {
+    return false;
+  }
+  if ((flags & kSCNetworkReachabilityFlagsConnectionRequired) == 0) {
+    return true;
+  }
+  if ((((flags & kSCNetworkReachabilityFlagsConnectionOnDemand ) != 0) || (flags & kSCNetworkReachabilityFlagsConnectionOnTraffic) != 0)
+      && (flags & kSCNetworkReachabilityFlagsInterventionRequired) == 0) {
+    return true;
+  }
+  if ((flags & kSCNetworkReachabilityFlagsIsWWAN) == kSCNetworkReachabilityFlagsIsWWAN) {
+    return true;
+  }
+  return false;
+}
+
 #endif  // TARGET_OS_IPHONE
 } // namespace
 
@@ -280,6 +333,22 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
 }
 
 + (void)setup:(NSString *)serverUrl andFirstLaunch:(BOOL)isFirstLaunch withLaunchOptions:(NSDictionary *)options {
+#if (TARGET_OS_IPHONE > 0)
+  // Initialize User Agent later, as it takes significant time at startup.
+  dispatch_async(dispatch_get_main_queue(), ^(void) {
+    gBrowserUserAgent = [[[UIWebView alloc] initWithFrame:CGRectZero] stringByEvaluatingJavaScriptFromString:@"navigator.userAgent"];
+    if (gBrowserUserAgent) {
+      Stats::Instance().LogEvent("$browserUserAgent", ToStdString(gBrowserUserAgent));
+    }
+  });
+  NSNotificationCenter * nc = [NSNotificationCenter defaultCenter];
+  Class cls = [Alohalytics class];
+  [nc addObserver:cls selector:@selector(applicationDidBecomeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
+  [nc addObserver:cls selector:@selector(applicationWillResignActive:) name:UIApplicationWillResignActiveNotification object:nil];
+  [nc addObserver:cls selector:@selector(applicationWillEnterForeground:) name:UIApplicationWillEnterForegroundNotification object:nil];
+  [nc addObserver:cls selector:@selector(applicationDidEnterBackground:) name:UIApplicationDidEnterBackgroundNotification object:nil];
+  [nc addObserver:cls selector:@selector(applicationWillTerminate:) name:UIApplicationWillTerminateNotification object:nil];
+#endif // TARGET_OS_IPHONE
   const auto installationId = InstallationId();
   Stats & instance = Stats::Instance();
   instance.SetClientId(installationId.first)
@@ -289,14 +358,14 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
   // Calculate some basic statistics about installations/updates/launches.
   NSUserDefaults * userDataBase = [NSUserDefaults standardUserDefaults];
   NSString * installedVersion = [userDataBase objectForKey:@"AlohalyticsInstalledVersion"];
-  bool forceUpload = false;
+  NSBundle * bundle = [NSBundle mainBundle];
   if (installationId.second && isFirstLaunch && installedVersion == nil) {
-    NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
+    NSString * version = [[bundle infoDictionary] objectForKey:@"CFBundleShortVersionString"];
     // Documents folder modification time can be interpreted as a "first app launch time" or an approx. "app install time".
     // App bundle modification time can be interpreted as an "app update time".
     instance.LogEvent("$install", {{"CFBundleShortVersionString", [version UTF8String]},
         {"documentsTimestampMillis", PathTimestampMillis([NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject])},
-        {"bundleTimestampMillis", PathTimestampMillis([[NSBundle mainBundle] executablePath])}});
+        {"bundleTimestampMillis", PathTimestampMillis([bundle executablePath])}});
     [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
     [userDataBase synchronize];
 #if (TARGET_OS_IPHONE > 0)
@@ -304,19 +373,17 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
 #else
     static_cast<void>(options);  // Unused variable warning fix.
 #endif  // TARGET_OS_IPHONE
-    forceUpload = true;
   } else {
-    NSString * version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
+    NSString * version = [[bundle infoDictionary] objectForKey:@"CFBundleShortVersionString"];
     if (installedVersion == nil || ![installedVersion isEqualToString:version]) {
       instance.LogEvent("$update", {{"CFBundleShortVersionString", [version UTF8String]},
           {"documentsTimestampMillis", PathTimestampMillis([NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject])},
-          {"bundleTimestampMillis", PathTimestampMillis([[NSBundle mainBundle] executablePath])}});
+          {"bundleTimestampMillis", PathTimestampMillis([bundle executablePath])}});
       [userDataBase setValue:version forKey:@"AlohalyticsInstalledVersion"];
       [userDataBase synchronize];
 #if (TARGET_OS_IPHONE > 0)
       LogSystemInformation();
 #endif  // TARGET_OS_IPHONE
-      forceUpload = true;
     }
   }
   instance.LogEvent("$launch"
@@ -324,10 +391,6 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
                     , ParseLaunchOptions(options)
 #endif  // TARGET_OS_IPHONE
                     );
-  // Force uploading to get first-time install information before uninstall.
-  if (forceUpload) {
-    instance.Upload();
-  }
 }
 
 + (void)forceUpload {
@@ -366,4 +429,40 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
   Stats::Instance().LogEvent(ToStdString(event), ToStringMap(dictionary), ExtractLocation(location));
 }
 
+#pragma mark App lifecycle notifications used to calculate basic metrics.
+#if (TARGET_OS_IPHONE > 0)
++ (void)applicationDidBecomeActive:(NSNotification *)notification {
+  Stats::Instance().LogEvent("$applicationDidBecomeActive");
+}
+
++ (void)applicationWillResignActive:(NSNotification *)notification {
+  Stats::Instance().LogEvent("$applicationWillResignActive");
+}
+
++ (void)applicationWillEnterForeground:(NSNotificationCenter *)notification {
+  Stats::Instance().LogEvent("$applicationWillEnterForeground");
+
+  if (sBackgroundTaskId != UIBackgroundTaskInvalid) {
+    EndBackgroundTask();
+  }
+}
+
++ (void)applicationDidEnterBackground:(NSNotification *)notification {
+  Stats::Instance().LogEvent("$applicationDidEnterBackground");
+
+  sBackgroundTaskId = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{ EndBackgroundTask(); }];
+  if (IsConnectionActive()) {
+    // Start uploading in the background, we have about 10 mins to do that.
+    alohalytics::Stats::Instance().Upload(&OnUploadFinished);
+  } else {
+    if (Stats::Instance().DebugMode()) {
+      ALOG("Skipped statistics uploading as connection is not active.");
+    }
+  }
+}
+
++ (void)applicationWillTerminate:(NSNotification *)notification {
+  Stats::Instance().LogEvent("$applicationWillTerminate");
+}
+#endif // TARGET_OS_IPHONE
 @end

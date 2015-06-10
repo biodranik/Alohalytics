@@ -22,38 +22,12 @@
  SOFTWARE.
  *******************************************************************************/
 
-// Small demo which ungzips and prints cereal stream from file.
+package org.alohalytics;
 
-// This define is needed to preserve client's timestamps in events.
-#define ALOHALYTICS_SERVER
-#include "../../src/event_base.h"
-#include "../../src/gzip_wrapper.h"
-#include "../../src/file_manager.h"
+import android.app.Application;
 
-#include <iostream>
-#include <iomanip>
-#include <typeinfo>
-#include <fstream>
-
-int main(int argc, char ** argv) {
-  if (argc < 2) {
-    std::cout << "Usage: " << argv[0] << " <gzipped_cereal_file>" << std::endl;
-    return -1;
+public class MainApplication extends Application {
+  static {
+    System.loadLibrary("alohalytics");
   }
-  try {
-    const std::string ungzipped = alohalytics::Gunzip(alohalytics::FileManager::ReadFileAsString(argv[1]));
-    std::istringstream in_stream(ungzipped);
-    cereal::BinaryInputArchive in_archive(in_stream);
-    std::unique_ptr<AlohalyticsBaseEvent> ptr;
-    // Cereal can't detect the end of the stream without our help.
-    // If tellg returns -1 we will exit safely.
-    while (ungzipped.size() > static_cast<size_t>(in_stream.tellg())) {
-      in_archive(ptr);
-      std::cout << ptr->ToString() << std::endl;
-    }
-  } catch (const std::exception & ex) {
-    std::cerr << "Exception: " << ex.what() << " in file " << argv[1] << std::endl;
-    return -1;
-  }
-  return 0;
 }

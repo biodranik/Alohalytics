@@ -30,12 +30,11 @@
 #endif
 
 #include <cstdint>
-#include <string>
+#include <exception>
 #include <iomanip>
 #include <sstream>  // For ToDebugString()
-#include <exception>
-
-#include <iostream>
+#include <string>
+#include <type_traits>
 
 namespace alohalytics {
 
@@ -106,9 +105,9 @@ class Location {
 
   // Initializes location from serialized byte array created by ToString() method.
   // TODO(AlexZ): we don't care about endianness right now.
-  explicit Location(const std::string &encoded) { Decode(encoded); }
+  explicit Location(const std::string & encoded) { Decode(encoded); }
 
-  void Decode(const std::string &encoded) {
+  void Decode(const std::string & encoded) {
     if (encoded.empty()) {
       throw LocationDecodeException();
     }
@@ -165,10 +164,7 @@ class Location {
   enum Source : std::uint8_t { UNKNOWN = 0, GPS = 1, NETWORK = 2, PASSIVE = 3 } source_;
 
   bool HasLatLon() const { return valid_values_mask_ & HAS_LATLON; }
-  Location &SetLatLon(uint64_t timestamp_ms,
-                      double latitude_deg,
-                      double longitude_deg,
-                      double horizontal_accuracy_m) {
+  Location & SetLatLon(uint64_t timestamp_ms, double latitude_deg, double longitude_deg, double horizontal_accuracy_m) {
     // We do not support values without known horizontal accuracy.
     if (horizontal_accuracy_m > 0.0) {
       timestamp_ms_ = timestamp_ms;
@@ -181,14 +177,14 @@ class Location {
   }
 
   bool HasSource() const { return valid_values_mask_ & HAS_SOURCE; }
-  Location &SetSource(Source source) {
+  Location & SetSource(Source source) {
     source_ = source;
     valid_values_mask_ = static_cast<Mask>(valid_values_mask_ | HAS_SOURCE);
     return *this;
   }
 
   bool HasAltitude() const { return valid_values_mask_ & HAS_ALTITUDE; }
-  Location &SetAltitude(double altitude_m, double vertical_accuracy_m) {
+  Location & SetAltitude(double altitude_m, double vertical_accuracy_m) {
     if (vertical_accuracy_m > 0.0) {
       altitude_m_ = altitude_m;
       vertical_accuracy_m_ = vertical_accuracy_m;
@@ -198,7 +194,7 @@ class Location {
   }
 
   bool HasBearing() const { return valid_values_mask_ & HAS_BEARING; }
-  Location &SetBearing(double bearing_deg) {
+  Location & SetBearing(double bearing_deg) {
     if (bearing_deg >= 0.0) {
       bearing_deg_ = bearing_deg;
       valid_values_mask_ = static_cast<Mask>(valid_values_mask_ | HAS_BEARING);
@@ -207,7 +203,7 @@ class Location {
   }
 
   bool HasSpeed() const { return valid_values_mask_ & HAS_SPEED; }
-  Location &SetSpeed(double speed_mps) {
+  Location & SetSpeed(double speed_mps) {
     if (speed_mps >= 0.0) {
       speed_mps_ = speed_mps;
       valid_values_mask_ = static_cast<Mask>(valid_values_mask_ | HAS_SPEED);
@@ -216,12 +212,12 @@ class Location {
   }
 
   template <class Archive>
-  void save(Archive &ar) const {
+  void save(Archive & ar) const {
     ar(Encode());
   }
 
   template <class Archive>
-  void load(Archive &ar) {
+  void load(Archive & ar) {
     std::string encoded_location;
     ar(encoded_location);
     Decode(encoded_location);
@@ -268,7 +264,8 @@ class Location {
 
  private:
   template <typename T>
-  static inline void AppendToStringAsBinary(std::string &str, const T &value, size_t bytes = sizeof(T)) {
+  static inline void AppendToStringAsBinary(std::string & str, const T & value, size_t bytes = sizeof(T)) {
+    static_assert(std::is_trivially_copyable<T>::value, "This type is not supported.");
     str.append(reinterpret_cast<const char *>(&value), bytes);
   }
 };

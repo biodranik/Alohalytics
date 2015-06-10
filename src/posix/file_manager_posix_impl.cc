@@ -1,10 +1,7 @@
-#ifndef BRICKS_UTIL_MAKE_SCOPED_GUARD_H
-#define BRICKS_UTIL_MAKE_SCOPED_GUARD_H
-
 /*******************************************************************************
 The MIT License (MIT)
 
-Copyright (c) 2014 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
+Copyright (c) 2015 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,37 +22,50 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
-#include <memory>
-#include <utility>
+// POSIX implementations for FileManager.
+#include "../file_manager.h"
 
-namespace bricks {
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
-template <typename POINTER, typename DELETER>
-std::unique_ptr<POINTER, DELETER> MakePointerScopeGuard(POINTER* x, DELETER t) {
-  return std::unique_ptr<POINTER, DELETER>(x, t);
-}
+namespace alohalytics {
 
-template <typename F>
-class ScopeGuard final {
-  F f_;
-  ScopeGuard(const ScopeGuard&) = delete;
-  void operator=(const ScopeGuard&) = delete;
+const char FileManager::kDirectorySeparator = '/';
 
- public:
-  explicit ScopeGuard(F f) : f_(f) {
-  }
-  ScopeGuard(ScopeGuard&& other) : f_(std::forward<F>(other.f_)) {
-  }
-  ~ScopeGuard() {
-    f_();
-  }
+namespace {
+struct ScopedCloseDir {
+  DIR * dir_;
+  ScopedCloseDir(DIR * dir) : dir_(dir) {}
+  ~ScopedCloseDir() { ::closedir(dir_); }
 };
+}  // namespace
 
-template <typename F>
-ScopeGuard<F> MakeScopeGuard(F f) {
-  return ScopeGuard<F>(f);
+void FileManager::ForEachFileInDir(std::string directory, std::function<bool(const std::string & full_path)> lambda) {
+  // Silently ignore invalid directories.
+  if (directory.empty()) {
+    return;
+  }
+  DIR * dir = ::opendir(directory.c_str());
+  if (!dir) {
+    return;
+  }
+  AppendDirectorySlash(directory);
+  const ScopedCloseDir closer(dir);
+  while (struct dirent * entry = ::readdir(dir)) {
+    if (!(entry->d_type & DT_DIR)) {
+      if (!lambda(directory + entry->d_name)) {
+        return;
+      }
+    }
+  }
 }
 
-}  // namespace bricks
-
-#endif  // BRICKS_UTIL_MAKE_SCOPED_GUARD_H
+int64_t FileManager::GetFileSize(const std::string & full_path_to_file) {
+  struct stat st;
+  if (0 == ::stat(full_path_to_file.c_str(), &st) && S_ISREG(st.st_mode)) {
+    return static_cast<int64_t>(st.st_size);
+  }
+  return -1;
+}
+}  // namespace alohalytics

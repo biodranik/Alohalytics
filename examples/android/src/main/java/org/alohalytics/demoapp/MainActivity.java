@@ -40,10 +40,6 @@ import java.util.HashMap;
 
 public class MainActivity extends Activity {
 
-  static {
-    System.loadLibrary("alohalytics");
-  }
-
   private static final String STATISTICS_SERVER_URL = "http://localhost:8080/";
 
   @Override
@@ -78,7 +74,7 @@ public class MainActivity extends Activity {
     // Event with parameter (key=value)
     Statistics.logEvent("device_manufacturer", Build.MANUFACTURER);
 
-    final HashMap<String, String> kv = new HashMap<String, String>();
+    final HashMap<String, String> kv = new HashMap<>();
     kv.put("brand", Build.BRAND);
     kv.put("device", Build.DEVICE);
     kv.put("model", Build.MODEL);

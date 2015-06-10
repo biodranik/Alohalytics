@@ -36,6 +36,11 @@ SOFTWARE.
 #import <Foundation/NSError.h>
 #import <Foundation/NSFileManager.h>
 
+#include <TargetConditionals.h> // TARGET_OS_IPHONE
+#if (TARGET_OS_IPHONE > 0)  // Works for all iOS devices, including iPad.
+extern NSString * gBrowserUserAgent;
+#endif
+
 #include "../http_client.h"
 #include "../logger.h"
 
@@ -60,12 +65,20 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     if (!user_agent_.empty()) {
       [request setValue:[NSString stringWithUTF8String:user_agent_.c_str()] forHTTPHeaderField:@"User-Agent"];
     }
+#if (TARGET_OS_IPHONE > 0)
+    else if (gBrowserUserAgent) {
+      [request setValue:gBrowserUserAgent forHTTPHeaderField:@"User-Agent"];
+    }
+#endif // TARGET_OS_IPHONE
     if (!basic_auth_user_.empty()) {
       NSData * loginAndPassword = [[NSString stringWithUTF8String:(basic_auth_user_ + ":" + basic_auth_password_).c_str()] dataUsingEncoding:NSUTF8StringEncoding];
       [request setValue:[NSString stringWithFormat:@"Basic %@", [loginAndPassword base64Encoding]] forHTTPHeaderField:@"Authorization"];
     }
     if (!body_data_.empty()) {
       request.HTTPBody = [NSData dataWithBytes:body_data_.data() length:body_data_.size()];
+      if (debug_mode_) {
+        ALOG("Uploading buffer of size", body_data_.size(), "bytes");
+      }
     } else if (!body_file_.empty()) {
       NSError * err = nil;
       NSString * path = [NSString stringWithUTF8String:body_file_.c_str()];
@@ -79,6 +92,9 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       }
       request.HTTPBodyStream = [NSInputStream inputStreamWithFileAtPath:path];
       [request setValue:[NSString stringWithFormat:@"%llu", file_size] forHTTPHeaderField:@"Content-Length"];
+      if (debug_mode_) {
+        ALOG("Uploading file", body_file_, file_size, "bytes");
+      }
     }
 
     NSHTTPURLResponse * response = nil;
