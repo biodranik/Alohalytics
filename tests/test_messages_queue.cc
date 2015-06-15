@@ -205,7 +205,7 @@ using alohalytics::ProcessingResult;
 
 bool EndsWith(const std::string & str, const std::string & suffix) {
   const std::string::size_type str_size = str.size(), suffix_size = suffix.size();
-  return str_size >= suffix_size && std::equal(suffix.begin(), suffix.end(), str.end() - suffix.length());
+  return str_size >= suffix_size && std::equal(suffix.begin(), suffix.end(), str.end() - suffix_size);
 }
 
 void Test_EndsWith() {
