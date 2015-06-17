@@ -51,16 +51,16 @@ public class Statistics {
     return sDebugModeEnabled;
   }
 
-  public static void setup(final String serverUrl, final Context context) {
+  // Passed serverUrl will be modified to $(serverUrl)/android/packageName/versionCode
+  public static void setup(String serverUrl, final Context context) {
     final String storagePath = context.getFilesDir().getAbsolutePath() + "/Alohalytics/";
     // Native code expects valid existing writable dir.
     (new File(storagePath)).mkdirs();
     final Pair<String, Boolean> id = getInstallationId(context);
-    setupCPP(HttpTransport.class, serverUrl, storagePath, id.first);
 
-    // Calculate some basic statistics about installations/updates/launches.
-    String versionName = "", packageName = "";
+    String versionName = "0", packageName = "0";
     long installTime = 0, updateTime = 0;
+    int versionCode = 0;
     try {
       final android.content.pm.PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
       if (packageInfo != null) {
@@ -68,10 +68,17 @@ public class Statistics {
         versionName = packageInfo.versionName;
         installTime = packageInfo.firstInstallTime;
         updateTime = packageInfo.lastUpdateTime;
+        versionCode = packageInfo.versionCode;
       }
     } catch (android.content.pm.PackageManager.NameNotFoundException ex) {
       ex.printStackTrace();
     }
+    // Take into an account trailing slash in the url.
+    serverUrl = serverUrl + (serverUrl.lastIndexOf('/') == serverUrl.length() - 1 ? "" : "/") + "android/" + packageName + "/" + versionCode;
+    // Initialize core C++ module before logging events.
+    setupCPP(HttpTransport.class, serverUrl, storagePath, id.first);
+
+    // Calculate some basic statistics about installations/updates/launches.
     final SharedPreferences prefs = context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
     Location lastKnownLocation = null;
     if (SystemInfo.hasPermission(android.Manifest.permission.ACCESS_FINE_LOCATION, context)) {
@@ -83,14 +90,15 @@ public class Statistics {
     // Is it a real new install?
     if (id.second && installTime == updateTime) {
       logEvent("$install", new String[]{"package", packageName, "version", versionName,
-          "millisEpochInstalled", String.valueOf(installTime)}, lastKnownLocation);
+          "millisEpochInstalled", String.valueOf(installTime), "versionCode", String.valueOf(versionCode)},
+          lastKnownLocation);
       // Collect device info once on start.
       SystemInfo.getDeviceInfoAsync(context);
       prefs.edit().putLong(PREF_APP_UPDATE_TIME, updateTime).apply();
     } else if (updateTime != installTime && updateTime != prefs.getLong(PREF_APP_UPDATE_TIME, 0)) {
       logEvent("$update", new String[]{"package", packageName, "version", versionName,
-          "millisEpochUpdated", String.valueOf(updateTime), "millisEpochInstalled", String.valueOf(installTime)},
-          lastKnownLocation);
+          "millisEpochUpdated", String.valueOf(updateTime), "millisEpochInstalled", String.valueOf(installTime),
+          "versionCode", String.valueOf(versionCode)}, lastKnownLocation);
       // Also collect device info on update.
       SystemInfo.getDeviceInfoAsync(context);
       prefs.edit().putLong(PREF_APP_UPDATE_TIME, updateTime).apply();
