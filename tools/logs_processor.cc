@@ -46,22 +46,15 @@ using namespace std;
 using namespace alohalytics;
 
 static void DeleteFile(const string & file) {
-  cout << "DeleteFile " << file << endl;
-//  std::remove(file.c_str());
+  std::remove(file.c_str());
 }
 
 int main(int argc, char ** argv) {
-  if (argc < 3) {
-    cout << "Usage: " << argv[0] << " <directory to store files> <server GMT offset in hours, like +3 or -5>" << endl;
+  if (argc < 2) {
+    cout << "Usage: " << argv[0] << " <directory to store merged file>" << endl;
     return -1;
   }
   string directory(argv[1]);
-  int GMT_offset_in_seconds;
-  if ((istringstream(argv[2]) >> GMT_offset_in_seconds).fail()) {
-    cout << "ERROR: Can't parse GMT offset command line parameter: " << argv[2] << endl;
-    return -1;
-  }
-  GMT_offset_in_seconds *= 60 * 60;
   FileManager::AppendDirectorySlash(directory);
   // Quick test if we can write to the specified directory.
   {
@@ -87,7 +80,7 @@ int main(int argc, char ** argv) {
       cout << "WARNING: Can't get IP address. Invalid log entry? " << log_entry << endl;
       continue;
     }
-    string ip(log_entry, start_pos, end_pos - start_pos);
+    const string ip(log_entry, start_pos, end_pos - start_pos);
     // Basic IP validity check.
     if (count(ip.begin(), ip.end(), '.') != 3) {
       cout << "WARNING: Invalid IP address: " << ip << endl;
@@ -108,7 +101,7 @@ int main(int argc, char ** argv) {
       continue;
     }
     // TODO(AlexZ): Do not rely on time_t equal to seconds from epoch.
-    const uint64_t server_timestamp_ms_from_epoch = (mktime(&stm) - GMT_offset_in_seconds) * 1000;
+    const uint64_t server_timestamp_ms_from_epoch = mktime(&stm) * 1000;
 
     // Request URI.
     start_pos = log_entry.find_first_of('/', end_pos);
@@ -121,7 +114,7 @@ int main(int argc, char ** argv) {
       cout << "WARNING: Can't get request uri. Invalid log entry? " << log_entry << endl;
       continue;
     }
-    string uri(log_entry, start_pos, end_pos - start_pos);
+    const string uri(log_entry, start_pos, end_pos - start_pos);
 
     // HTTP Code should be 200 for correct data.
     start_pos = log_entry.find_first_of(' ', end_pos + 1);
@@ -169,7 +162,7 @@ int main(int argc, char ** argv) {
       cout << "WARNING: Can't get User-Agent. Invalid log entry? " << log_entry << endl;
       continue;
     }
-    string user_agent(log_entry, start_pos + 1, end_pos - start_pos - 1);
+    const string user_agent(log_entry, start_pos + 1, end_pos - start_pos - 1);
 
     // Check that Content-Type and Content-Encoding are correct.
     if (string::npos == log_entry.find(" application/alohalytics-binary-blob gzip", end_pos + 1)) {
@@ -177,7 +170,7 @@ int main(int argc, char ** argv) {
       continue;
     }
 
-    string gzipped_body = FileManager::ReadFileAsString(file_path);
+    const string gzipped_body = FileManager::ReadFileAsString(file_path);
     files_total_size += gzipped_body.size();
     if (gzipped_body.empty()) {
       cout << "WARNING: Empty or absent file " << file_path << " or can't load it's contents. Log entry: " << log_entry << endl;
@@ -185,7 +178,7 @@ int main(int argc, char ** argv) {
     }
 
     try {
-      receiver.ProcessReceivedHTTPBody(std::move(gzipped_body), server_timestamp_ms_from_epoch, std::move(ip), std::move(user_agent), std::move(uri));
+      receiver.ProcessReceivedHTTPBody(gzipped_body, server_timestamp_ms_from_epoch, ip, user_agent, uri);
     } catch (const std::exception & ex) {
       cout << "WARNING: Corrupted file " << file_path << ", exception: " << ex.what() << endl;
       DeleteFile(file_path);

@@ -78,15 +78,14 @@ class StatisticsReceiver {
   }
 
   // Throws exceptions on any error.
-  void ProcessReceivedHTTPBody(std::string && body, uint64_t server_timestamp, std::string && ip, std::string && user_agent, std::string && uri) {
+  void ProcessReceivedHTTPBody(const std::string & gzipped_body, uint64_t server_timestamp, const std::string & ip, const std::string & user_agent, const std::string & uri) {
     // Throws GunzipErrorException.
-    body = Gunzip(body);
+    const std::string body = Gunzip(gzipped_body);
 
     std::istringstream in_stream(body);
     cereal::BinaryInputArchive in_ar(in_stream);
     std::ostringstream out_stream;
     std::unique_ptr<AlohalyticsBaseEvent> ptr;
-    std::unique_ptr<AlohalyticsIdServerEvent> server_id_event;
     const std::streampos bytes_to_read = body.size();
     while (bytes_to_read > in_stream.tellg()) {
       in_ar(ptr);
@@ -95,24 +94,22 @@ class StatisticsReceiver {
       if (ptr.get() == nullptr) {
         throw std::invalid_argument("Corrupted Cereal object, this == 0.");
       }
-      // First event in every body is AlohalyticsIdEvent. Convert it into AlohalyticsIdServerEvent.
-      if (!server_id_event) {
-        const AlohalyticsIdEvent * id_event = dynamic_cast<const AlohalyticsIdEvent *>(ptr.get());
-        if (!id_event) {
-          throw std::invalid_argument("Corrupted block of data: first event should be AlohalyticsIdEvent.");
-        }
-        server_id_event.reset(new AlohalyticsIdServerEvent());
+      // TODO: May be an overhead to cast every event instead of only the first one, but what if stream will contain several mixed bodies? 
+      const AlohalyticsIdEvent * id_event = dynamic_cast<const AlohalyticsIdEvent *>(ptr.get());
+      if (id_event) {
+        AlohalyticsIdServerEvent * server_id_event = new AlohalyticsIdServerEvent();
         server_id_event->timestamp = id_event->timestamp;
         server_id_event->id = id_event->id;
         server_id_event->server_timestamp = server_timestamp;
-        server_id_event->ip = std::move(ip);
-        server_id_event->user_agent = std::move(user_agent);
-        server_id_event->uri = std::move(uri);
+        server_id_event->ip = ip;
+        server_id_event->user_agent = user_agent;
+        server_id_event->uri = uri;
+        ptr.reset(server_id_event);
         // TODO tmp debug.
-        std::cout << AlohalyticsBaseEvent::TimestampToString(server_id_event->timestamp) << " "
-                  << AlohalyticsBaseEvent::TimestampToString(server_id_event->server_timestamp) << " "
-                  << server_id_event->id << " " << server_id_event->ip << " " << server_id_event->uri << " " << server_id_event->uri << " "
-                  << server_id_event->user_agent << std::endl;
+//        std::cout << AlohalyticsBaseEvent::TimestampToString(server_id_event->timestamp) << " "
+//                  << AlohalyticsBaseEvent::TimestampToString(server_id_event->server_timestamp) << " "
+//                  << server_id_event->id << " " << server_id_event->ip << " " << server_id_event->uri << " " << server_id_event->uri << " "
+//                  << server_id_event->user_agent << std::endl;
       }
       // Serialize it back.
       cereal::BinaryOutputArchive(out_stream) << ptr;
