@@ -77,6 +77,12 @@ class MessagesQueue final {
     worker_thread_.join();
   }
 
+  // Not const because of the mutex.
+  size_t NumberOfCommandsInTheQueue() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return commands_queue_.size();
+  }
+
   // Sets working directory (and flushes in-memory messages into the file).
   // Executed on the WorkerThread.
   void SetStorageDirectory(std::string directory) {
