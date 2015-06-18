@@ -1,0 +1,137 @@
+/*******************************************************************************
+ The MIT License (MIT)
+
+ Copyright (c) 2015 Alexander Zolotarev <me@alex.bio> from Minsk, Belarus
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ *******************************************************************************/
+
+// This define is needed to preserve client's timestamps in events and to access
+// additional data fields when processing received data on a server side.
+#define ALOHALYTICS_SERVER
+#include "../src/event_base.h"
+#include "../src/file_manager.h"
+#include "../src/gzip_wrapper.h"
+#include "../src/messages_queue.h"
+
+#include <chrono>
+#include <cstdio>
+#include <iostream>
+#include <sstream>
+#include <utility>
+
+namespace alohalytics {
+
+class StatisticsReceiver {
+  std::string storage_directory_;
+  UnlimitedFileQueue file_storage_queue_;
+
+  // How often should we create separate files with all collected data.
+  static constexpr uint64_t kArchiveFileIntervalInMS = 1000 * 60 * 60;  // One hour.
+  static constexpr const char * kArchiveExtension = ".cereal";
+  static constexpr const char * kGzippedArchiveExtension = ".gz";
+
+  // Used to archive currently collected data into a separate file.
+  uint64_t last_checked_time_ms_from_epoch_;
+
+ public:
+  explicit StatisticsReceiver(const std::string & storage_directory)
+      : storage_directory_(storage_directory),
+        last_checked_time_ms_from_epoch_(AlohalyticsBaseEvent::CurrentTimestamp()) {
+    FileManager::AppendDirectorySlash(storage_directory_);
+    file_storage_queue_.SetStorageDirectory(storage_directory_);
+  }
+
+  static std::string GenerateFileNameFromEpochMilliseconds(uint64_t ms_from_epoch) {
+    const time_t timet = static_cast<const time_t>(ms_from_epoch / 1000);
+    char buf[100];
+    if (std::strftime(buf, sizeof(buf), "%F-%H%M%S", std::gmtime(&timet))) {
+      return std::string(buf) + kArchiveExtension;
+    } else {
+      return std::to_string(ms_from_epoch) + kArchiveExtension;
+    }
+  }
+
+  bool ShouldRenameFile(uint64_t current_ms_from_epoch) {
+    last_checked_time_ms_from_epoch_ = current_ms_from_epoch;
+    if (current_ms_from_epoch - last_checked_time_ms_from_epoch_ > kArchiveFileIntervalInMS) {
+      last_checked_time_ms_from_epoch_ = current_ms_from_epoch;
+      return true;
+    }
+    return false;
+  }
+
+  // Throws exceptions on any error.
+  void ProcessReceivedHTTPBody(std::string && body, uint64_t server_timestamp, std::string && ip, std::string && user_agent, std::string && uri) {
+    // Throws GunzipErrorException.
+    body = Gunzip(body);
+
+    std::istringstream in_stream(body);
+    cereal::BinaryInputArchive in_ar(in_stream);
+    std::ostringstream out_stream;
+    std::unique_ptr<AlohalyticsBaseEvent> ptr;
+    std::unique_ptr<AlohalyticsIdServerEvent> server_id_event;
+    const std::streampos bytes_to_read = body.size();
+    while (bytes_to_read > in_stream.tellg()) {
+      in_ar(ptr);
+      // Cereal does not check if binary data is valid. Let's do it ourselves.
+      // TODO(AlexZ): Switch from Cereal to another library.
+      if (ptr.get() == nullptr) {
+        throw std::invalid_argument("Corrupted Cereal object, this == 0.");
+      }
+      // First event in every body is AlohalyticsIdEvent. Convert it into AlohalyticsIdServerEvent.
+      if (!server_id_event) {
+        const AlohalyticsIdEvent * id_event = dynamic_cast<const AlohalyticsIdEvent *>(ptr.get());
+        if (!id_event) {
+          throw std::invalid_argument("Corrupted block of data: first event should be AlohalyticsIdEvent.");
+        }
+        server_id_event.reset(new AlohalyticsIdServerEvent());
+        server_id_event->timestamp = id_event->timestamp;
+        server_id_event->id = id_event->id;
+        server_id_event->server_timestamp = server_timestamp;
+        server_id_event->ip = std::move(ip);
+        server_id_event->user_agent = std::move(user_agent);
+        server_id_event->uri = std::move(uri);
+        // TODO tmp debug.
+        std::cout << AlohalyticsBaseEvent::TimestampToString(server_id_event->timestamp) << " "
+                  << AlohalyticsBaseEvent::TimestampToString(server_id_event->server_timestamp) << " "
+                  << server_id_event->id << " " << server_id_event->ip << " " << server_id_event->uri << " " << server_id_event->uri << " "
+                  << server_id_event->user_agent << std::endl;
+      }
+      // Serialize it back.
+      cereal::BinaryOutputArchive(out_stream) << ptr;
+    }
+    file_storage_queue_.PushMessage(out_stream.str());
+
+//    if (ShouldRenameFile(server_id_event->server_timestamp)) {
+//      const std::string archive_file =
+//          storage_directory_ + GenerateFileNameFromEpochMilliseconds(server_id_event->server_timestamp);
+//      if (-1 == FileManager::GetFileSize(archive_file)) {
+//        // TODO LOG IT OR HANDLE SOMEHOW.
+//      }
+//      // TODO Should we gzip it here? Probably by calling an external tool?
+//      file_storage_queue_.ProcessArchivedFiles([&archive_file](bool, const std::string & file_path) {
+//        std::rename(file_path.c_str(), archive_file.c_str());
+//        return true;
+//      });
+//    }
+  }
+};
+
+}  // namespace alohalytics
