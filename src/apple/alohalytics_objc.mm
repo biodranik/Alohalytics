@@ -276,8 +276,10 @@ static alohalytics::TStringMap ParseLaunchOptions(NSDictionary * options) {
 // Need it to effectively upload data when app goes into background.
 static UIBackgroundTaskIdentifier sBackgroundTaskId = UIBackgroundTaskInvalid;
 static void EndBackgroundTask() {
-  [[UIApplication sharedApplication] endBackgroundTask:sBackgroundTaskId];
-  sBackgroundTaskId = UIBackgroundTaskInvalid;
+  if (sBackgroundTaskId != UIBackgroundTaskInvalid) {
+    [[UIApplication sharedApplication] endBackgroundTask:sBackgroundTaskId];
+    sBackgroundTaskId = UIBackgroundTaskInvalid;
+  }
 }
 static void OnUploadFinished(alohalytics::ProcessingResult result) {
   if (Stats::Instance().DebugMode()) {
@@ -289,9 +291,7 @@ static void OnUploadFinished(alohalytics::ProcessingResult result) {
     }
     ALOG(str);
   }
-  if (sBackgroundTaskId != UIBackgroundTaskInvalid) {
-    EndBackgroundTask();
-  }
+  EndBackgroundTask();
 }
 
 // Quick check if device has any active connection.
@@ -453,17 +453,21 @@ bool IsConnectionActive() {
 + (void)applicationWillEnterForeground:(NSNotificationCenter *)notification {
   Stats::Instance().LogEvent("$applicationWillEnterForeground");
 
-  if (sBackgroundTaskId != UIBackgroundTaskInvalid) {
-    EndBackgroundTask();
-  }
+  EndBackgroundTask();
 }
 
 + (void)applicationDidEnterBackground:(NSNotification *)notification {
   Stats::Instance().LogEvent("$applicationDidEnterBackground");
 
-  sBackgroundTaskId = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{ EndBackgroundTask(); }];
   if (IsConnectionActive()) {
-    // Start uploading in the background, we have about 10 mins to do that.
+    // Start uploading in the background, but keep in mind, that we have a limited time to do that.
+    // Graceful background task finish is a must before system time limit hits.
+    UIApplication * theApp = [UIApplication sharedApplication];
+    void (^endBackgroundTaskBlock)(void) = ^{ EndBackgroundTask(); };
+    ::dispatch_after(::dispatch_time(DISPATCH_TIME_NOW, static_cast<int64_t>(theApp.backgroundTimeRemaining)),
+                     ::dispatch_get_main_queue(),
+                     endBackgroundTaskBlock);
+    sBackgroundTaskId = [theApp beginBackgroundTaskWithExpirationHandler:endBackgroundTaskBlock];
     alohalytics::Stats::Instance().Upload(&OnUploadFinished);
   } else {
     if (Stats::Instance().DebugMode()) {
