@@ -22,185 +22,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
+#include "test_defines.h"
+
 #include "../src/file_manager.h"
 #include "../src/messages_queue.h"
 
-#include <algorithm>
-#include <chrono>
-#include <cstdlib>
-#include <future>
-#include <iostream>
-#include <map>
 #include <random>
-#include <thread>
 #include <vector>
 
-#define TEST_EQUAL(x, y)                                                                                        \
-  {                                                                                                             \
-    auto vx = (x);                                                                                              \
-    auto vy = (y);                                                                                              \
-    if (vx != vy) {                                                                                             \
-      std::cerr << __FILE__ << ':' << __FUNCTION__ << ':' << __LINE__ << " Test failed: " << #x << " != " << #y \
-                << " (" << vx << " != " << vy << ")" << std::endl;                                              \
-      std::exit(-1);                                                                                            \
-    }                                                                                                           \
-  }
-
-struct ScopedRemoveFile {
-  std::string file_;
-  ScopedRemoveFile(const std::string & file) : file_(file) {}
-  ~ScopedRemoveFile() { std::remove(file_.c_str()); }
-};
-
 using alohalytics::FileManager;
+using alohalytics::ScopedRemoveFile;
 
-// Generates unique temporary file name or empty string on error.
-static std::string GenerateTemporaryFileName() {
-#ifdef _MSC_VER
-  char tmp_file[L_tmpnam];
-  if (0 == ::tmpnam_s(tmp_file, L_tmpnam)) {
-    return tmp_file;
-  }
-#else
-  char tmp_file[] = "/tmp/alohalytics_file_manager-XXXXXX";
-  if (::mktemp(tmp_file)) {
-    return tmp_file;
-  }
-#endif
-  return std::string();
-}
-
-void Test_GetDirectoryFromFilePath() {
-  const std::string s = std::string(1, FileManager::kDirectorySeparator);
-  const std::string ns = (s == "/") ? "\\" : "/";
-  TEST_EQUAL("", FileManager::GetDirectoryFromFilePath(""));
-  TEST_EQUAL(".", FileManager::GetDirectoryFromFilePath("some_file_name.ext"));
-  TEST_EQUAL(".", FileManager::GetDirectoryFromFilePath("evil" + ns + "file"));
-  TEST_EQUAL("dir" + s, FileManager::GetDirectoryFromFilePath("dir" + s + "file"));
-  TEST_EQUAL(s + "root" + s + "dir" + s, FileManager::GetDirectoryFromFilePath(s + "root" + s + "dir" + s + "file"));
-  TEST_EQUAL(".", FileManager::GetDirectoryFromFilePath("dir" + ns + "file"));
-  TEST_EQUAL("C:" + s + "root" + s + "dir" + s,
-             FileManager::GetDirectoryFromFilePath("C:" + s + "root" + s + "dir" + s + "file.ext"));
-  TEST_EQUAL(s + "tmp" + s, FileManager::GetDirectoryFromFilePath(s + "tmp" + s + "evil" + ns + "file"));
-}
-
-void Test_ScopedRemoveFile() {
-  const std::string file = GenerateTemporaryFileName();
-  {
-    ScopedRemoveFile remover(file);
-    TEST_EQUAL(true, FileManager::AppendStringToFile(file, file));
-    TEST_EQUAL(file, FileManager::ReadFileAsString(file));
-  }
-  TEST_EQUAL(std::string(), FileManager::ReadFileAsString(file));
-}
-
-void Test_CreateTemporaryFile() {
-  const std::string file1 = GenerateTemporaryFileName();
-  ScopedRemoveFile remover1(file1);
-  TEST_EQUAL(true, FileManager::AppendStringToFile(file1, file1));
-  TEST_EQUAL(file1, FileManager::ReadFileAsString(file1));
-  const std::string file2 = GenerateTemporaryFileName();
-  TEST_EQUAL(false, file1 == file2);
-  ScopedRemoveFile remover2(file2);
-  TEST_EQUAL(true, FileManager::AppendStringToFile(file2, file2));
-  TEST_EQUAL(file2, FileManager::ReadFileAsString(file2));
-  TEST_EQUAL(true, file1 != file2);
-}
-
-void Test_AppendStringToFile() {
-  const std::string file = GenerateTemporaryFileName();
-  ScopedRemoveFile remover(file);
-  const std::string s1("First\0 String");
-  TEST_EQUAL(true, FileManager::AppendStringToFile(s1, file));
-  TEST_EQUAL(s1, FileManager::ReadFileAsString(file));
-  const std::string s2("Second one.");
-  TEST_EQUAL(true, FileManager::AppendStringToFile(s2, file));
-  TEST_EQUAL(s1 + s2, FileManager::ReadFileAsString(file));
-
-  TEST_EQUAL(false, FileManager::AppendStringToFile(file, ""));
-}
-
-void Test_ReadFileAsString() {
-  const std::string file = GenerateTemporaryFileName();
-  ScopedRemoveFile remover(file);
-  TEST_EQUAL(true, FileManager::AppendStringToFile(file, file));
-  TEST_EQUAL(file, FileManager::ReadFileAsString(file));
-}
-
-void Test_ForEachFileInDir() {
-  {
-    bool was_called_at_least_once = false;
-    FileManager::ForEachFileInDir("", [&was_called_at_least_once](const std::string &) -> bool {
-      was_called_at_least_once = true;
-      return true;
-    });
-    TEST_EQUAL(false, was_called_at_least_once);
-  }
-
-  {
-    std::vector<std::string> files, files_copy;
-    std::vector<std::unique_ptr<ScopedRemoveFile>> removers;
-    for (size_t i = 0; i < 5; ++i) {
-      const std::string file = GenerateTemporaryFileName();
-      files.push_back(file);
-      removers.emplace_back(new ScopedRemoveFile(file));
-      TEST_EQUAL(true, FileManager::AppendStringToFile(file, file));
-    }
-    files_copy = files;
-    const std::string directory = FileManager::GetDirectoryFromFilePath(files[0]);
-    TEST_EQUAL(false, directory.empty());
-    FileManager::ForEachFileInDir(directory, [&files_copy](const std::string & path) -> bool {
-      // Some random files can remain in the temporary directory.
-      const auto found = std::find(files_copy.begin(), files_copy.end(), path);
-      if (found != files_copy.end()) {
-        TEST_EQUAL(path, FileManager::ReadFileAsString(path));
-        files_copy.erase(found);
-      }
-      return true;
-    });
-    TEST_EQUAL(size_t(0), files_copy.size());
-
-    // Test if ForEachFileInDir can be correctly interrupted in the middle.
-    files_copy = files;
-    FileManager::ForEachFileInDir(directory, [&files_copy](const std::string & path) -> bool {
-      // Some random files can remain in the temporary directory.
-      const auto found = std::find(files_copy.begin(), files_copy.end(), path);
-      if (found != files_copy.end()) {
-        std::remove(path.c_str());
-        files_copy.erase(found);
-        if (files_copy.size() == 1) {
-          return false;  // Interrupt when only 1 file left
-        }
-      }
-      return true;
-    });
-    TEST_EQUAL(size_t(1), files_copy.size());
-    // At this point, only 1 file should left in the folder.
-    for (const auto & file : files) {
-      if (file == files_copy.front()) {
-        TEST_EQUAL(file, FileManager::ReadFileAsString(file));
-      } else {
-        TEST_EQUAL("", FileManager::ReadFileAsString(file))
-      }
-    }
-  }
-}
-
-void Test_GetFileSize() {
-  const std::string file = GenerateTemporaryFileName();
-  ScopedRemoveFile remover(file);
-  // File does not exist yet.
-  TEST_EQUAL(-1, FileManager::GetFileSize(file));
-  // Use file name itself as a file contents.
-  TEST_EQUAL(true, FileManager::AppendStringToFile(file, file));
-  TEST_EQUAL(static_cast<int64_t>(file.size()), FileManager::GetFileSize(file));
-  // It should fail for directories.
-  TEST_EQUAL(-1, FileManager::GetFileSize(FileManager::GetDirectoryFromFilePath(file)));
-}
-
-// ******************* Message Queue tests ******************
-
-using alohalytics::MessagesQueue;
+using alohalytics::HundredKilobytesFileQueue;
 using alohalytics::ProcessingResult;
 
 bool EndsWith(const std::string & str, const std::string & suffix) {
@@ -278,7 +111,7 @@ static void FinishedCallback(ProcessingResult result, FinishTask & finish_task) 
 
 void Test_MessagesQueue_InMemory_Empty() {
   bool processor_was_called = false;
-  MessagesQueue q;
+  HundredKilobytesFileQueue q;
   FinishTask finish_task;
   q.ProcessArchivedFiles([&processor_was_called](bool, const std::string &) {
     processor_was_called = true;  // This code should not be executed.
@@ -289,7 +122,7 @@ void Test_MessagesQueue_InMemory_Empty() {
 }
 
 void Test_MessagesQueue_InMemory_SuccessfulProcessing() {
-  MessagesQueue q;
+  HundredKilobytesFileQueue q;
   q.PushMessage(kTestMessage);
   std::thread worker([&q]() { q.PushMessage(kTestWorkerMessage); });
   worker.join();
@@ -306,7 +139,7 @@ void Test_MessagesQueue_InMemory_SuccessfulProcessing() {
 }
 
 void Test_MessagesQueue_InMemory_FailedProcessing() {
-  MessagesQueue q;
+  HundredKilobytesFileQueue q;
   q.PushMessage(kTestMessage);
   bool processor_was_called = false;
   FinishTask finish_task;
@@ -323,24 +156,24 @@ void Test_MessagesQueue_InMemory_FailedProcessing() {
 void Test_MessagesQueue_SwitchFromInMemoryToFile_and_OfflineEmulation() {
   const std::string tmpdir = FileManager::GetDirectoryFromFilePath(GenerateTemporaryFileName());
   CleanUpQueueFiles(tmpdir);
-  ScopedRemoveFile remover(tmpdir + alohalytics::kCurrentFileName);
-  MessagesQueue q;
+  const ScopedRemoveFile remover(tmpdir + alohalytics::kCurrentFileName);
   std::string archived_file, second_archived_file;
   {
-    q.PushMessage(kTestMessage);    // This one goes into the memory storage.
-    q.SetStorageDirectory(tmpdir);  // Here message shoud move from memory into the file.
-    std::thread worker([&q]() { q.PushMessage(kTestWorkerMessage); });
-    worker.join();
-
-    // Wait until messages will be stored into the file.
-    // NOTE: THIS IS NOT A PRODUCTION-READY PRACTICE! NEVER USE IT IN PRODUCTION!
-    // Here it is used for tests simplification only.
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    {
+      HundredKilobytesFileQueue q;
+      q.PushMessage(kTestMessage);    // This one goes into the memory storage.
+      q.SetStorageDirectory(tmpdir);  // Here message shoud move from memory into the file.
+      std::thread worker([&q]() { q.PushMessage(kTestWorkerMessage); });
+      worker.join();
+      // After calling queue's destructor, all messages should be gracefully stored in the file.
+    }
     TEST_EQUAL(kTestMessage + kTestWorkerMessage,
                FileManager::ReadFileAsString(tmpdir + alohalytics::kCurrentFileName));
 
     bool processor_was_called = false;
     FinishTask finish_task;
+    HundredKilobytesFileQueue q;
+    q.SetStorageDirectory(tmpdir);
     q.ProcessArchivedFiles([&processor_was_called, &archived_file](bool is_file, const std::string & full_file_path) {
       TEST_EQUAL(true, is_file);
       TEST_EQUAL(kTestMessage + kTestWorkerMessage, FileManager::ReadFileAsString(full_file_path));
@@ -356,8 +189,9 @@ void Test_MessagesQueue_SwitchFromInMemoryToFile_and_OfflineEmulation() {
   }
 
   // Create second archive in the queue after ProcessArchivedFiles() call.
+  HundredKilobytesFileQueue q;
+  q.SetStorageDirectory(tmpdir);
   q.PushMessage(kTestMessage);
-
   {
     bool archive1_processed = false, archive2_processed = false;
     FinishTask finish_task;
@@ -376,16 +210,16 @@ void Test_MessagesQueue_SwitchFromInMemoryToFile_and_OfflineEmulation() {
     TEST_EQUAL(ProcessingResult::EProcessedSuccessfully, finish_task.get());
     TEST_EQUAL(true, archive1_processed);
     TEST_EQUAL(true, archive2_processed);
-    TEST_EQUAL("", FileManager::ReadFileAsString(archived_file));
-    TEST_EQUAL("", FileManager::ReadFileAsString(second_archived_file));
+    TEST_EXCEPTION(std::ios_base::failure, FileManager::ReadFileAsString(archived_file));
+    TEST_EXCEPTION(std::ios_base::failure, FileManager::ReadFileAsString(second_archived_file));
   }
 }
 
 void Test_MessagesQueue_CreateArchiveOnSizeLimitHit() {
   const std::string tmpdir = FileManager::GetDirectoryFromFilePath(GenerateTemporaryFileName());
   CleanUpQueueFiles(tmpdir);
-  ScopedRemoveFile remover(tmpdir + alohalytics::kCurrentFileName);
-  MessagesQueue q;
+  const ScopedRemoveFile remover(tmpdir + alohalytics::kCurrentFileName);
+  HundredKilobytesFileQueue q;
   q.SetStorageDirectory(tmpdir);
 
   // Generate messages with total size enough for triggering archiving.
@@ -398,7 +232,8 @@ void Test_MessagesQueue_CreateArchiveOnSizeLimitHit() {
     }
     size += generated_size;
   };
-  static const std::ofstream::pos_type number_of_bytes_to_generate = q.kMaxFileSizeInBytes / 2 + 100;
+  static const std::ofstream::pos_type number_of_bytes_to_generate =
+      HundredKilobytesFileQueue::kMaxFileSizeInBytes / 2 + 100;
   std::thread worker([&generator]() { generator(kTestWorkerMessage, number_of_bytes_to_generate); });
   generator(kTestMessage, number_of_bytes_to_generate);
   worker.join();
@@ -421,8 +256,8 @@ void Test_MessagesQueue_HighLoadAndIntegrity() {
   // so many archives will be created. But it will make everything much more complex now.
   const std::string tmpdir = FileManager::GetDirectoryFromFilePath(GenerateTemporaryFileName());
   CleanUpQueueFiles(tmpdir);
-  ScopedRemoveFile remover(tmpdir + alohalytics::kCurrentFileName);
-  MessagesQueue q;
+  const ScopedRemoveFile remover(tmpdir + alohalytics::kCurrentFileName);
+  HundredKilobytesFileQueue q;
   const int kMaxThreads = 300;
   std::mt19937 gen(std::mt19937::default_seed);
   std::uniform_int_distribution<> dis('A', 'Z');
@@ -464,15 +299,6 @@ void Test_MessagesQueue_HighLoadAndIntegrity() {
 }
 
 int main(int, char * []) {
-  // TODO(AlexZ): Split unit tests into two separate files.
-  Test_ScopedRemoveFile();
-  Test_GetDirectoryFromFilePath();
-  Test_CreateTemporaryFile();
-  Test_ReadFileAsString();
-  Test_AppendStringToFile();
-  Test_ForEachFileInDir();
-  Test_GetFileSize();
-
   Test_EndsWith();
   Test_MessagesQueue_InMemory_Empty();
   Test_MessagesQueue_InMemory_SuccessfulProcessing();

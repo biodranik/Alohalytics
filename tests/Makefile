@@ -14,11 +14,12 @@ run: all
 	./build/test_location
 	./build/test_gzip
 	./build/test_messages_queue
+	./build/test_file_manager
 
 all: build ${BIN}
 
 indent:
-	(find . -name "*.cc") | xargs clang-format -i
+	(find . -name "*.cc" -o -name "*.h") | xargs clang-format -i
 
 clean:
 	rm -rf build

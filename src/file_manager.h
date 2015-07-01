@@ -25,11 +25,19 @@ SOFTWARE.
 #ifndef FILE_MANAGER_H
 #define FILE_MANAGER_H
 
-#include <string>
+#include <algorithm>
 #include <functional>
 #include <fstream>
+#include <string>
 
 namespace alohalytics {
+
+// Useful helper.
+struct ScopedRemoveFile {
+  std::string file;
+  ScopedRemoveFile(const std::string & file_to_delete) : file(file_to_delete) {}
+  ~ScopedRemoveFile() { std::remove(file.c_str()); }
+};
 
 // Functions are wrapped into the class for convenience.
 struct FileManager {
@@ -60,32 +68,57 @@ struct FileManager {
 
   // Creates a new file or appends string to an existing one.
   // Returns false on error.
+  // TODO(AlexZ): Should consider exceptions?
   static bool AppendStringToFile(const std::string & str, const std::string & file_path) {
-    return std::ofstream(file_path, std::ofstream::app | std::ofstream::binary)
+    return std::ofstream(file_path, std::ios_base::app | std::ios_base::binary | std::ios_base::out)
         .write(str.data(), str.size())
         .flush()
         .good();
   }
 
-  // Returns file content as a string or empty string on error.
-  static std::string ReadFileAsString(std::string const & file_path) {
-    const int64_t size = GetFileSize(file_path);
-    if (size > 0) {
-      std::ifstream fi(file_path, std::ifstream::binary);
-      std::string buffer(static_cast<const size_t>(size), '\0');
-      if (fi.read(&buffer[0], static_cast<std::streamsize>(size)).good()) {
-        return buffer;
+  // Returns file content as a string.
+  // Throws ios_base::failure exception if file is absent or is a directory.
+  static std::string ReadFileAsString(const std::string & file_path) {
+    const uint64_t size = GetFileSize(file_path);
+    std::ifstream fi(file_path, std::ios_base::binary | std::ios_base::in);
+    fi.exceptions(std::ios_base::badbit | std::ios_base::failbit);
+    std::string buffer(static_cast<const size_t>(size), '\0');
+    fi.read(&buffer[0], static_cast<std::streamsize>(size));
+    return buffer;
+  }
+
+  // Returns true if we can write to the specified directory.
+  static bool IsDirectoryWritable(std::string directory) {
+    AppendDirectorySlash(directory);
+    std::string temporary_file = directory;
+    // For a pseudo-random file we turn directory path into a file name.
+    std::replace(temporary_file.begin(), temporary_file.end(), kDirectorySeparator, 'Z');
+    // Make sure it does not exist first.
+    while (true) {
+      try {
+        (void)GetFileSize(directory + temporary_file);
+        temporary_file += 'Z';
+      } catch (const std::exception &) {
+        break;
       }
     }
-    return std::string();
+    const ScopedRemoveFile remover(directory + temporary_file);
+    bool is_writable = false;
+    try {
+      (void)FileManager::AppendStringToFile(temporary_file, remover.file);
+      if (FileManager::ReadFileAsString(remover.file) == temporary_file) {
+        is_writable = true;
+      }
+    } catch (const std::exception &) {
+    }
+    return is_writable;
   }
 
   // Executes lambda for each regular file in the directory and stops immediately if lambda returns false.
   static void ForEachFileInDir(std::string directory, std::function<bool(const std::string & full_path)> lambda);
 
-  // Returns negative value on error and if full_path_to_file is a directory.
-  // TODO(AlexZ): Should consider approach with exceptions and uint64_t return type.
-  static int64_t GetFileSize(const std::string & full_path_to_file);
+  // Throws std::ios_base::failure exception if file is absent or is a directory.
+  static uint64_t GetFileSize(const std::string & full_path_to_file);
 };
 
 }  // namespace alohalytics

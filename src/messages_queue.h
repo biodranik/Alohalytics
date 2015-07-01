@@ -22,6 +22,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
+// This queue stores incoming messages in the memory on a separate thread as a continuous
+// block of bytes. If storage directory is set, it stores everything in a file (on a separate thread too).
+// When TMaxFileSizeInBytes limit is hit, file is "archived" (see TFileArchiver in constructor)
+// and a new file is created instead.
+// Destructor gracefully processes all commands left in the queue.
+
 #ifndef MESSAGES_QUEUE_H
 #define MESSAGES_QUEUE_H
 
@@ -30,13 +36,14 @@ SOFTWARE.
 #include <ctime>               // time, gmtime
 #include <fstream>             // ofstream
 #include <functional>          // bind, function
+#include <limits>              // numeric_limits
 #include <list>                // list
 #include <memory>              // unique_ptr
 #include <mutex>               // mutex
 #include <string>              // string
 #include <thread>              // thread
 
-#include "file_manager.h"  // ForEachFileInDir
+#include "file_manager.h"
 
 namespace alohalytics {
 
@@ -44,7 +51,7 @@ namespace alohalytics {
 typedef std::function<void(const std::string & file_to_archive, const std::string & archived_file)> TFileArchiver;
 // Processor should return true if file was processed successfully.
 // If file_name_in_content is true, then second parameter is a full path to a file instead of a buffer.
-typedef std::function<bool(bool file_name_in_content, const std::string & content)> TArchivedFileProcessor;
+typedef std::function<bool(bool file_name_in_content, const std::string & content)> TArchivedFilesProcessor;
 enum class ProcessingResult { EProcessedSuccessfully, EProcessingError, ENothingToProcess };
 typedef std::function<void(ProcessingResult)> TFileProcessingFinishedCallback;
 
@@ -52,12 +59,12 @@ typedef std::function<void(ProcessingResult)> TFileProcessingFinishedCallback;
 constexpr char kCurrentFileName[] = "alohalytics_messages";
 constexpr char kArchivedFilesExtension[] = ".archived";
 
+// TMaxFileSizeInBytes is a size limit (before gzip) when we archive "current" file and create a new one for appending.
+// Optimal size is the one which (gzipped) can be POSTed to the server as one HTTP request.
+template <std::streamoff TMaxFileSizeInBytes>
 class MessagesQueue final {
  public:
-  // Size limit (before gzip) when we archive "current" file and create a new one for appending.
-  // Optimal size is the one which (gzipped) can be POSTed to the server as one HTTP request.
-  const std::ofstream::pos_type kMaxFileSizeInBytes = 100 * 1024;
-
+  static constexpr std::streamoff kMaxFileSizeInBytes = TMaxFileSizeInBytes;
   // Default archiving simply renames original file without any additional processing.
   static void ArchiveFileByRenamingIt(const std::string & original_file, const std::string & out_archive) {
     // TODO(AlexZ): Debug log if rename has failed.
@@ -69,9 +76,9 @@ class MessagesQueue final {
 
   ~MessagesQueue() {
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(commands_mutex_);
       worker_thread_should_exit_ = true;
-      condition_variable_.notify_all();
+      commands_condition_variable_.notify_all();
     }
     worker_thread_.join();
   }
@@ -80,29 +87,34 @@ class MessagesQueue final {
   // Executed on the WorkerThread.
   void SetStorageDirectory(std::string directory) {
     FileManager::AppendDirectorySlash(directory);
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(commands_mutex_);
     commands_queue_.push_back(std::bind(&MessagesQueue::ProcessInitializeStorageCommand, this, directory));
-    condition_variable_.notify_all();
+    commands_condition_variable_.notify_all();
   }
   // Stores message into a file archive (if SetStorageDirectory was called with a valid directory),
   // otherwise stores messages in-memory.
   // Executed on the WorkerThread.
   void PushMessage(const std::string & message) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    messages_buffer_.append(message);
+    {
+      std::lock_guard<std::mutex> lock(messages_mutex_);
+      messages_buffer_.append(message);
+    }
+    std::lock_guard<std::mutex> lock(commands_mutex_);
     commands_queue_.push_back(std::bind(&MessagesQueue::ProcessMessageCommand, this));
-    condition_variable_.notify_all();
+    commands_condition_variable_.notify_all();
   }
 
   // Processor should return true if file was successfully processed (e.g. uploaded to a server, etc.).
   // File is deleted if processor has returned true.
   // Processing stops if processor returns false.
   // Optional callback is called when all files are processed.
+  // This call automatically archives current file before processing, but zero-sized "current" file is never archived.
   // Executed on the WorkerThread.
-  void ProcessArchivedFiles(TArchivedFileProcessor processor, TFileProcessingFinishedCallback callback) {
-    std::lock_guard<std::mutex> lock(mutex_);
+  void ProcessArchivedFiles(TArchivedFilesProcessor processor,
+                            TFileProcessingFinishedCallback callback = TFileProcessingFinishedCallback()) {
+    std::lock_guard<std::mutex> lock(commands_mutex_);
     commands_queue_.push_back(std::bind(&MessagesQueue::ProcessArchivedFilesCommand, this, processor, callback));
-    condition_variable_.notify_all();
+    commands_condition_variable_.notify_all();
   }
 
  private:
@@ -128,14 +140,14 @@ class MessagesQueue final {
     }
   }
 
-  void StoreMessages(std::string const & messages_buffer) {
+  void StoreMessages(std::string const & messages) {
     if (current_file_) {
-      *current_file_ << messages_buffer << std::flush;
+      *current_file_ << messages << std::flush;
       if (current_file_->tellp() >= kMaxFileSizeInBytes) {
         ArchiveCurrentFile();
       }
     } else {
-      messages_storage_.append(messages_buffer);
+      inmemory_storage_.append(messages);
     }
   }
 
@@ -151,9 +163,9 @@ class MessagesQueue final {
       storage_directory_ = directory;
       current_file_ = std::move(new_current_file);
       // Also check if there are any messages in the memory storage, and save them to file.
-      if (!messages_storage_.empty()) {
-        StoreMessages(messages_storage_);
-        messages_storage_.clear();
+      if (!inmemory_storage_.empty()) {
+        StoreMessages(inmemory_storage_);
+        inmemory_storage_.clear();
       }
     }
   }
@@ -161,7 +173,7 @@ class MessagesQueue final {
   void ProcessMessageCommand() {
     std::string messages_buffer_copy;
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(messages_mutex_);
       if (!messages_buffer_.empty()) {
         messages_buffer_copy.swap(messages_buffer_);
       }
@@ -172,12 +184,12 @@ class MessagesQueue final {
   }
 
   // If there is no file storage directory set, it should also process messages from the memory buffer.
-  void ProcessArchivedFilesCommand(TArchivedFileProcessor processor, TFileProcessingFinishedCallback callback) {
+  void ProcessArchivedFilesCommand(TArchivedFilesProcessor processor, TFileProcessingFinishedCallback callback) {
     ProcessingResult result = ProcessingResult::ENothingToProcess;
     // Process in-memory messages, if any.
-    if (!messages_storage_.empty()) {
-      if (processor(false /* in-memory buffer */, messages_storage_)) {
-        messages_storage_.clear();
+    if (!inmemory_storage_.empty()) {
+      if (processor(false /* in-memory buffer */, inmemory_storage_)) {
+        inmemory_storage_.clear();
         result = ProcessingResult::EProcessedSuccessfully;
       } else {
         result = ProcessingResult::EProcessingError;
@@ -218,11 +230,15 @@ class MessagesQueue final {
     TCommand command_to_execute;
     while (true) {
       {
-        std::unique_lock<std::mutex> lock(mutex_);
-        condition_variable_.wait(lock, [this] { return !commands_queue_.empty() || worker_thread_should_exit_; });
+        std::unique_lock<std::mutex> lock(commands_mutex_);
+        commands_condition_variable_.wait(lock,
+                                          [this] { return !commands_queue_.empty() || worker_thread_should_exit_; });
         if (worker_thread_should_exit_) {
-          // TODO(AlexZ): Should we execute commands (if any) on exit?
-          // What if they will be too long (e.g. network connection)?
+          // Gracefully finish all commands left in the queue and exit.
+          while (!commands_queue_.empty()) {
+            commands_queue_.front()();
+            commands_queue_.pop_front();
+          }
           return;
         }
         command_to_execute = commands_queue_.front();
@@ -239,18 +255,23 @@ class MessagesQueue final {
   // Directory with a slash at the end, where we store "current" file and archived files.
   std::string storage_directory_;
   // Used as an in-memory storage if storage_dir_ was not set.
-  std::string messages_storage_;
+  std::string inmemory_storage_;
   typedef std::function<void()> TCommand;
   std::list<TCommand> commands_queue_;
 
   volatile bool worker_thread_should_exit_ = false;
-  std::mutex mutex_;
-  std::condition_variable condition_variable_;
+  std::mutex messages_mutex_;
+  std::mutex commands_mutex_;
+  std::condition_variable commands_condition_variable_;
   // Only WorkerThread accesses this variable.
   std::unique_ptr<std::ofstream> current_file_;
   // Should be the last member of the class to initialize after all other members.
   std::thread worker_thread_ = std::thread(&MessagesQueue::WorkerThread, this);
 };
+
+typedef MessagesQueue<1024 * 100> HundredKilobytesFileQueue;
+// TODO(AlexZ): Remove unnecessary file size checks from this specialization.
+typedef MessagesQueue<std::numeric_limits<std::streamoff>::max()> UnlimitedFileQueue;
 
 }  // namespace alohalytics
 
