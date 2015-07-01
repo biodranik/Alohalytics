@@ -67,21 +67,21 @@ class StatisticsReceiver {
       in_ar(ptr);
       // Cereal does not check if binary data is valid. Let's do it ourselves.
       // TODO(AlexZ): Switch from Cereal to another library.
-      if (ptr.get() == nullptr) {
+      if (!ptr) {
         throw std::invalid_argument("Corrupted Cereal object, this == 0.");
       }
       // TODO(AlexZ): Looks like an overhead to cast every event instead of only the first one,
       // but what if stream contains several mixed bodies?
       const AlohalyticsIdEvent * id_event = dynamic_cast<const AlohalyticsIdEvent *>(ptr.get());
       if (id_event) {
-        AlohalyticsIdServerEvent * server_id_event = new AlohalyticsIdServerEvent();
+        std::unique_ptr<AlohalyticsIdServerEvent> server_id_event(new AlohalyticsIdServerEvent());
         server_id_event->timestamp = id_event->timestamp;
         server_id_event->id = id_event->id;
         server_id_event->server_timestamp = server_timestamp;
         server_id_event->ip = ip;
         server_id_event->user_agent = user_agent;
         server_id_event->uri = uri;
-        ptr.reset(server_id_event);
+        ptr = std::move(server_id_event);
       }
       // Serialize it back.
       cereal::BinaryOutputArchive(out_stream) << ptr;
