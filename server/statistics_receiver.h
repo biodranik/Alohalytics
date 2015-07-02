@@ -26,13 +26,9 @@
 // additional data fields when processing received data on a server side.
 #define ALOHALYTICS_SERVER
 #include "../src/event_base.h"
-#include "../src/file_manager.h"
 #include "../src/gzip_wrapper.h"
 #include "../src/messages_queue.h"
 
-#include <chrono>
-#include <cstdio>
-#include <iostream>
 #include <sstream>
 #include <utility>
 
@@ -43,8 +39,7 @@ class StatisticsReceiver {
   TUnlimitedFileQueue file_storage_queue_;
 
  public:
-  explicit StatisticsReceiver(const std::string & storage_directory)
-      : storage_directory_(storage_directory) {
+  explicit StatisticsReceiver(const std::string & storage_directory) : storage_directory_(storage_directory) {
     FileManager::AppendDirectorySlash(storage_directory_);
     file_storage_queue_.SetStorageDirectory(storage_directory_);
   }

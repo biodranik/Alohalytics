@@ -88,6 +88,7 @@ struct FileManager {
   }
 
   // Returns true if we can write to the specified directory.
+  // TODO(AlexZ): Investigate better cross-platform solutions. For example, access() does not always work with setuid, etc.
   static bool IsDirectoryWritable(std::string directory) {
     AppendDirectorySlash(directory);
     std::string temporary_file = directory;

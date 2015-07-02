@@ -69,7 +69,7 @@ uint64_t FileManager::GetFileSize(const std::string & full_path_to_file) {
     if (S_ISREG(st.st_mode)) {
       return st.st_size;
     }
-    throw std::ios_base::failure(full_path_to_file + " is a directory.",
+    throw std::ios_base::failure(full_path_to_file + " is not a regular file.",
                                  std::error_code(EISDIR, std::generic_category()));
   }
   throw std::ios_base::failure(std::string("Can't stat file ") + full_path_to_file,
