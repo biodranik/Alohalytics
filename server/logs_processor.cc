@@ -94,7 +94,7 @@ int main(int argc, char ** argv) {
   size_t good_files_processed = 0, corrupted_files_removed = 0, other_files_removed = 0;
   size_t files_total_size = 0;
   StatisticsReceiver receiver(directory);
-  while (getline(cin, log_entry).good()) {
+  while (getline(cin, log_entry)) {
     // IP address.
     size_t start_pos = 0;
     size_t end_pos = log_entry.find_first_of(' ');
