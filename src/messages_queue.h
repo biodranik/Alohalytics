@@ -269,9 +269,9 @@ class MessagesQueue final {
   std::thread worker_thread_ = std::thread(&MessagesQueue::WorkerThread, this);
 };
 
-typedef MessagesQueue<1024 * 100> HundredKilobytesFileQueue;
+typedef MessagesQueue<1024 * 100> THundredKilobytesFileQueue;
 // TODO(AlexZ): Remove unnecessary file size checks from this specialization.
-typedef MessagesQueue<std::numeric_limits<std::streamoff>::max()> UnlimitedFileQueue;
+typedef MessagesQueue<std::numeric_limits<std::streamoff>::max()> TUnlimitedFileQueue;
 
 }  // namespace alohalytics
 
