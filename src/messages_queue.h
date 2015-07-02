@@ -259,7 +259,8 @@ class MessagesQueue final {
   typedef std::function<void()> TCommand;
   std::list<TCommand> commands_queue_;
 
-  volatile bool worker_thread_should_exit_ = false;
+  // Should be guarded by commands_mutex_.
+  bool worker_thread_should_exit_ = false;
   std::mutex messages_mutex_;
   std::mutex commands_mutex_;
   std::condition_variable commands_condition_variable_;
