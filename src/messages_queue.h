@@ -235,10 +235,10 @@ class MessagesQueue final {
                                           [this] { return !commands_queue_.empty() || worker_thread_should_exit_; });
         if (worker_thread_should_exit_) {
           // Gracefully finish all commands left in the queue and exit.
-          while (!commands_queue_.empty()) {
-            commands_queue_.front()();
-            commands_queue_.pop_front();
+          for (auto & command : commands_queue_) {
+            command();
           }
+          commands_queue_.clear();
           return;
         }
         command_to_execute = commands_queue_.front();

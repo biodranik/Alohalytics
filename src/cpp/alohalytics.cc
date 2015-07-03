@@ -220,7 +220,7 @@ bool Stats::UploadFileImpl(bool file_name_in_content, const std::string & conten
     }
     const bool uploadSucceeded = request.RunHTTPRequest() && 200 == request.error_code() && !request.was_redirected();
     LOG_IF_DEBUG("RunHTTPRequest has returned code", request.error_code(),
-                 request.was_redirected() ? "and request was redirected." : "");
+                 request.was_redirected() ? "and request was redirected to " + request.url_received() : " ");
     return uploadSucceeded;
   } catch (const std::exception & ex) {
     LOG_IF_DEBUG("Exception in UploadFileImpl:", ex.what());
