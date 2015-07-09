@@ -26,13 +26,9 @@
 // additional data fields when processing received data on a server side.
 #define ALOHALYTICS_SERVER
 #include "../src/event_base.h"
-#include "../src/file_manager.h"
 #include "../src/gzip_wrapper.h"
 #include "../src/messages_queue.h"
 
-#include <chrono>
-#include <cstdio>
-#include <iostream>
 #include <sstream>
 #include <utility>
 
@@ -40,11 +36,10 @@ namespace alohalytics {
 
 class StatisticsReceiver {
   std::string storage_directory_;
-  UnlimitedFileQueue file_storage_queue_;
+  TUnlimitedFileQueue file_storage_queue_;
 
  public:
-  explicit StatisticsReceiver(const std::string & storage_directory)
-      : storage_directory_(storage_directory) {
+  explicit StatisticsReceiver(const std::string & storage_directory) : storage_directory_(storage_directory) {
     FileManager::AppendDirectorySlash(storage_directory_);
     file_storage_queue_.SetStorageDirectory(storage_directory_);
   }
@@ -88,6 +83,9 @@ class StatisticsReceiver {
     }
     file_storage_queue_.PushMessage(out_stream.str());
   }
+
+  // Correct logrotate utility support for queue's file.
+  void ReopenDataFile() { file_storage_queue_.LogrotateCurrentFile(); }
 };
 
 }  // namespace alohalytics

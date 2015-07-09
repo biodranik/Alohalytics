@@ -117,6 +117,13 @@ class MessagesQueue final {
     commands_condition_variable_.notify_all();
   }
 
+  // This may be needed for correct logrotate utility support on *nix systems.
+  void LogrotateCurrentFile() {
+    std::lock_guard<std::mutex> lock(commands_mutex_);
+    commands_queue_.push_back(std::bind(&MessagesQueue::ProcessLogrotateCurrentFileCommand, this));
+    commands_condition_variable_.notify_all();
+  }
+
  private:
   // Returns full path to unique, non-existing file in the given directory.
   // Uses default extension for easier archives scan later.
@@ -207,7 +214,8 @@ class MessagesQueue final {
     }
     FileManager::ForEachFileInDir(storage_directory_, [&processor, &result](const std::string & full_path_to_file) {
       // Ignore non-archived files.
-      if (full_path_to_file.find(kArchivedFilesExtension) == std::string::npos) {
+      const auto pos = full_path_to_file.rfind(kArchivedFilesExtension);
+      if (pos == std::string::npos || pos + sizeof(kArchivedFilesExtension) - 1 != full_path_to_file.size()) {
         return true;
       }
       if (processor(true /* true here means that second parameter is file path */, full_path_to_file)) {
@@ -226,6 +234,14 @@ class MessagesQueue final {
     }
   }
 
+  void ProcessLogrotateCurrentFileCommand() {
+    // Here we simply reopen the file. It should be already moved by logrotate.
+    current_file_.reset(nullptr);
+    current_file_.reset(
+        new std::ofstream(storage_directory_ + kCurrentFileName, std::ios_base::app | std::ios_base::binary));
+    // TODO(AlexZ): Should we check for possible reopen errors?
+  }
+
   void WorkerThread() {
     TCommand command_to_execute;
     while (true) {
@@ -235,10 +251,10 @@ class MessagesQueue final {
                                           [this] { return !commands_queue_.empty() || worker_thread_should_exit_; });
         if (worker_thread_should_exit_) {
           // Gracefully finish all commands left in the queue and exit.
-          while (!commands_queue_.empty()) {
-            commands_queue_.front()();
-            commands_queue_.pop_front();
+          for (auto & command : commands_queue_) {
+            command();
           }
+          commands_queue_.clear();
           return;
         }
         command_to_execute = commands_queue_.front();
@@ -259,7 +275,8 @@ class MessagesQueue final {
   typedef std::function<void()> TCommand;
   std::list<TCommand> commands_queue_;
 
-  volatile bool worker_thread_should_exit_ = false;
+  // Should be guarded by commands_mutex_.
+  bool worker_thread_should_exit_ = false;
   std::mutex messages_mutex_;
   std::mutex commands_mutex_;
   std::condition_variable commands_condition_variable_;
@@ -269,9 +286,9 @@ class MessagesQueue final {
   std::thread worker_thread_ = std::thread(&MessagesQueue::WorkerThread, this);
 };
 
-typedef MessagesQueue<1024 * 100> HundredKilobytesFileQueue;
+typedef MessagesQueue<1024 * 100> THundredKilobytesFileQueue;
 // TODO(AlexZ): Remove unnecessary file size checks from this specialization.
-typedef MessagesQueue<std::numeric_limits<std::streamoff>::max()> UnlimitedFileQueue;
+typedef MessagesQueue<std::numeric_limits<std::streamoff>::max()> TUnlimitedFileQueue;
 
 }  // namespace alohalytics
 
