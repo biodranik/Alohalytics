@@ -1,7 +1,7 @@
 .PHONY: run all indent clean
 
 CPP=g++
-CPPFLAGS=-std=c++11 -Wall -W -I${INCLUDES}
+CPPFLAGS=-std=c++11 -Wall -W -I${INCLUDES} -O3
 LDFLAGS=-L${LIBS} -lz -pthread -lfcgi -lfcgi++
 MORE_SOURCES=../src/posix/file_manager_posix_impl.cc
 
