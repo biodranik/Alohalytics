@@ -36,7 +36,7 @@
 
 namespace alohalytics {
 
-typedef std::function<void(const AlohalyticsIdServerEvent & ie, const AlohalyticsBaseEvent & e)> TLambda;
+typedef std::function<void(const AlohalyticsIdServerEvent * ie, const AlohalyticsBaseEvent * e)> TLambda;
 
 // Reads and processes all cereal events from stdin.
 struct Processor {
@@ -64,7 +64,7 @@ struct Processor {
         unique_user_ids.insert(id_event->id);
         server_id_ptr = std::move(ptr);
       } else {
-        lambda(*static_cast<const AlohalyticsIdServerEvent *>(server_id_ptr.get()), *ptr.get());
+        lambda(static_cast<const AlohalyticsIdServerEvent *>(server_id_ptr.get()), ptr.get());
         // Do not count id events as they are created automatically.
         ++total_events_processed;
       }
