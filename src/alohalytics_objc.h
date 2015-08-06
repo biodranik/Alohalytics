@@ -23,11 +23,13 @@
  *******************************************************************************/
 
 // Convenience header to use from pure Objective-C project.
+// TODO(AlexZ): Refactor it to use instance and it's methods instead of static functions.
 
 #ifndef ALOHALYTICS_OBJC_H
 #define ALOHALYTICS_OBJC_H
 
 #import <Foundation/Foundation.h>
+#import <Foundation/NSDate.h>
 #import <CoreLocation/CoreLocation.h>
 
 @interface Alohalytics : NSObject
@@ -48,6 +50,10 @@
 + (void)logEvent:(NSString *)event withKeyValueArray:(NSArray *)array atLocation:(CLLocation *)location;
 + (void)logEvent:(NSString *)event withDictionary:(NSDictionary *)dictionary;
 + (void)logEvent:(NSString *)event withDictionary:(NSDictionary *)dictionary atLocation:(CLLocation *)location;
+// Returns the date when app was launched for the first time (usually the same as install date).
++ (NSDate *)firstLaunchDate;
+// Returns summary time of all active user sessions up to now.
++ (NSInteger)totalSecondsSpentInTheApp;
 @end
 
 #endif  // #ifndef ALOHALYTICS_OBJC_H

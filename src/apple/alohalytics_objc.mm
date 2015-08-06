@@ -328,6 +328,13 @@ bool IsConnectionActive() {
 
 // Keys for NSUserDefaults.
 static NSString * const kInstalledVersionKey = @"AlohalyticsInstalledVersion";
+static NSString * const kInstallDateKey = @"AlohalyticsInstallDate";
+static NSString * const kTotalSecondsInTheApp = @"AlohalyticsTotalSecondsInTheApp";
+
+// Used to calculate session length and total time spent in the app.
+// setup should be called to activate counting.
+static NSDate * sSessionStartTime = nil;
+
 @implementation Alohalytics
 
 + (void)setDebugMode:(BOOL)enable {
@@ -379,6 +386,10 @@ static NSString * const kInstalledVersionKey = @"AlohalyticsInstalledVersion";
         {"documentsTimestampMillis", PathTimestampMillis([NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject])},
         {"bundleTimestampMillis", PathTimestampMillis([bundle executablePath])}});
     [userDataBase setValue:version forKey:kInstalledVersionKey];
+    // Also store install date for future use, but check if firstLaunchDate was already called before.
+    if (nil == [userDataBase objectForKey:kInstallDateKey]) {
+      [userDataBase setObject:[NSDate date] forKey:kInstallDateKey];
+    }
     [userDataBase synchronize];
     shouldSendUpdatedSystemInformation = YES;
   } else {
@@ -448,11 +459,24 @@ static NSString * const kInstalledVersionKey = @"AlohalyticsInstalledVersion";
 #pragma mark App lifecycle notifications used to calculate basic metrics.
 #if (TARGET_OS_IPHONE > 0)
 + (void)applicationDidBecomeActive:(NSNotification *)notification {
+  sSessionStartTime = [NSDate date];
   Stats::Instance().LogEvent("$applicationDidBecomeActive");
 }
 
 + (void)applicationWillResignActive:(NSNotification *)notification {
-  Stats::Instance().LogEvent("$applicationWillResignActive");
+  // Calculate session length.
+  NSInteger seconds = static_cast<NSInteger>(-sSessionStartTime.timeIntervalSinceNow);
+  // nil it to filter time when the app is in the background, but totalSecondsSpentInTheApp is called.
+  sSessionStartTime = nil;
+  Stats & instance = Stats::Instance();
+  instance.LogEvent("$applicationWillResignActive", std::to_string(seconds));
+  NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
+  seconds += [defaults integerForKey:kTotalSecondsInTheApp];
+  [defaults setInteger:seconds forKey:kTotalSecondsInTheApp];
+  [defaults synchronize];
+  if (instance.DebugMode()) {
+    ALOG("Total seconds spent in the app:", seconds);
+  }
 }
 
 + (void)applicationWillEnterForeground:(NSNotificationCenter *)notification {
@@ -485,4 +509,29 @@ static NSString * const kInstalledVersionKey = @"AlohalyticsInstalledVersion";
   Stats::Instance().LogEvent("$applicationWillTerminate");
 }
 #endif // TARGET_OS_IPHONE
+
+#pragma mark Utility methods
++ (NSDate *)firstLaunchDate {
+  NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
+  NSDate * date = [defaults objectForKey:kInstallDateKey];
+  if (!date) {
+    // Non-standard situation: setup was never called before. Use documents folder timestamp for approximation.
+    NSString * docsFolder = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
+    NSDictionary * attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:docsFolder error:nil];
+    NSDate * date = attributes ? [attributes objectForKey:NSFileModificationDate] : [NSDate date];
+    [defaults setObject:date forKey:kInstallDateKey];
+    [defaults synchronize];
+  }
+  return date;
+}
+
++ (NSInteger)totalSecondsSpentInTheApp {
+  NSInteger seconds = [[NSUserDefaults standardUserDefaults] integerForKey:kTotalSecondsInTheApp];
+  // Take into an account currently active session.
+  if (sSessionStartTime) {
+    seconds += static_cast<NSInteger>(-sSessionStartTime.timeIntervalSinceNow);
+  }
+  return seconds;
+}
+
 @end
