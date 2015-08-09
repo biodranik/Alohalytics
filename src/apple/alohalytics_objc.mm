@@ -123,11 +123,9 @@ static Location ExtractLocation(CLLocation * l) {
   return extracted;
 }
 
-// Returns string representing uint64_t timestamp of given file or directory (modification date in millis from 1970).
-static std::string PathTimestampMillis(NSString * path) {
-  NSDictionary * attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:nil];
-  if (attributes) {
-    NSDate * date = [attributes objectForKey:NSFileModificationDate];
+// Internal helper.
+static std::string NSDateToMillisFrom1970(NSDate * date) {
+  if (date) {
     return std::to_string(static_cast<uint64_t>([date timeIntervalSince1970] * 1000.));
   }
   return std::string("0");
@@ -328,12 +326,13 @@ bool IsConnectionActive() {
 
 // Keys for NSUserDefaults.
 static NSString * const kInstalledVersionKey = @"AlohalyticsInstalledVersion";
-static NSString * const kInstallDateKey = @"AlohalyticsInstallDate";
+static NSString * const kFirstLaunchDateKey = @"AlohalyticsFirstLaunchDate";
 static NSString * const kTotalSecondsInTheApp = @"AlohalyticsTotalSecondsInTheApp";
 
 // Used to calculate session length and total time spent in the app.
 // setup should be called to activate counting.
-static NSDate * sSessionStartTime = nil;
+static NSDate * gSessionStartTime = nil;
+static BOOL gIsFirstSession = NO;
 
 @implementation Alohalytics
 
@@ -342,10 +341,6 @@ static NSDate * sSessionStartTime = nil;
 }
 
 + (void)setup:(NSString *)serverUrl withLaunchOptions:(NSDictionary *)options {
-  [Alohalytics setup:serverUrl andFirstLaunch:YES withLaunchOptions:options];
-}
-
-+ (void)setup:(NSString *)serverUrl andFirstLaunch:(BOOL)isFirstLaunch withLaunchOptions:(NSDictionary *)options {
   const NSBundle * bundle = [NSBundle mainBundle];
   NSString * bundleIdentifier = [bundle bundleIdentifier];
   NSString * version = [[bundle infoDictionary] objectForKey:@"CFBundleShortVersionString"];
@@ -379,25 +374,26 @@ static NSDate * sSessionStartTime = nil;
   NSUserDefaults * userDataBase = [NSUserDefaults standardUserDefaults];
   NSString * installedVersion = [userDataBase objectForKey:kInstalledVersionKey];
   BOOL shouldSendUpdatedSystemInformation = NO;
-  if (installationId.second && isFirstLaunch && installedVersion == nil) {
-    // Documents folder modification time can be interpreted as a "first app launch time" or an approx. "app install time".
-    // App bundle modification time can be interpreted as an "app update time".
-    instance.LogEvent("$install", {{"CFBundleShortVersionString", [version UTF8String]},
-        {"documentsTimestampMillis", PathTimestampMillis([NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject])},
-        {"bundleTimestampMillis", PathTimestampMillis([bundle executablePath])}});
+  // Do not generate $install event for old users who did not have Alohalytics installed but already used the app.
+  const BOOL appWasNeverInstalledAndLaunchedBefore = (NSOrderedAscending == [[Alohalytics buildDate] compare:[Alohalytics installDate]]);
+  if (installationId.second && appWasNeverInstalledAndLaunchedBefore && installedVersion == nil) {
+    gIsFirstSession = YES;
+    instance.LogEvent("$install", [Alohalytics bundleInformation:version]);
     [userDataBase setValue:version forKey:kInstalledVersionKey];
-    // Also store install date for future use, but check if firstLaunchDate was already called before.
-    if (nil == [userDataBase objectForKey:kInstallDateKey]) {
-      [userDataBase setObject:[NSDate date] forKey:kInstallDateKey];
+    // Also store first launch date for future use.
+    if (nil == [userDataBase objectForKey:kFirstLaunchDateKey]) {
+      [userDataBase setObject:[NSDate date] forKey:kFirstLaunchDateKey];
     }
     [userDataBase synchronize];
     shouldSendUpdatedSystemInformation = YES;
   } else {
     if (installedVersion == nil || ![installedVersion isEqualToString:version]) {
-      instance.LogEvent("$update", {{"CFBundleShortVersionString", [version UTF8String]},
-          {"documentsTimestampMillis", PathTimestampMillis([NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject])},
-          {"bundleTimestampMillis", PathTimestampMillis([bundle executablePath])}});
+      instance.LogEvent("$update", [Alohalytics bundleInformation:version]);
       [userDataBase setValue:version forKey:kInstalledVersionKey];
+      // Also store first launch date for future use, if Alohalytics was integrated only in this update.
+      if (nil == [userDataBase objectForKey:kFirstLaunchDateKey]) {
+        [userDataBase setObject:[NSDate date] forKey:kFirstLaunchDateKey];
+      }
       [userDataBase synchronize];
       shouldSendUpdatedSystemInformation = YES;
     }
@@ -418,6 +414,14 @@ static NSDate * sSessionStartTime = nil;
 #else
   static_cast<void>(options);  // Unused variable warning fix.
 #endif  // TARGET_OS_IPHONE
+}
+
++(alohalytics::TStringMap)bundleInformation:(NSString *)version {
+  return {{"CFBundleShortVersionString", [version UTF8String]},
+    {"installTimestampMillis", NSDateToMillisFrom1970([Alohalytics installDate])},
+    {"updateTimestampMillis", NSDateToMillisFrom1970([Alohalytics updateDate])},
+    {"buildTimestampMillis", NSDateToMillisFrom1970([Alohalytics buildDate])},
+  };
 }
 
 + (void)forceUpload {
@@ -459,15 +463,15 @@ static NSDate * sSessionStartTime = nil;
 #pragma mark App lifecycle notifications used to calculate basic metrics.
 #if (TARGET_OS_IPHONE > 0)
 + (void)applicationDidBecomeActive:(NSNotification *)notification {
-  sSessionStartTime = [NSDate date];
+  gSessionStartTime = [NSDate date];
   Stats::Instance().LogEvent("$applicationDidBecomeActive");
 }
 
 + (void)applicationWillResignActive:(NSNotification *)notification {
   // Calculate session length.
-  NSInteger seconds = static_cast<NSInteger>(-sSessionStartTime.timeIntervalSinceNow);
+  NSInteger seconds = static_cast<NSInteger>(-gSessionStartTime.timeIntervalSinceNow);
   // nil it to filter time when the app is in the background, but totalSecondsSpentInTheApp is called.
-  sSessionStartTime = nil;
+  gSessionStartTime = nil;
   Stats & instance = Stats::Instance();
   instance.LogEvent("$applicationWillResignActive", std::to_string(seconds));
   NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
@@ -503,6 +507,9 @@ static NSDate * sSessionStartTime = nil;
       ALOG("Skipped statistics uploading as connection is not active.");
     }
   }
+  if (gIsFirstSession) {
+    gIsFirstSession = NO;
+  }
 }
 
 + (void)applicationWillTerminate:(NSNotification *)notification {
@@ -511,15 +518,18 @@ static NSDate * sSessionStartTime = nil;
 #endif // TARGET_OS_IPHONE
 
 #pragma mark Utility methods
+
++ (BOOL)isFirstSession {
+  return gIsFirstSession;
+}
+
 + (NSDate *)firstLaunchDate {
   NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
-  NSDate * date = [defaults objectForKey:kInstallDateKey];
+  NSDate * date = [defaults objectForKey:kFirstLaunchDateKey];
   if (!date) {
-    // Non-standard situation: setup was never called before. Use documents folder timestamp for approximation.
-    NSString * docsFolder = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
-    NSDictionary * attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:docsFolder error:nil];
-    NSDate * date = attributes ? [attributes objectForKey:NSFileModificationDate] : [NSDate date];
-    [defaults setObject:date forKey:kInstallDateKey];
+    // Non-standard situation: this method is called before calling setup. Return current date.
+    date = [NSDate date];
+    [defaults setObject:date forKey:kFirstLaunchDateKey];
     [defaults synchronize];
   }
   return date;
@@ -528,10 +538,28 @@ static NSDate * sSessionStartTime = nil;
 + (NSInteger)totalSecondsSpentInTheApp {
   NSInteger seconds = [[NSUserDefaults standardUserDefaults] integerForKey:kTotalSecondsInTheApp];
   // Take into an account currently active session.
-  if (sSessionStartTime) {
-    seconds += static_cast<NSInteger>(-sSessionStartTime.timeIntervalSinceNow);
+  if (gSessionStartTime) {
+    seconds += static_cast<NSInteger>(-gSessionStartTime.timeIntervalSinceNow);
   }
   return seconds;
+}
+
+// Internal helper, returns nil for invalid paths.
++ (NSDate *)fileCreationDate:(NSString *)fullPath {
+  NSDictionary * attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:fullPath error:nil];
+  return attributes ? [attributes objectForKey:NSFileCreationDate] : nil;
+}
+
++ (NSDate *)installDate {
+  return [Alohalytics fileCreationDate:[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject]];
+}
+
++ (NSDate *)updateDate {
+  return [Alohalytics fileCreationDate:[[NSBundle mainBundle] resourcePath]];
+}
+
++ (NSDate *)buildDate {
+  return [Alohalytics fileCreationDate:[[NSBundle mainBundle] executablePath]];
 }
 
 @end
