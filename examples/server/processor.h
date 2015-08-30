@@ -26,7 +26,7 @@
 
 // This define is needed to preserve client's timestamps in events.
 #define ALOHALYTICS_SERVER
-#include "../src/event_base.h"
+#include "../../src/event_base.h"
 
 #include <chrono>
 #include <iostream>
@@ -36,7 +36,7 @@
 
 namespace alohalytics {
 
-typedef std::function<void(const AlohalyticsIdServerEvent * ie, const AlohalyticsBaseEvent * e)> TLambda;
+typedef std::function<void(const AlohalyticsIdServerEvent * ie, const AlohalyticsKeyEvent * e)> TLambda;
 
 // Reads and processes all cereal events from stdin.
 struct Processor {
@@ -64,7 +64,8 @@ struct Processor {
         unique_user_ids.insert(id_event->id);
         server_id_ptr = std::move(ptr);
       } else {
-        lambda(static_cast<const AlohalyticsIdServerEvent *>(server_id_ptr.get()), ptr.get());
+        lambda(static_cast<const AlohalyticsIdServerEvent *>(server_id_ptr.get()),
+               static_cast<const AlohalyticsKeyEvent *>(ptr.get()));
         // Do not count id events as they are created automatically.
         ++total_events_processed;
       }
