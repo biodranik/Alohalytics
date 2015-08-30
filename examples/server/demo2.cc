@@ -27,14 +27,15 @@
 // This define is needed to preserve client's timestamps in events.
 #define ALOHALYTICS_SERVER
 #include "../../src/event_base.h"
-#include "../../queries/processor.h"
+
+#include "processor.h"
 
 #include <iostream>
 
 int main(int, char **) {
   cereal::BinaryInputArchive ar(std::cin);
   const AlohalyticsIdServerEvent * previous = nullptr;
-  alohalytics::Processor([&previous](const AlohalyticsIdServerEvent * se, const AlohalyticsBaseEvent * e) {
+  alohalytics::Processor([&previous](const AlohalyticsIdServerEvent * se, const AlohalyticsKeyEvent * e) {
     if (previous != se) {
       std::cout << se->ToString() << std::endl;
       previous = se;
