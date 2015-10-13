@@ -206,15 +206,15 @@ static void LogSystemInformation(NSString * userAgent) {
 // Returns <unique id, true if it's the very-first app launch>.
 static std::pair<std::string, bool> InstallationId() {
   bool firstLaunch = false;
-  NSUserDefaults * userDataBase = [NSUserDefaults standardUserDefaults];
-  NSString * installationId = [userDataBase objectForKey:@"AlohalyticsInstallationId"];
+  NSUserDefaults * ud = [NSUserDefaults standardUserDefaults];
+  NSString * installationId = [ud objectForKey:@"AlohalyticsInstallationId"];
   if (installationId == nil) {
     CFUUIDRef uuid = CFUUIDCreate(kCFAllocatorDefault);
     // All iOS IDs start with I:
     installationId = [@"I:" stringByAppendingString:(NSString *)CFBridgingRelease(CFUUIDCreateString(kCFAllocatorDefault, uuid))];
     CFRelease(uuid);
-    [userDataBase setValue:installationId forKey:@"AlohalyticsInstallationId"];
-    [userDataBase synchronize];
+    [ud setValue:installationId forKey:@"AlohalyticsInstallationId"];
+    [ud synchronize];
     firstLaunch = true;
   }
   return std::make_pair([installationId UTF8String], firstLaunch);
@@ -288,7 +288,7 @@ static void OnUploadFinished(alohalytics::ProcessingResult result) {
   }
   EndBackgroundTask();
 }
-
+#endif  // TARGET_OS_IPHONE
 // Quick check if device has any active connection.
 // Does not guarantee actual reachability of any host.
 // Inspired by Apple's Reachability example:
@@ -315,19 +315,22 @@ bool IsConnectionActive() {
       && (flags & kSCNetworkReachabilityFlagsInterventionRequired) == 0) {
     return true;
   }
+#if (TARGET_OS_IPHONE > 0)
   if ((flags & kSCNetworkReachabilityFlagsIsWWAN) == kSCNetworkReachabilityFlagsIsWWAN) {
     return true;
   }
+#endif  // TARGET_OS_IPHONE
   return false;
 }
 
-#endif  // TARGET_OS_IPHONE
+//#endif  // TARGET_OS_IPHONE
 } // namespace
 
 // Keys for NSUserDefaults.
 static NSString * const kInstalledVersionKey = @"AlohalyticsInstalledVersion";
 static NSString * const kFirstLaunchDateKey = @"AlohalyticsFirstLaunchDate";
 static NSString * const kTotalSecondsInTheApp = @"AlohalyticsTotalSecondsInTheApp";
+static NSString * const kIsAlohalyticsDisabledKey = @"AlohalyticsDisabledKey";
 
 // Used to calculate session length and total time spent in the app.
 // setup should be called to activate counting.
@@ -370,31 +373,35 @@ static BOOL gIsFirstSession = NO;
           .SetServerUrl([serverUrl UTF8String])
           .SetStoragePath(StoragePath());
 
+  NSUserDefaults * ud = [NSUserDefaults standardUserDefaults];
+  if ([ud boolForKey:kIsAlohalyticsDisabledKey]) {
+    instance.Disable();
+  }
+
   // Calculate some basic statistics about installations/updates/launches.
-  NSUserDefaults * userDataBase = [NSUserDefaults standardUserDefaults];
-  NSString * installedVersion = [userDataBase objectForKey:kInstalledVersionKey];
+  NSString * installedVersion = [ud objectForKey:kInstalledVersionKey];
   BOOL shouldSendUpdatedSystemInformation = NO;
   // Do not generate $install event for old users who did not have Alohalytics installed but already used the app.
   const BOOL appWasNeverInstalledAndLaunchedBefore = (NSOrderedAscending == [[Alohalytics buildDate] compare:[Alohalytics installDate]]);
   if (installationId.second && appWasNeverInstalledAndLaunchedBefore && installedVersion == nil) {
     gIsFirstSession = YES;
     instance.LogEvent("$install", [Alohalytics bundleInformation:version]);
-    [userDataBase setValue:version forKey:kInstalledVersionKey];
+    [ud setValue:version forKey:kInstalledVersionKey];
     // Also store first launch date for future use.
-    if (nil == [userDataBase objectForKey:kFirstLaunchDateKey]) {
-      [userDataBase setObject:[NSDate date] forKey:kFirstLaunchDateKey];
+    if (nil == [ud objectForKey:kFirstLaunchDateKey]) {
+      [ud setObject:[NSDate date] forKey:kFirstLaunchDateKey];
     }
-    [userDataBase synchronize];
+    [ud synchronize];
     shouldSendUpdatedSystemInformation = YES;
   } else {
     if (installedVersion == nil || ![installedVersion isEqualToString:version]) {
       instance.LogEvent("$update", [Alohalytics bundleInformation:version]);
-      [userDataBase setValue:version forKey:kInstalledVersionKey];
+      [ud setValue:version forKey:kInstalledVersionKey];
       // Also store first launch date for future use, if Alohalytics was integrated only in this update.
-      if (nil == [userDataBase objectForKey:kFirstLaunchDateKey]) {
-        [userDataBase setObject:[NSDate date] forKey:kFirstLaunchDateKey];
+      if (nil == [ud objectForKey:kFirstLaunchDateKey]) {
+        [ud setObject:[NSDate date] forKey:kFirstLaunchDateKey];
       }
-      [userDataBase synchronize];
+      [ud synchronize];
       shouldSendUpdatedSystemInformation = YES;
     }
   }
@@ -474,10 +481,10 @@ static BOOL gIsFirstSession = NO;
   gSessionStartTime = nil;
   Stats & instance = Stats::Instance();
   instance.LogEvent("$applicationWillResignActive", std::to_string(seconds));
-  NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
-  seconds += [defaults integerForKey:kTotalSecondsInTheApp];
-  [defaults setInteger:seconds forKey:kTotalSecondsInTheApp];
-  [defaults synchronize];
+  NSUserDefaults * ud = [NSUserDefaults standardUserDefaults];
+  seconds += [ud integerForKey:kTotalSecondsInTheApp];
+  [ud setInteger:seconds forKey:kTotalSecondsInTheApp];
+  [ud synchronize];
   if (instance.DebugMode()) {
     ALOG("Total seconds spent in the app:", seconds);
   }
@@ -524,13 +531,13 @@ static BOOL gIsFirstSession = NO;
 }
 
 + (NSDate *)firstLaunchDate {
-  NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
-  NSDate * date = [defaults objectForKey:kFirstLaunchDateKey];
+  NSUserDefaults * ud = [NSUserDefaults standardUserDefaults];
+  NSDate * date = [ud objectForKey:kFirstLaunchDateKey];
   if (!date) {
     // Non-standard situation: this method is called before calling setup. Return current date.
     date = [NSDate date];
-    [defaults setObject:date forKey:kFirstLaunchDateKey];
-    [defaults synchronize];
+    [ud setObject:date forKey:kFirstLaunchDateKey];
+    [ud synchronize];
   }
   return date;
 }
@@ -560,6 +567,24 @@ static BOOL gIsFirstSession = NO;
 
 + (NSDate *)buildDate {
   return [Alohalytics fileCreationDate:[[NSBundle mainBundle] executablePath]];
+}
+
++ (void)disable {
+  Stats & s = Stats::Instance();
+  // Force uploading of all previous events.
+  if (IsConnectionActive())
+    s.Upload();
+  s.Disable();
+  NSUserDefaults * ud = [NSUserDefaults standardUserDefaults];
+  [ud setBool:YES forKey:kIsAlohalyticsDisabledKey];
+  [ud synchronize];
+}
+
++ (void)enable {
+  Stats::Instance().Enable();
+  NSUserDefaults * ud = [NSUserDefaults standardUserDefaults];
+  [ud setBool:NO forKey:kIsAlohalyticsDisabledKey];
+  [ud synchronize];
 }
 
 @end
