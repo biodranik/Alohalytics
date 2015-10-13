@@ -405,11 +405,12 @@ static BOOL gIsFirstSession = NO;
       shouldSendUpdatedSystemInformation = YES;
     }
   }
-  instance.LogEvent("$launch"
+  alohalytics::TStringMap params = {{"connected", (IsConnectionActive() ? "yes" : "no")}};
 #if (TARGET_OS_IPHONE > 0)
-                    , ParseLaunchOptions(options)
+  const auto oparams = ParseLaunchOptions(options);
+  params.insert(oparams.begin(), oparams.end());
 #endif  // TARGET_OS_IPHONE
-                    );
+  instance.LogEvent("$launch", params);
 #if (TARGET_OS_IPHONE > 0)
   // Initialize User-Agent asynchronously and log additional system info for iOS, as it takes significant time at startup.
   dispatch_async(dispatch_get_main_queue(), ^{
