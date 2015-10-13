@@ -12,8 +12,8 @@ OS := $(shell uname)
 MORE_SOURCES = ../../src/cpp/alohalytics.cc ../../src/posix/file_manager_posix_impl.cc
 ifeq ($(OS),Darwin)
   CPPFLAGS += -x objective-c++ -fobjc-arc
-  LDFLAGS += -framework Foundation
-  MORE_SOURCES += ../../src/apple/http_client_apple.mm
+  LDFLAGS += -framework Foundation -framework SystemConfiguration
+  MORE_SOURCES += ../../src/apple/http_client_apple.mm ../../src/apple/alohalytics_objc.mm
 else
   ifeq ($(OS),Linux)
     MORE_SOURCES += ../../src/posix/http_client_curl.cc
