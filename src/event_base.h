@@ -48,6 +48,9 @@ struct NoOpDeleter {
 };
 }  // namespace alohalytics
 
+// Helper to make events processing code more readable.
+typedef std::string AlohaID;
+
 // For easier processing on a server side, every statistics event should derive from this base class.
 struct AlohalyticsBaseEvent {
   uint64_t timestamp;
@@ -87,7 +90,7 @@ CEREAL_REGISTER_TYPE_WITH_NAME(AlohalyticsBaseEvent, "b")
 // Special event in the beginning of each block (file) sent to stats server.
 // Designed to mark all events in this data block as belonging to one user with specified id.
 struct AlohalyticsIdEvent : public AlohalyticsBaseEvent {
-  std::string id;
+  AlohaID id;
 
   virtual std::string ToString() const { return AlohalyticsBaseEvent::ToString() + " ID: " + id; }
 
