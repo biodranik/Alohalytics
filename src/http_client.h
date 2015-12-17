@@ -141,6 +141,7 @@ class HTTPClientPlatformWrapper {
   // in the simplest success case use 'if (200 == client.error_code())' // 200 means OK in HTTP
   int error_code() const { return error_code_; }
   std::string const & server_response() const { return server_response_; }
+  std::string const & http_method() const { return http_method_; }
 
 };  // class HTTPClientPlatformWrapper
 
