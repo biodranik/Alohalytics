@@ -37,6 +37,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
+import java.util.Map;
 
 public class HttpTransport {
 
@@ -67,6 +69,9 @@ public class HttpTransport {
       }
       if (p.userAgent != null) {
         connection.setRequestProperty("User-Agent", p.userAgent);
+      }
+      if (p.cookies != null) {
+        connection.setRequestProperty("Cookie", p.cookies);
       }
       if (p.inputFilePath != null || p.data != null) {
         // Send (POST, PUT...) data to the server.
@@ -116,6 +121,16 @@ public class HttpTransport {
       }
       p.contentType = connection.getContentType();
       p.contentEncoding = connection.getContentEncoding();
+      final Map<String, List<String>> headers = connection.getHeaderFields();
+      if (headers != null && headers.containsKey("Set-Cookie")) {
+        p.cookies = "";
+        for (final String value : headers.get("Set-Cookie")) {
+          if (value != null) {
+            // Multiple Set-Cookie headers are normalized in C++ code.
+            p.cookies += value + ", ";
+          }
+        }
+      }
       // This implementation receives any data only if we have HTTP::OK (200).
       if (p.httpResponseCode == HttpURLConnection.HTTP_OK) {
         OutputStream ostream;
@@ -179,6 +194,7 @@ public class HttpTransport {
     public String userAgent = null;
     public String basicAuthUser = null;
     public String basicAuthPassword = null;
+    public String cookies = null;
     public int httpResponseCode = -1;
     public boolean debugMode = false;
 
