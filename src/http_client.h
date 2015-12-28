@@ -196,7 +196,17 @@ class HTTPClientPlatformWrapper {
     }
     return server_cookies_ + "; " + cookies_;
   }
-
+  // Returns cookie value or empty string if it's not present.
+  std::string cookie_by_name(std::string name) const {
+    const std::string str = combined_cookies();
+    name += "=";
+    const auto cookie = str.find(name);
+    const auto eq = cookie + name.size();
+    if (cookie != std::string::npos && str.size() > eq) {
+      return str.substr(eq, str.find(';', eq) - eq);
+    }
+    return std::string();
+  }
 };  // class HTTPClientPlatformWrapper
 
 }  // namespace alohalytics
