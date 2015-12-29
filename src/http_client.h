@@ -83,11 +83,11 @@ class HTTPClientPlatformWrapper {
       // In the good case, we have '=' and it goes before any ' '.
       const auto eq = str.find('=');
       if (eq == std::string::npos) {
-        continue; // It's not a cookie: no valid key value pair.
+        continue;  // It's not a cookie: no valid key value pair.
       }
       const auto sp = str.find(' ');
       if (sp != std::string::npos && eq > sp) {
-        continue; // It's not a cookie: comma in expires date.
+        continue;  // It's not a cookie: comma in expires date.
       }
       // Insert delimiter.
       if (!result.empty()) {

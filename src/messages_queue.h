@@ -218,6 +218,17 @@ class MessagesQueue final {
       if (pos == std::string::npos || pos + sizeof(kArchivedFilesExtension) - 1 != full_path_to_file.size()) {
         return true;
       }
+      // Ignore and delete zero-size files.
+      try {
+        if (0 == FileManager::GetFileSize(full_path_to_file)) {
+          std::remove(full_path_to_file.c_str());
+          return true;
+        }
+      } catch (const std::exception &) {
+        // File is absent or is a directory.
+        return true;
+      }
+      // Process archived files.
       if (processor(true /* true here means that second parameter is file path */, full_path_to_file)) {
         result = ProcessingResult::EProcessedSuccessfully;
         // Also delete successfully processed archive.
