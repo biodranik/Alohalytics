@@ -25,6 +25,7 @@ SOFTWARE.
 #ifndef HTTP_CLIENT_H
 #define HTTP_CLIENT_H
 
+#include <sstream>
 #include <string>
 
 namespace alohalytics {
@@ -54,11 +55,49 @@ class HTTPClientPlatformWrapper {
   std::string http_method_ = "GET";
   std::string basic_auth_user_;
   std::string basic_auth_password_;
+  // All Set-Cookie values from server response combined in a Cookie format:
+  // cookie1=value1; cookie2=value2
+  // TODO(AlexZ): Support encoding and expiration/path/domains etc.
+  std::string server_cookies_;
+  // Cookies set by the client before request is run.
+  std::string cookies_;
   bool debug_mode_ = false;
 
   HTTPClientPlatformWrapper(const HTTPClientPlatformWrapper &) = delete;
   HTTPClientPlatformWrapper(HTTPClientPlatformWrapper &&) = delete;
   HTTPClientPlatformWrapper & operator=(const HTTPClientPlatformWrapper &) = delete;
+
+  // Internal helper to convert cookies like this:
+  // "first=value1; expires=Mon, 26-Dec-2016 12:12:32 GMT; path=/, second=value2; path=/, third=value3; "
+  // into this:
+  // "first=value1; second=value2; third=value3"
+  static std::string normalize_server_cookies(std::string && cookies) {
+    std::istringstream is(cookies);
+    std::string str, result;
+    // Split by ", ". Can have invalid tokens here, expires= can also contain a comma.
+    while (std::getline(is, str, ',')) {
+      size_t const leading = str.find_first_not_of(" ");
+      if (leading != std::string::npos) {
+        str.substr(leading).swap(str);
+      }
+      // In the good case, we have '=' and it goes before any ' '.
+      const auto eq = str.find('=');
+      if (eq == std::string::npos) {
+        continue; // It's not a cookie: no valid key value pair.
+      }
+      const auto sp = str.find(' ');
+      if (sp != std::string::npos && eq > sp) {
+        continue; // It's not a cookie: comma in expires date.
+      }
+      // Insert delimiter.
+      if (!result.empty()) {
+        result.append("; ");
+      }
+      // Read cookie itself.
+      result.append(str, 0, str.find(";"));
+    }
+    return result;
+  }
 
  public:
   HTTPClientPlatformWrapper() = default;
@@ -127,6 +166,11 @@ class HTTPClientPlatformWrapper {
     basic_auth_password_ = password;
     return *this;
   }
+  // Set HTTP Cookie header.
+  HTTPClientPlatformWrapper & set_cookies(const std::string & cookies) {
+    cookies_ = cookies;
+    return *this;
+  }
 
   // Synchronous (blocking) call, should be implemented for each platform
   // @returns true if connection was made and server returned something (200, 404, etc.).
@@ -142,7 +186,27 @@ class HTTPClientPlatformWrapper {
   int error_code() const { return error_code_; }
   std::string const & server_response() const { return server_response_; }
   std::string const & http_method() const { return http_method_; }
-
+  // Pass this getter's value to the set_cookies() method for easier cookies support in the next request.
+  std::string combined_cookies() const {
+    if (server_cookies_.empty()) {
+      return cookies_;
+    }
+    if (cookies_.empty()) {
+      return server_cookies_;
+    }
+    return server_cookies_ + "; " + cookies_;
+  }
+  // Returns cookie value or empty string if it's not present.
+  std::string cookie_by_name(std::string name) const {
+    const std::string str = combined_cookies();
+    name += "=";
+    const auto cookie = str.find(name);
+    const auto eq = cookie + name.size();
+    if (cookie != std::string::npos && str.size() > eq) {
+      return str.substr(eq, str.find(';', eq) - eq);
+    }
+    return std::string();
+  }
 };  // class HTTPClientPlatformWrapper
 
 }  // namespace alohalytics

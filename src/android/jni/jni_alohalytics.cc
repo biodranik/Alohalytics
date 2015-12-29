@@ -347,6 +347,15 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
   }
 
+  const static jfieldID cookiesField = env->GetFieldID(g_httpParamsClass, "cookies", "Ljava/lang/String;");
+  if (!cookies_.empty()) {
+    const auto jniCookies = MakePointerScopeGuard(env->NewStringUTF(cookies_.c_str()), deleteLocalRef);
+    CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
+
+    env->SetObjectField(httpParamsObject.get(), cookiesField, jniCookies.get());
+    CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
+  }
+
   const static jfieldID debugModeField = env->GetFieldID(g_httpParamsClass, "debugMode", "Z");
   env->SetBooleanField(httpParamsObject.get(), debugModeField, debug_mode_);
   CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
@@ -389,6 +398,15 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
   if (jniContentEncoding) {
     content_encoding_received_ = std::move(ToStdString(env, jniContentEncoding.get()));
+  }
+
+  // Note: cookies field is used not only to send Cookie header, but also to receive back Server-Cookie header.
+  // cookiesField is already cached above.
+  const auto jniServerCookies =
+      MakePointerScopeGuard(static_cast<jstring>(env->GetObjectField(response, cookiesField)), deleteLocalRef);
+  CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
+  if (jniServerCookies) {
+    server_cookies_ = std::move(normalize_server_cookies(std::move(ToStdString(env, jniServerCookies.get()))));
   }
 
   // dataField is already cached above.
