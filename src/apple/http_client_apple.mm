@@ -67,6 +67,9 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     if (!user_agent_.empty()) {
       [request setValue:[NSString stringWithUTF8String:user_agent_.c_str()] forHTTPHeaderField:@"User-Agent"];
     }
+    if (!cookies_.empty()) {
+      [request setValue:[NSString stringWithUTF8String:cookies_.c_str()] forHTTPHeaderField:@"Cookie"];
+    }
 #if (TARGET_OS_IPHONE > 0)
     else if (gBrowserUserAgent) {
       [request setValue:gBrowserUserAgent forHTTPHeaderField:@"User-Agent"];
@@ -112,11 +115,16 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       url_received_ = [response.URL.absoluteString UTF8String];
       NSString * content = [response.allHeaderFields objectForKey:@"Content-Type"];
       if (content) {
-        content_type_received_ = [content UTF8String];
+        content_type_received_ = std::move([content UTF8String]);
       }
       NSString * encoding = [response.allHeaderFields objectForKey:@"Content-Encoding"];
       if (encoding) {
-        content_encoding_received_ = [encoding UTF8String];
+        content_encoding_received_ = std::move([encoding UTF8String]);
+      }
+      // Apple merges all Set-Cookie fields into one NSDictionary key delimited by commas.
+      NSString * cookies = [response.allHeaderFields objectForKey:@"Set-Cookie"];
+      if (cookies) {
+        server_cookies_ = std::move(normalize_server_cookies(std::move([cookies UTF8String])));
       }
       if (url_data) {
         if (received_file_.empty()) {
