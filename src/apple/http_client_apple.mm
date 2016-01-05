@@ -56,6 +56,8 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
     NSMutableURLRequest * request = [NSMutableURLRequest requestWithURL:
         [NSURL URLWithString:[NSString stringWithUTF8String:url_requested_.c_str()]]
         cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:kTimeoutInSeconds];
+    // We handle cookies manually.
+    request.HTTPShouldHandleCookies = NO;
 
     request.HTTPMethod = [NSString stringWithUTF8String:http_method_.c_str()];
     if (!content_type_.empty()) {
