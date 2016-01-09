@@ -52,6 +52,10 @@ namespace cereal
   {
     size_type size;
     ar( make_size_tag( size ) );
+    // TODO(AlexZ): Workaround for binary deserialization.
+    static constexpr const auto kHundredMegabytes = 1024 * 1024 * 100;
+    if (size > kHundredMegabytes)
+      throw Exception("Size for string is too big " + std::to_string(size) + ", there is a high chance that data is corrupted.");
     str.resize(static_cast<std::size_t>(size));
     ar( binary_data( const_cast<CharT *>( str.data() ), static_cast<std::size_t>(size) * sizeof(CharT) ) );
   }
