@@ -35,10 +35,16 @@ namespace alohalytics {
 // Useful helper.
 struct ScopedRemoveFile {
   std::string file;
+
+  ScopedRemoveFile() = default;
   template <typename F>
   ScopedRemoveFile(F && file_to_delete)
       : file(std::forward<F>(file_to_delete)) {}
-  ~ScopedRemoveFile() { std::remove(file.c_str()); }
+  ~ScopedRemoveFile() {
+    if (!file.empty()) {
+      std::remove(file.c_str());
+    }
+  }
 };
 
 // Functions are wrapped into the class for convenience.
