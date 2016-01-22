@@ -22,10 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
-#include <jni.h>
-#include <string>
-#include <memory>
 #include <cassert>
+#include <jni.h>
+#include <memory>
+#include <stdexcept>
+#include <string>
 
 #include "../../alohalytics.h"
 #include "../../http_client.h"
@@ -72,13 +73,13 @@ static jclass g_httpParamsClass = 0;
 static jmethodID g_httpParamsConstructor = 0;
 
 // JNI helper, returns empty string if str == 0.
-string ToStdString(JNIEnv * env, jstring str) {
+string MakeString(JNIEnv * env, jstring jstr) {
   string result;
-  if (str) {
-    char const * utfBuffer = env->GetStringUTFChars(str, 0);
+  if (jstr) {
+    char const * utfBuffer = env->GetStringUTFChars(jstr, 0);
     if (utfBuffer) {
       result = utfBuffer;
-      env->ReleaseStringUTFChars(str, utfBuffer);
+      env->ReleaseStringUTFChars(jstr, utfBuffer);
     }
   }
   return result;
@@ -93,10 +94,10 @@ TStringMap FillMapHelper(JNIEnv * env, jobjectArray keyValuePairs) {
     for (jsize i = 0; i < count; ++i) {
       const jstring jni_string = static_cast<jstring>(env->GetObjectArrayElement(keyValuePairs, i));
       if ((i + 1) % 2) {
-        key = ToStdString(env, jni_string);
+        key = MakeString(env, jni_string);
         map[key] = "";
       } else {
-        map[key] = ToStdString(env, jni_string);
+        map[key] = MakeString(env, jni_string);
       }
       if (jni_string) {
         env->DeleteLocalRef(jni_string);
@@ -106,23 +107,59 @@ TStringMap FillMapHelper(JNIEnv * env, jobjectArray keyValuePairs) {
   return map;
 }
 
+class ScopedJNIEnv final {
+  bool auto_detach_;
+  JNIEnv * env_;
+  JavaVM * vm_;
+  ScopedJNIEnv(bool auto_detach, JNIEnv * env, JavaVM * vm)
+    : auto_detach_(auto_detach), env_(env), vm_(vm) {}
+public:
+  JNIEnv * operator->() { return env_; }
+
+  ~ScopedJNIEnv() {
+    if (auto_detach_) {
+      vm_->DetachCurrentThread();
+    }
+  }
+
+  static ScopedJNIEnv GetJNIEnv(JavaVM * vm) {
+    JNIEnv * env;
+    switch (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6))
+    {
+      case JNI_EVERSION: throw std::runtime_error("ERROR JNI version is not supported.");
+      case JNI_EDETACHED: {
+        if (JNI_OK == vm->AttachCurrentThread(&env, nullptr)) {
+          return ScopedJNIEnv(true, env, vm);
+        }
+        throw std::runtime_error("ERROR while trying to attach JNI thread.");
+      }
+    }
+    // case JNI_OK:
+    return ScopedJNIEnv(false, env, vm);
+  }
+
+  inline string ToStdString(jstring jstr) {
+    return MakeString(env_, jstr);
+  }
+};
+
 }  // namespace
 
 extern "C" {
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_logEvent__Ljava_lang_String_2(JNIEnv * env,
                                                                                      jclass,
                                                                                      jstring eventName) {
-  LogEvent(ToStdString(env, eventName));
+  LogEvent(MakeString(env, eventName));
 }
 
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_logEvent__Ljava_lang_String_2Ljava_lang_String_2(
     JNIEnv * env, jclass, jstring eventName, jstring eventValue) {
-  LogEvent(ToStdString(env, eventName), ToStdString(env, eventValue));
+  LogEvent(MakeString(env, eventName), MakeString(env, eventValue));
 }
 
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_logEvent__Ljava_lang_String_2_3Ljava_lang_String_2(
     JNIEnv * env, jclass, jstring eventName, jobjectArray keyValuePairs) {
-  LogEvent(ToStdString(env, eventName), FillMapHelper(env, keyValuePairs));
+  LogEvent(MakeString(env, eventName), FillMapHelper(env, keyValuePairs));
 }
 
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_logEvent__Ljava_lang_String_2_3Ljava_lang_String_2ZJDDFZDZFZFB(
@@ -157,7 +194,7 @@ JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_logEvent__Ljava_lang_Stri
     l.SetSpeed(speed);
   }
 
-  LogEvent(ToStdString(env, eventName), FillMapHelper(env, keyValuePairs), l);
+  LogEvent(MakeString(env, eventName), FillMapHelper(env, keyValuePairs), l);
 }
 
 #define CLEAR_AND_RETURN_FALSE_ON_EXCEPTION \
@@ -189,9 +226,9 @@ JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_setupCPP(
 
   // Initialize statistics engine at the end of setup function, as it can use globals above.
   Stats::Instance()
-      .SetClientId(ToStdString(env, installationId))
-      .SetServerUrl(ToStdString(env, serverUrl))
-      .SetStoragePath(ToStdString(env, storagePath));
+      .SetClientId(MakeString(env, installationId))
+      .SetServerUrl(MakeString(env, serverUrl))
+      .SetStoragePath(MakeString(env, storagePath));
 }
 
 JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_debugCPP(JNIEnv * env, jclass, jboolean enableDebug) {
@@ -220,23 +257,7 @@ JNIEXPORT void JNICALL Java_org_alohalytics_Statistics_enableCPP(JNIEnv * env, j
 namespace alohalytics {
 
 bool HTTPClientPlatformWrapper::RunHTTPRequest() {
-  // Attaching multiple times from the same thread is a no-op, which only gets good env for us.
-  JNIEnv * env;
-  if (JNI_OK !=
-      ::GetJVM()->AttachCurrentThread(
-#ifdef ANDROID
-          &env,
-#else
-          // Non-Android JAVA requires void** here.
-          reinterpret_cast<void **>(&env),
-#endif
-          nullptr)) {
-    ALOG("ERROR while trying to attach JNI thread");
-    return false;
-  }
-
-  // TODO(AlexZ): May need to refactor if this method will be agressively used from the same thread.
-  const auto detachThreadOnScopeExit = MakeScopeGuard([] { ::GetJVM()->DetachCurrentThread(); });
+  auto env = ScopedJNIEnv::GetJNIEnv(::GetJVM());
 
   // Convenience lambda.
   const auto deleteLocalRef = [&env](jobject o) { env->DeleteLocalRef(o); };
@@ -381,7 +402,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       MakePointerScopeGuard(static_cast<jstring>(env->GetObjectField(response, receivedUrlField)), deleteLocalRef);
   CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
   if (jniReceivedUrl) {
-    url_received_ = std::move(ToStdString(env, jniReceivedUrl.get()));
+    url_received_ = env.ToStdString(jniReceivedUrl.get());
   }
 
   // contentTypeField is already cached above.
@@ -389,7 +410,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       MakePointerScopeGuard(static_cast<jstring>(env->GetObjectField(response, contentTypeField)), deleteLocalRef);
   CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
   if (jniContentType) {
-    content_type_received_ = std::move(ToStdString(env, jniContentType.get()));
+    content_type_received_ = env.ToStdString(jniContentType.get());
   }
 
   // contentEncodingField is already cached above.
@@ -397,7 +418,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       MakePointerScopeGuard(static_cast<jstring>(env->GetObjectField(response, contentEncodingField)), deleteLocalRef);
   CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
   if (jniContentEncoding) {
-    content_encoding_received_ = std::move(ToStdString(env, jniContentEncoding.get()));
+    content_encoding_received_ = env.ToStdString(jniContentEncoding.get());
   }
 
   // Note: cookies field is used not only to send Cookie header, but also to receive back Server-Cookie header.
@@ -406,7 +427,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       MakePointerScopeGuard(static_cast<jstring>(env->GetObjectField(response, cookiesField)), deleteLocalRef);
   CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
   if (jniServerCookies) {
-    server_cookies_ = std::move(normalize_server_cookies(std::move(ToStdString(env, jniServerCookies.get()))));
+    server_cookies_ = normalize_server_cookies(std::move(env.ToStdString(jniServerCookies.get())));
   }
 
   // dataField is already cached above.
