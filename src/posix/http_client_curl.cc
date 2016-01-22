@@ -167,13 +167,17 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       }
     }
     server_cookies_ = normalize_server_cookies(std::move(server_cookies_));
-    // TODO(AlexZ): Optimize code to ignore bodies of intermediate locations in case of redirects.
-    if (received_file_.empty()) {
-      server_response_ = alohalytics::FileManager::ReadFileAsString(rfile);
-    }
 
     if (url_received_.empty()) {
       url_received_ = url_requested_;
+      // Load body contents in final request only (skip redirects).
+      if (received_file_.empty()) {
+        // Sometimes server can reply with empty body, and it's ok.
+        try {
+          server_response_ = alohalytics::FileManager::ReadFileAsString(rfile);
+        } catch (const std::exception &) {
+        }
+      }
     } else {
       // Handle HTTP redirect.
       // TODO(AlexZ): Should we check HTTP redirect code here?
