@@ -517,7 +517,7 @@ static BOOL gIsFirstSession = NO;
     // Graceful background task finish is a must before system time limit hits.
     UIApplication * theApp = [UIApplication sharedApplication];
     void (^endBackgroundTaskBlock)(void) = ^{ EndBackgroundTask(); };
-    ::dispatch_after(::dispatch_time(DISPATCH_TIME_NOW, static_cast<int64_t>(theApp.backgroundTimeRemaining)),
+    ::dispatch_after(::dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC * static_cast<int64_t>(theApp.backgroundTimeRemaining)),
                      ::dispatch_get_main_queue(),
                      endBackgroundTaskBlock);
     sBackgroundTaskId = [theApp beginBackgroundTaskWithExpirationHandler:endBackgroundTaskBlock];
