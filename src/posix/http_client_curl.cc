@@ -67,6 +67,7 @@ std::string RunCurl(const std::string & cmd) {
 }
 
 // TODO(AlexZ): Move this function to File Manager.
+// TODO(AlexZ): Rewrite code to use safe opened descriptors instead of file names.
 std::string GetTmpFileName() {
 #ifdef _MSC_VER
   char tmp_file[L_tmpnam];
@@ -76,9 +77,11 @@ std::string GetTmpFileName() {
   }
 #else
   char tmp_file[] = "/tmp/alohalyticstmp-XXXXXX";
-  if (nullptr == ::mktemp(tmp_file)) {  // tmpnam is deprecated and insecure.
+  int fd = ::mkstemp(tmp_file);  // tmpnam is deprecated and insecure.
+  if (fd == -1) {
     throw std::runtime_error("Error: failed to create temporary file.");
   }
+  ::close(fd);
 #endif
   return tmp_file;
 }
