@@ -67,18 +67,21 @@ std::string RunCurl(const std::string & cmd) {
 }
 
 // TODO(AlexZ): Move this function to File Manager.
+// TODO(AlexZ): Rewrite code to use safe opened descriptors instead of file names.
 std::string GetTmpFileName() {
 #ifdef _MSC_VER
   char tmp_file[L_tmpnam];
-  errno_t const err = ::tmpnam_s(tmp_file, L_tmpnam);
+  const errno_t err = ::tmpnam_s(tmp_file, L_tmpnam);
   if (err != 0) {
     throw std::runtime_error("Error " + std::to_string(err) + ", failed to create temporary file.");
   }
 #else
   char tmp_file[] = "/tmp/alohalyticstmp-XXXXXX";
-  if (nullptr == ::mktemp(tmp_file)) {  // tmpnam is deprecated and insecure.
+  int fd = ::mkstemp(tmp_file);  // tmpnam is deprecated and insecure.
+  if (fd == -1) {
     throw std::runtime_error("Error: failed to create temporary file.");
   }
+  ::close(fd);
 #endif
   return tmp_file;
 }
@@ -106,7 +109,7 @@ HeadersT ParseHeaders(const std::string & raw) {
 // HTTP status code is extracted from curl output (-w switches).
 // Redirects are handled recursively. TODO(AlexZ): avoid infinite redirects loop.
 bool HTTPClientPlatformWrapper::RunHTTPRequest() {
-  alohalytics::ScopedRemoveFile const headers_deleter(GetTmpFileName());
+  const alohalytics::ScopedRemoveFile headers_deleter(GetTmpFileName());
   std::string cmd = "curl -s -w '%{http_code}' -X " + http_method_ + " -D '" + headers_deleter.file + "' ";
 
   if (!content_type_.empty()) {
@@ -154,8 +157,8 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       ALOG("Executing", cmd);
     }
     error_code_ = std::stoi(RunCurl(cmd));
-    HeadersT const headers = ParseHeaders(alohalytics::FileManager::ReadFileAsString(headers_deleter.file));
-    for (auto const & header : headers) {
+    const HeadersT headers = ParseHeaders(alohalytics::FileManager::ReadFileAsString(headers_deleter.file));
+    for (const auto & header : headers) {
       if (header.first == "Set-Cookie") {
         server_cookies_ += header.second + ", ";
       } else if (header.first == "Content-Type") {
@@ -167,13 +170,17 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       }
     }
     server_cookies_ = normalize_server_cookies(std::move(server_cookies_));
-    // TODO(AlexZ): Optimize code to ignore bodies of intermediate locations in case of redirects.
-    if (received_file_.empty()) {
-      server_response_ = alohalytics::FileManager::ReadFileAsString(rfile);
-    }
 
     if (url_received_.empty()) {
       url_received_ = url_requested_;
+      // Load body contents in final request only (skip redirects).
+      if (received_file_.empty()) {
+        // Sometimes server can reply with empty body, and it's ok.
+        try {
+          server_response_ = alohalytics::FileManager::ReadFileAsString(rfile);
+        } catch (const std::exception &) {
+        }
+      }
     } else {
       // Handle HTTP redirect.
       // TODO(AlexZ): Should we check HTTP redirect code here?
@@ -182,7 +189,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       }
       HTTPClientPlatformWrapper redirect(url_received_);
       redirect.set_cookies(combined_cookies());
-      bool const success = redirect.RunHTTPRequest();
+      const bool success = redirect.RunHTTPRequest();
       if (success) {
         error_code_ = redirect.error_code();
         url_received_ = redirect.url_received();
@@ -195,7 +202,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       }
       return success;
     }
-  } catch (std::exception const & ex) {
+  } catch (const std::exception & ex) {
     std::cerr << "Exception " << ex.what() << std::endl;
     return false;
   }

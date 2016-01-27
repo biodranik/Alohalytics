@@ -32,6 +32,10 @@
 #import <Foundation/NSDate.h>
 #import <CoreLocation/CoreLocation.h>
 
+#if (TARGET_OS_IPHONE > 0)
+#import <UIKit/UIApplication.h> // enum UIBackgroundFetchResult
+#endif // TARGET_OS_IPHONE
+
 @interface Alohalytics : NSObject
 // Call it once to turn off events logging.
 + (void)disable;
@@ -42,6 +46,10 @@
 // Final serverUrl is modified to $(serverUrl)/[ios|mac]/your.bundle.id/app.version
 + (void)setup:(NSString *)serverUrl withLaunchOptions:(NSDictionary *)options;
 + (void)forceUpload;
+#if (TARGET_OS_IPHONE > 0)
+// The same as above but with a callback notification when upload ends or fails.
++ (void)forceUpload:(void (^)(UIBackgroundFetchResult))callback;
+#endif // TARGET_OS_IPHONE
 + (void)logEvent:(NSString *)event;
 + (void)logEvent:(NSString *)event atLocation:(CLLocation *)location;
 + (void)logEvent:(NSString *)event withValue:(NSString *)value;

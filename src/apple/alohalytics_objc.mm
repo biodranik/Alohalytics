@@ -435,7 +435,19 @@ static BOOL gIsFirstSession = NO;
 + (void)forceUpload {
   Stats::Instance().Upload();
 }
-
+#if (TARGET_OS_IPHONE > 0)
++ (void)forceUpload:(void (^)(UIBackgroundFetchResult))callback
+{
+  using alohalytics::ProcessingResult;
+  Stats::Instance().Upload([callback](ProcessingResult result){
+    switch (result) {
+    case ProcessingResult::EProcessedSuccessfully: callback(UIBackgroundFetchResultNewData); break;
+    case ProcessingResult::EProcessingError: callback(UIBackgroundFetchResultFailed); break;
+    case ProcessingResult::ENothingToProcess: callback(UIBackgroundFetchResultNoData); break;
+    }
+  });
+}
+#endif // TARGET_OS_IPHONE
 + (void)logEvent:(NSString *)event {
   Stats::Instance().LogEvent(ToStdString(event));
 }
@@ -505,7 +517,7 @@ static BOOL gIsFirstSession = NO;
     // Graceful background task finish is a must before system time limit hits.
     UIApplication * theApp = [UIApplication sharedApplication];
     void (^endBackgroundTaskBlock)(void) = ^{ EndBackgroundTask(); };
-    ::dispatch_after(::dispatch_time(DISPATCH_TIME_NOW, static_cast<int64_t>(theApp.backgroundTimeRemaining)),
+    ::dispatch_after(::dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC * static_cast<int64_t>(theApp.backgroundTimeRemaining)),
                      ::dispatch_get_main_queue(),
                      endBackgroundTaskBlock);
     sBackgroundTaskId = [theApp beginBackgroundTaskWithExpirationHandler:endBackgroundTaskBlock];

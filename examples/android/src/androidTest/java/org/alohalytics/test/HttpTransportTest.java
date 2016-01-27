@@ -186,10 +186,10 @@ public class HttpTransportTest extends InstrumentationTestCase {
   }
 
   public void testHttpRedirect302() throws Exception {
-    final HttpTransport.Params p = new HttpTransport.Params("http://httpbin.org/redirect-to?url=http%3A%2F%2Falohalytics.org%2F");
+    final HttpTransport.Params p = new HttpTransport.Params("http://httpbin.org/redirect-to?url=http%3A%2F%2Fmaps.me");
     final HttpTransport.Params r = HttpTransport.run(p);
-    assertEquals(302, r.httpResponseCode);
-    assertEquals(r.receivedUrl, "http://alohalytics.org/");
+    assertEquals(200, r.httpResponseCode);
+    assertEquals(r.receivedUrl, "http://maps.me/en/home");
     assertTrue(!r.url.equals(r.receivedUrl));
   }
 
@@ -205,9 +205,9 @@ public class HttpTransportTest extends InstrumentationTestCase {
   public void testHttpRedirect301() throws Exception {
     final HttpTransport.Params p = new HttpTransport.Params("http://maps.me");
     final HttpTransport.Params r = HttpTransport.run(p);
-    // Client should not follow redirects automatically.
-    assertEquals(301, r.httpResponseCode);
-    assertEquals(r.receivedUrl, "http://maps.me/en/");
+    // Client should follow redirects automatically.
+    assertEquals(200, r.httpResponseCode);
+    assertEquals(r.receivedUrl, "http://maps.me/en/home");
     assertTrue(!r.url.equals(r.receivedUrl));
   }
 

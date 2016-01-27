@@ -57,7 +57,7 @@ public class HttpTransport {
       Log.d(TAG, "Connecting to " + p.url);
     try {
       connection = (HttpURLConnection) new URL(p.url).openConnection(); // NullPointerException, MalformedUrlException, IOException
-      // Redirects are followed by default.
+      // Redirects are followed by default. But it does not follow redirects from http to https or vice versa.
       connection.setConnectTimeout(TIMEOUT_IN_MILLISECONDS);
       connection.setReadTimeout(TIMEOUT_IN_MILLISECONDS);
       connection.setUseCaches(false);
