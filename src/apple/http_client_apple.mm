@@ -139,6 +139,12 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       return true;
     }
     // Request has failed if we are here.
+    // MacOSX/iOS-specific workaround for HTTP 401 error bug.
+    // @see bit.ly/1TrHlcS for more details.
+    if (err.code == NSURLErrorUserCancelledAuthentication) {
+      error_code_ = 401;
+      return true;
+    }
     error_code_ = static_cast<int>(err.code);
     if (debug_mode_) {
       ALOG("ERROR", error_code_, ':', [err.localizedDescription UTF8String], "while connecting to", url_requested_);
