@@ -149,9 +149,9 @@ int main(int argc, char * argv[]) {
   alohalytics::StatisticsReceiver receiver(argv[1]);
   string gzipped_body;
   long long content_length;
-  const char * remote_addr_str;
-  const char * request_uri_str;
-  const char * user_agent_str;
+  const char * remote_addr_str = nullptr;
+  const char * request_uri_str = nullptr;
+  const char * user_agent_str = nullptr;
   ATLOG("FastCGI Server instance is ready to serve clients' requests.");
   while (FCGX_Accept_r(&request) >= 0) {
     // Correctly reopen data file in the queue.
@@ -164,23 +164,19 @@ int main(int argc, char * argv[]) {
       log_redirector.ReopenLogFile();
       gReceivedSIGUSR1 = 0;
     }
-    FCGX_FPrintF(request.out, "Status: 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %ld\r\n\r\n%s\n",
-                 kBodyTextForGoodServerReply.size(), kBodyTextForGoodServerReply.c_str());
+
     try {
       remote_addr_str = FCGX_GetParam("REMOTE_ADDR", request.envp);
       if (!remote_addr_str) {
         ATLOG("WARNING: Missing REMOTE_ADDR. Please check your http server configuration.");
-        remote_addr_str = "";
       }
       request_uri_str = FCGX_GetParam("REQUEST_URI", request.envp);
       if (!request_uri_str) {
         ATLOG("WARNING: Missing REQUEST_URI. Please check your http server configuration.");
-        request_uri_str = "";
       }
       user_agent_str = FCGX_GetParam("HTTP_USER_AGENT", request.envp);
       if (!user_agent_str) {
         ATLOG("WARNING: Missing HTTP User-Agent. Please check your http server configuration.");
-        user_agent_str = "";
       }
 
       const char * content_length_str = FCGX_GetParam("HTTP_CONTENT_LENGTH", request.envp);
@@ -202,8 +198,11 @@ int main(int argc, char * argv[]) {
 
       // Process and store received body.
       // This call can throw different exceptions.
-      receiver.ProcessReceivedHTTPBody(gzipped_body, AlohalyticsBaseEvent::CurrentTimestamp(), remote_addr_str,
-                                       user_agent_str, request_uri_str);
+      receiver.ProcessReceivedHTTPBody(gzipped_body,
+                                       AlohalyticsBaseEvent::CurrentTimestamp(),
+                                       remote_addr_str ? remote_addr_str : "",
+                                       user_agent_str ? user_agent_str : "",
+                                       request_uri_str ? request_uri_str : "");
       Reply200OKWithBody(request.out, kBodyTextForGoodServerReply);
     } catch (const exception & ex) {
       ATLOG("ERROR: Exception was thrown:", ex.what(), remote_addr_str, request_uri_str, user_agent_str);
