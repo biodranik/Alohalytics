@@ -27,9 +27,10 @@
 // dflags is optional and is used here just for command line parameters parsing.
 #include "dflags.h"
 
+#include <chrono>
+#include <future>
 #include <iostream>
 #include <thread>
-#include <chrono>
 
 DEFINE_string(server_url, "", "Statistics server url.");
 DEFINE_string(event, "TestEvent", "Records given event.");
@@ -48,6 +49,7 @@ DEFINE_bool(location, true, "Simulates event with a location.");
 
 using namespace std;
 using alohalytics::Stats;
+using alohalytics::ProcessingResult;
 
 int main(int argc, char ** argv) {
   ParseDFlags(&argc, &argv);
@@ -111,7 +113,25 @@ int main(int argc, char ** argv) {
   }
 
   if (FLAGS_upload) {
-    stats.Upload();
+    packaged_task<void(ProcessingResult)> task([](ProcessingResult result) {
+      const char * str;
+      switch (result) {
+      case ProcessingResult::EProcessedSuccessfully:
+        str = "ProcessedSuccessfully";
+        break;
+      case ProcessingResult::EProcessingError:
+        str = "ProcessingError";
+        break;
+      case ProcessingResult::ENothingToProcess:
+        str = "NothingToProcess";
+        break;
+      }
+      std::cout << "Upload has finished with result: " << str << std::endl;
+    });
+    std::future<void> result = task.get_future();
+    stats.Upload([&task](ProcessingResult result){ task(result); });
+    // Wait for callback from upload thread.
+    result.get();
   }
 
   this_thread::sleep_for(chrono::milliseconds(static_cast<uint32_t>(1e3 * FLAGS_sleep)));
