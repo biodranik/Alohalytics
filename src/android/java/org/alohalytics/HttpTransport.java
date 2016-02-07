@@ -77,6 +77,10 @@ public class HttpTransport {
         if (p.contentType == null) {
           throw new NullPointerException("Please set Content-Type for request.");
         }
+        // Work-around for situation when more than one consequent POST requests can lead to stable
+        // "java.net.ProtocolException: Unexpected status line:" on a client and Nginx HTTP 499 errors.
+        // The only found reference to this bug is http://stackoverflow.com/a/24303115/1209392
+        connection.setRequestProperty("Connection", "close");
         connection.setRequestProperty("Content-Type", p.contentType);
         if (p.contentEncoding != null) {
           connection.setRequestProperty("Content-Encoding", p.contentEncoding);
