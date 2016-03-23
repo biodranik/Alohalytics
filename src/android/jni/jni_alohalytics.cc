@@ -381,6 +381,10 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
   env->SetBooleanField(httpParamsObject.get(), debugModeField, debug_mode_);
   CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
 
+  const static jfieldID followRedirectsField = env->GetFieldID(g_httpParamsClass, "followRedirects", "Z");
+  env->SetBooleanField(httpParamsObject.get(), followRedirectsField, handle_redirects_);
+  CLEAR_AND_RETURN_FALSE_ON_EXCEPTION
+
   // DO ALL MAGIC!
   // Current Java implementation simply reuses input params instance, so we don't need to
   // DeleteLocalRef(response).
