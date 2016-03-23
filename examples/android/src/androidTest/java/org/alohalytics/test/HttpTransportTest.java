@@ -186,11 +186,22 @@ public class HttpTransportTest extends InstrumentationTestCase {
   }
 
   public void testHttpRedirect302() throws Exception {
-    final HttpTransport.Params p = new HttpTransport.Params("http://httpbin.org/redirect-to?url=http%3A%2F%2Fmaps.me");
-    final HttpTransport.Params r = HttpTransport.run(p);
-    assertEquals(200, r.httpResponseCode);
-    assertEquals(r.receivedUrl, "http://maps.me/en/home");
-    assertTrue(!r.url.equals(r.receivedUrl));
+    {
+      final HttpTransport.Params p = new HttpTransport.Params("http://httpbin.org/redirect-to?url=http%3A%2F%2Fmaps.me");
+      final HttpTransport.Params r = HttpTransport.run(p);
+      assertEquals(200, r.httpResponseCode);
+      assertEquals(r.receivedUrl, "http://maps.me/en/home");
+      assertTrue(!r.url.equals(r.receivedUrl));
+    }
+
+    {
+      final HttpTransport.Params p = new HttpTransport.Params("http://httpbin.org/redirect-to?url=http%3A%2F%2Fmaps.me");
+      p.followRedirects = false;
+      final HttpTransport.Params r = HttpTransport.run(p);
+      assertEquals(302, r.httpResponseCode);
+      assertEquals(r.receivedUrl, "http://maps.me");
+      assertTrue(!r.url.equals(r.receivedUrl));
+    }
   }
 
   public void testUserAgent() throws Exception {

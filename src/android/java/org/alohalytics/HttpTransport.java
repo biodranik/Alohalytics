@@ -57,7 +57,22 @@ public class HttpTransport {
       Log.d(TAG, "Connecting to " + p.url);
     try {
       connection = (HttpURLConnection) new URL(p.url).openConnection(); // NullPointerException, MalformedUrlException, IOException
-      // Redirects are followed by default. But it does not follow redirects from http to https or vice versa.
+      // Redirects from http to https or vice versa are not supported by Android implementation.
+      // There is also a nasty bug on Androids before 4.4:
+      // if you send any request with Content-Length set, and it is redirected, and your instance is set to automatically follow redirects,
+      // then next (internal) GET request to redirected location will incorrectly have have all headers set from the previous request,
+      // including Content-Length, Content-Type etc. This leads to unexpected hangs and timeout errors, because some servers are
+      // correctly trying to wait for the body if Content-Length is set.
+      // It shows in logs like this:
+      //
+      // java.net.SocketTimeoutException: Read timed out
+      //   at org.apache.harmony.xnet.provider.jsse.NativeCrypto.SSL_read(Native Method)
+      //   at org.apache.harmony.xnet.provider.jsse.OpenSSLSocketImpl$SSLInputStream.read(OpenSSLSocketImpl.java:687)
+      //   ...
+      //
+      // Looks like this bug was fixed by switching to OkHttp implementation in this commit:
+      // https://android.googlesource.com/platform/libcore/+/2503556d17b28c7b4e6e514540a77df1627857d0
+      connection.setInstanceFollowRedirects(p.followRedirects);
       connection.setConnectTimeout(TIMEOUT_IN_MILLISECONDS);
       connection.setReadTimeout(TIMEOUT_IN_MILLISECONDS);
       connection.setUseCaches(false);
@@ -200,6 +215,7 @@ public class HttpTransport {
     public String cookies = null;
     public int httpResponseCode = -1;
     public boolean debugMode = false;
+    public boolean followRedirects = true;
 
     // Simple GET request constructor.
     public Params(String url) {

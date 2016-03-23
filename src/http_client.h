@@ -62,6 +62,7 @@ class HTTPClientPlatformWrapper {
   // Cookies set by the client before request is run.
   std::string cookies_;
   bool debug_mode_ = false;
+  bool handle_redirects_ = true;
 
   HTTPClientPlatformWrapper(const HTTPClientPlatformWrapper &) = delete;
   HTTPClientPlatformWrapper(HTTPClientPlatformWrapper &&) = delete;
@@ -169,6 +170,12 @@ class HTTPClientPlatformWrapper {
   // Set HTTP Cookie header.
   HTTPClientPlatformWrapper & set_cookies(const std::string & cookies) {
     cookies_ = cookies;
+    return *this;
+  }
+  // When set to true (default), clients never get 3XX codes from servers, redirects are handled automatically.
+  // TODO: "false" is now supported on Android only.
+  HTTPClientPlatformWrapper & set_handle_redirects(bool handle_redirects) {
+    handle_redirects_ = handle_redirects;
     return *this;
   }
 
