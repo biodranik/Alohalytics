@@ -126,7 +126,7 @@ bool HTTPClientPlatformWrapper::RunHTTPRequest() {
       // Apple merges all Set-Cookie fields into one NSDictionary key delimited by commas.
       NSString * cookies = [response.allHeaderFields objectForKey:@"Set-Cookie"];
       if (cookies) {
-        server_cookies_ = std::move(normalize_server_cookies(std::move([cookies UTF8String])));
+        server_cookies_ = normalize_server_cookies(std::move([cookies UTF8String]));
       }
       if (url_data) {
         if (received_file_.empty()) {
