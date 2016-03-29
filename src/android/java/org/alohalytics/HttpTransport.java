@@ -162,22 +162,10 @@ public class HttpTransport {
         final byte[] buffer = new byte[STREAM_BUFFER_SIZE];
         // gzip encoding is transparently enabled and we can't use Content-Length for
         // body reading if server has gzipped it.
-        final String encoding = connection.getContentEncoding();
-        int bytesExpected = (encoding != null && encoding.equalsIgnoreCase("gzip")) ? -1 : connection.getContentLength();
         int bytesRead;
         while ((bytesRead = istream.read(buffer, 0, STREAM_BUFFER_SIZE)) > 0) {
-          if (bytesExpected == -1) {
-            // Read everything if Content-Length is not known in advance.
-            ostream.write(buffer, 0, bytesRead);
-          } else {
-            // Read only up-to Content-Length (sometimes servers/proxies add garbage at the end).
-            if (bytesExpected < bytesRead) {
-              ostream.write(buffer, 0, bytesExpected);
-              break;
-            }
-            ostream.write(buffer, 0, bytesRead);
-            bytesExpected -= bytesRead;
-          }
+          // Read everything if Content-Length is not known in advance.
+          ostream.write(buffer, 0, bytesRead);
         }
         istream.close(); // IOException
         ostream.close(); // IOException
