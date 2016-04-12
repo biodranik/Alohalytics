@@ -30,11 +30,13 @@
 // Validity checks for requests should be mostly done on nginx side (see nginx.conf):
 // $request_method should be POST only
 // $content_length should be set and greater than zero (we re-check it below anyway)
-// $content_type should be set to application/alohalytics-binary-blob
-// $http_content_encoding should be set to gzip
+// $content_type should be set to application/alohalytics-binary-blob (except of monitoring uri)
+// $http_content_encoding should be set to gzip (except of monitoring uri)
+
+// Monitoring URI is a simple is-server-alive check. POST any content-type there and get it back without any modifications.
 
 // This binary shoud be spawn as a FastCGI app, for example:
-// $ spawn-fcgi [-n] -a 127.0.0.1 -p <port number> -P /path/to/pid.file -- ./fcgi_server /dir/to/store/received/data [/optional/path/to/log.file]
+// $ spawn-fcgi [-n] -a 127.0.0.1 -p <port number> -P /path/to/pid.file -- ./fcgi_server /dir/to/store/received/data /monitoring/uri [/optional/path/to/log.file]
 // pid.file can be used by logrotate (see logrotate.conf).
 // clang-format on
 
@@ -64,9 +66,10 @@ static const string kBodyTextForBadServerReply = "Hohono";
 
 // We always reply to our clients that we have received everything they sent, even if it was a complete junk.
 // The difference is only in the body of the reply.
-void Reply200OKWithBody(FCGX_Stream * out, const string & body) {
-  FCGX_FPrintF(out, "Status: 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %ld\r\n\r\n%s\n", body.size(),
-               body.c_str());
+// Custom content type is used for monitoring.
+void Reply200OKWithBody(FCGX_Stream * out, const string & body, const char * content_type = "text/plain") {
+  FCGX_FPrintF(out, "Status: 200 OK\r\nContent-Type: %s\r\nContent-Length: %ld\r\n\r\n%s\n", content_type,
+               body.size(), body.c_str());
 }
 
 // Global variables to correctly reopen data and log files after signals from logrotate utility.
@@ -99,16 +102,26 @@ struct CoutToFileRedirector {
 };
 
 int main(int argc, char * argv[]) {
-  if (argc < 2) {
-    ALOG("Usage:", argv[0], "<directory to store received data> [path to error log file]");
+
+  if (argc < 3) {
+    ALOG("Usage:", argv[0], "<directory to store received data> </special/uri/for/monitoring> [path to error log file]");
+    ALOG("  - Monitoring URI always replies with the same body and content-type which was received.");
     ALOG("  - SIGHUP reopens main data file and SIGUSR1 reopens debug log file for logrotate utility.");
     return -1;
   }
+
+  const string kMonitoringURI = argv[2];
+  if (kMonitoringURI.empty() || kMonitoringURI.front() != '/') {
+    ALOG("Given monitoring URI", kMonitoringURI, "shoud start with a slash.");
+    return -1;
+  }
+
   int result = FCGX_Init();
   if (0 != result) {
     ALOG("ERROR: FCGX_Init has failed with code", result);
     return result;
   }
+
   FCGX_Request request;
   result = FCGX_InitRequest(&request, 0, FCGI_FAIL_ACCEPT_ON_INTR);
   if (0 != result) {
@@ -117,7 +130,7 @@ int main(int argc, char * argv[]) {
   }
 
   // Redirect cout into a file if it was given in the command line.
-  CoutToFileRedirector log_redirector(argc > 2 ? argv[2] : nullptr);
+  CoutToFileRedirector log_redirector(argc > 3 ? argv[3] : nullptr);
   // Correctly reopen data file on SIGHUP for logrotate.
   if (SIG_ERR == ::signal(SIGHUP, [](int) { gReceivedSIGHUP = SIGHUP; })) {
     ATLOG("WARNING: Can't set SIGHUP handler. Logrotate will not work correctly.");
@@ -193,6 +206,14 @@ int main(int argc, char * argv[]) {
         ATLOG("WARNING: Request is ignored because it's body can't be read.", remote_addr_str, request_uri_str,
               user_agent_str);
         Reply200OKWithBody(request.out, kBodyTextForBadServerReply);
+        continue;
+      }
+
+      // Handle special URI for server monitoring.
+      if (request_uri_str && request_uri_str == kMonitoringURI) {
+        const char * content_type_str = FCGX_GetParam("HTTP_CONTENT_TYPE", request.envp);
+        // Reply with the same content and content-type.
+        Reply200OKWithBody(request.out, gzipped_body, content_type_str ? content_type_str : "text/plain");
         continue;
       }
 
