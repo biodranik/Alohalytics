@@ -21,7 +21,7 @@ else
 endif
 
 run: all
-	spawn-fcgi -n -p 8888 -- build/fcgi_server /tmp/
+	spawn-fcgi -n -p 8888 -- build/fcgi_server /tmp/ /monitoring
 
 all: build ${BIN}
 

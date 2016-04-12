@@ -97,6 +97,14 @@ http {
       fastcgi_param REQUEST_URI $request_uri;
       fastcgi_pass 127.0.0.1:8888;                            # <-- Change to actual FastCGI app address and port.
     }
+
+    # Any custom URI can be used for monitoring. Specify it as a launch parameter to the binary.
+    location ^/monitoring$ {
+      fastcgi_pass_request_headers on;
+      fastcgi_param REMOTE_ADDR $remote_addr;
+      fastcgi_param REQUEST_URI $request_uri;
+      fastcgi_pass 127.0.0.1:8888;                            # <-- Change to actual FastCGI app address and port.
+    }
   }
 }
 
