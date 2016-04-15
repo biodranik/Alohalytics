@@ -20,10 +20,11 @@ else
   endif
 endif
 
-run: all
-	spawn-fcgi -n -p 8888 -- build/fcgi_server /tmp/ /monitoring
 
 all: build ${BIN}
+
+run: all
+	spawn-fcgi -n -p 8888 -- build/fcgi_server /tmp/ /monitoring
 
 indent:
 	(find . -name "*.cc" -o -name "*.h") | xargs clang-format -i
