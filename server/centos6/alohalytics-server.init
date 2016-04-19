@@ -1,9 +1,9 @@
 #!/bin/sh
 #
-# spawn-fcgi   Start and stop FastCGI processes
+# Starts and stops FastCGI alohalytics-server process.
 #
 # chkconfig:   - 80 20
-# description: Spawn FastCGI scripts to be used by web servers
+# description: Spawn alohalytics-server FastCGI binaries to be used by web servers
 
 ### BEGIN INIT INFO
 # Provides: 
@@ -13,18 +13,19 @@
 # Should-Stop: 
 # Default-Start: 
 # Default-Stop: 0 1 2 3 4 5 6
-# Short-Description: Start and stop FastCGI processes
-# Description:       Spawn FastCGI scripts to be used by web servers
+# Short-Description: Start and stop alohalytics-server
+# Description:       Spawn alohalytics-server binary to be used by web servers
 ### END INIT INFO
 
 # Source function library.
 . /etc/rc.d/init.d/functions
 
+prog=`basename $0`
+# alohalytics-server binary is set in the config.
 exec="/usr/bin/spawn-fcgi"
-prog="alohalytics"
-config="/etc/sysconfig/alohalytics"
+config="/etc/sysconfig/$prog"
 
-[ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
+[ -e "$config" ] && . $config
 
 lockfile=/var/lock/subsys/$prog
 
