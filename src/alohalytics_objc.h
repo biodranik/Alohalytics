@@ -74,6 +74,8 @@
 // When the binary was built.
 // Hint: if buildDate > installDate then this is not a new app install, but an existing old user.
 + (NSDate *)buildDate;
+// Returns app unique installation id or nil if called before setup in the first session.
++ (NSString *)installationId;
 @end
 
 #endif  // #ifndef ALOHALYTICS_OBJC_H

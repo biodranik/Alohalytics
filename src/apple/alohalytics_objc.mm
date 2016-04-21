@@ -54,6 +54,9 @@ NSString * gBrowserUserAgent = nil;
 using namespace alohalytics;
 
 namespace {
+// Key for app unique installation id in standardUserDefaults.
+NSString * const kAlohalyticsInstallationId = @"AlohalyticsInstallationId";
+
 // Conversion from [possible nil] NSString to std::string.
 static std::string ToStdString(NSString * nsString) {
   if (nsString) {
@@ -207,13 +210,13 @@ static void LogSystemInformation(NSString * userAgent) {
 static std::pair<std::string, bool> InstallationId() {
   bool firstLaunch = false;
   NSUserDefaults * ud = [NSUserDefaults standardUserDefaults];
-  NSString * installationId = [ud objectForKey:@"AlohalyticsInstallationId"];
+  NSString * installationId = [ud stringForKey:kAlohalyticsInstallationId];
   if (installationId == nil) {
     CFUUIDRef uuid = CFUUIDCreate(kCFAllocatorDefault);
     // All iOS IDs start with I:
     installationId = [@"I:" stringByAppendingString:(NSString *)CFBridgingRelease(CFUUIDCreateString(kCFAllocatorDefault, uuid))];
     CFRelease(uuid);
-    [ud setValue:installationId forKey:@"AlohalyticsInstallationId"];
+    [ud setValue:installationId forKey:kAlohalyticsInstallationId];
     [ud synchronize];
     firstLaunch = true;
   }
@@ -580,6 +583,10 @@ static BOOL gIsFirstSession = NO;
 
 + (NSDate *)buildDate {
   return [Alohalytics fileCreationDate:[[NSBundle mainBundle] executablePath]];
+}
+
++ (NSString *)installationId {
+  return [[NSUserDefaults standardUserDefaults] stringForKey:kAlohalyticsInstallationId];
 }
 
 + (void)disable {
