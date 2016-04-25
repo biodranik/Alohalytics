@@ -31,6 +31,7 @@ SOFTWARE.
 #ifndef MESSAGES_QUEUE_H
 #define MESSAGES_QUEUE_H
 
+#include <cerrno>              // errno
 #include <condition_variable>  // condition_variable
 #include <cstdio>              // rename, remove
 #include <ctime>               // time, gmtime
@@ -44,6 +45,7 @@ SOFTWARE.
 #include <thread>              // thread
 
 #include "file_manager.h"
+#include "logger.h"
 
 namespace alohalytics {
 
@@ -67,8 +69,9 @@ class MessagesQueue final {
   static constexpr std::streamoff kMaxFileSizeInBytes = TMaxFileSizeInBytes;
   // Default archiving simply renames original file without any additional processing.
   static void ArchiveFileByRenamingIt(const std::string & original_file, const std::string & out_archive) {
-    // TODO(AlexZ): Debug log if rename has failed.
-    std::rename(original_file.c_str(), out_archive.c_str());
+    if (std::rename(original_file.c_str(), out_archive.c_str())) {
+      ALOG("ERROR: Rename", original_file, "to", out_archive, "has failed with error", std::to_string(errno));
+    }
   }
 
   // Pass custom processing function here, e.g. append IDs, gzip everything before archiving file etc.
@@ -149,8 +152,11 @@ class MessagesQueue final {
 
   void StoreMessages(std::string const & messages) {
     if (current_file_) {
+      // TODO(AlexZ): Consider using write instead of operator<<.
       *current_file_ << messages << std::flush;
-      if (current_file_->tellp() >= kMaxFileSizeInBytes) {
+      if (current_file_->fail()) {
+        ALOG("ERROR: Write to", storage_directory_ + kCurrentFileName, "has failed.");
+      } else if (current_file_->tellp() >= kMaxFileSizeInBytes) {
         ArchiveCurrentFile();
       }
     } else {
@@ -163,9 +169,9 @@ class MessagesQueue final {
     std::unique_ptr<std::ofstream> new_current_file(
         new std::ofstream(directory + kCurrentFileName, std::ios_base::app | std::ios_base::binary));
     if (new_current_file->fail()) {
-      // If file can't be created, fall back to the in-memory storage.
+      // If file could not be created, fall back to the in-memory storage.
       storage_directory_.clear();
-      // TODO(AlexZ): DebugLog this bad situation!
+      ALOG("ERROR: Could not create file", directory + kCurrentFileName);
     } else {
       storage_directory_ = directory;
       current_file_ = std::move(new_current_file);
@@ -250,7 +256,9 @@ class MessagesQueue final {
     current_file_.reset(nullptr);
     current_file_.reset(
         new std::ofstream(storage_directory_ + kCurrentFileName, std::ios_base::app | std::ios_base::binary));
-    // TODO(AlexZ): Should we check for possible reopen errors?
+    if (current_file_->fail()) {
+      ALOG("ERROR: Could not reopen", storage_directory_ + kCurrentFileName);
+    }
   }
 
   void WorkerThread() {
