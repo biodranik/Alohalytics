@@ -1,4 +1,4 @@
-%define	pkg_version 20160419.1700
+%define	pkg_version 20160425.1300
 %define checkout_date %(date -d "`echo %{pkg_version} | sed -e 's#\\.# #'`" +"%Y-%m-%d %H:%M")
 
 Name:           alohalytics
@@ -59,10 +59,11 @@ rm -rf %{buildroot}
 
 %files server
 %defattr(-,root,root,-)
-/usr/local/bin/%{name}-server
-/etc/init.d/%{name}-server
+%attr(755,root,root) /usr/local/bin/%{name}-server
+%attr(755,root,root) /etc/init.d/%{name}-server
 
 %changelog
-* Tue Apr 19 2016 Alexander Zolotarev <zolotarev@corp.mail.ru> - 20160419.1646
+* Mon Apr 25 2016 Alexander Zolotarev <me@alex.bio> - 20160425.1255
+* Tue Apr 19 2016 Alexander Zolotarev <me@alex.bio> - 20160419.1646
 * Fri Apr 15 2016 Aleksey Antropov <aleksey.antropov@corp.mail.ru> - 20160415.1031-1
 - Initial
