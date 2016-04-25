@@ -1,4 +1,4 @@
-%define	pkg_version 20160425.1300
+%define	pkg_version 20160425.1430
 %define checkout_date %(date -d "`echo %{pkg_version} | sed -e 's#\\.# #'`" +"%Y-%m-%d %H:%M")
 
 Name:           alohalytics
@@ -18,7 +18,7 @@ BuildRequires: fcgi-devel
 BuildRequires: spawn-fcgi
 BuildRequires: zlib-devel
 BuildRequires: devtoolset-2-gcc-c++
-Requires: spawn-fcgi
+Requires: spawn-fcgi, fcgi, fcgi-devel
 
 %description
 alohalytics main package
@@ -63,7 +63,7 @@ rm -rf %{buildroot}
 %attr(755,root,root) /etc/init.d/%{name}-server
 
 %changelog
-* Mon Apr 25 2016 Alexander Zolotarev <me@alex.bio> - 20160425.1255
+* Mon Apr 25 2016 Alexander Zolotarev <me@alex.bio> - 20160425.1424
 * Tue Apr 19 2016 Alexander Zolotarev <me@alex.bio> - 20160419.1646
 * Fri Apr 15 2016 Aleksey Antropov <aleksey.antropov@corp.mail.ru> - 20160415.1031-1
 - Initial
