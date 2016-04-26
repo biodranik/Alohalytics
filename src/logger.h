@@ -120,6 +120,5 @@ class Logger {
 
 #define ATRACE(...) alohalytics::Logger(__FILE__, __LINE__).Log(__VA_ARGS__)
 #define ALOG(...) alohalytics::Logger().Log(__VA_ARGS__)
-#define ATLOG(...) alohalytics::Logger().Log(__VA_ARGS__)
 
-#endif
+#endif  // #ifndef LOGGER_H

@@ -94,7 +94,7 @@ struct CoutToFileRedirector {
     if (log_file->good()) {
       cout.rdbuf(log_file->rdbuf());
     } else {
-      ATLOG("ERROR: Can't open log file", path, "for writing.");
+      ALOG("ERROR: Can't open log file", path, "for writing.");
     }
   }
   // Restore original cout streambuf.
@@ -133,11 +133,11 @@ int main(int argc, char * argv[]) {
   CoutToFileRedirector log_redirector(argc > 3 ? argv[3] : nullptr);
   // Correctly reopen data file on SIGHUP for logrotate.
   if (SIG_ERR == ::signal(SIGHUP, [](int) { gReceivedSIGHUP = SIGHUP; })) {
-    ATLOG("WARNING: Can't set SIGHUP handler. Logrotate will not work correctly.");
+    ALOG("WARNING: Can't set SIGHUP handler. Logrotate will not work correctly.");
   }
   // Correctly reopen debug log file on SIGUSR1 for logrotate.
   if (SIG_ERR == ::signal(SIGUSR1, [](int) { gReceivedSIGUSR1 = SIGUSR1; })) {
-    ATLOG("WARNING: Can't set SIGUSR1 handler. Logrotate will not work correctly.");
+    ALOG("WARNING: Can't set SIGUSR1 handler. Logrotate will not work correctly.");
   }
   // NOTE: On most systems, when we get a signal, FCGX_Accept_r blocks even with a FCGI_FAIL_ACCEPT_ON_INTR flag set
   // in the request. Looks like on these systems default signal function installs the signals with the SA_RESTART flag
@@ -155,7 +155,7 @@ int main(int argc, char * argv[]) {
     act.sa_handler = [](int) { FCGX_ShutdownPending(); };
     const int result = sigaction(signo, &act, nullptr);
     if (result != 0) {
-      ATLOG("WARNING: Can't set", signo, "signal handler");
+      ALOG("WARNING: Can't set", signo, "signal handler");
     }
   }
 
@@ -165,7 +165,7 @@ int main(int argc, char * argv[]) {
   const char * remote_addr_str = nullptr;
   const char * request_uri_str = nullptr;
   const char * user_agent_str = nullptr;
-  ATLOG("FastCGI Server instance is ready to serve clients' requests.");
+  ALOG("FastCGI Server instance is ready to serve clients' requests.");
   while (FCGX_Accept_r(&request) >= 0) {
     // Correctly reopen data file in the queue.
     if (gReceivedSIGHUP == SIGHUP) {
@@ -181,21 +181,21 @@ int main(int argc, char * argv[]) {
     try {
       remote_addr_str = FCGX_GetParam("REMOTE_ADDR", request.envp);
       if (!remote_addr_str) {
-        ATLOG("WARNING: Missing REMOTE_ADDR. Please check your http server configuration.");
+        ALOG("WARNING: Missing REMOTE_ADDR. Please check your http server configuration.");
       }
       request_uri_str = FCGX_GetParam("REQUEST_URI", request.envp);
       if (!request_uri_str) {
-        ATLOG("WARNING: Missing REQUEST_URI. Please check your http server configuration.");
+        ALOG("WARNING: Missing REQUEST_URI. Please check your http server configuration.");
       }
       user_agent_str = FCGX_GetParam("HTTP_USER_AGENT", request.envp);
       if (!user_agent_str) {
-        ATLOG("WARNING: Missing HTTP User-Agent. Please check your http server configuration.");
+        ALOG("WARNING: Missing HTTP User-Agent. Please check your http server configuration.");
       }
 
       const char * content_length_str = FCGX_GetParam("HTTP_CONTENT_LENGTH", request.envp);
       content_length = 0;
       if (!content_length_str || ((content_length = atoll(content_length_str)) <= 0)) {
-        ATLOG("WARNING: Request is ignored due to invalid or missing Content-Length header", content_length_str,
+        ALOG("WARNING: Request is ignored due to invalid or missing Content-Length header", content_length_str,
               remote_addr_str, request_uri_str, user_agent_str);
         Reply200OKWithBody(request.out, kBodyTextForBadServerReply);
         continue;
@@ -203,7 +203,7 @@ int main(int argc, char * argv[]) {
       // TODO(AlexZ): Should we make a better check for Content-Length or basic exception handling would be enough?
       gzipped_body.resize(content_length);
       if (fcgi_istream(request.in).read(&gzipped_body[0], content_length).fail()) {
-        ATLOG("WARNING: Request is ignored because it's body can't be read.", remote_addr_str, request_uri_str,
+        ALOG("WARNING: Request is ignored because it's body can't be read.", remote_addr_str, request_uri_str,
               user_agent_str);
         Reply200OKWithBody(request.out, kBodyTextForBadServerReply);
         continue;
@@ -226,11 +226,11 @@ int main(int argc, char * argv[]) {
                                        request_uri_str ? request_uri_str : "");
       Reply200OKWithBody(request.out, kBodyTextForGoodServerReply);
     } catch (const exception & ex) {
-      ATLOG("ERROR: Exception was thrown:", ex.what(), remote_addr_str, request_uri_str, user_agent_str);
+      ALOG("ERROR: Exception was thrown:", ex.what(), remote_addr_str, request_uri_str, user_agent_str);
       // TODO(AlexZ): Log "bad" received body for investigation.
       Reply200OKWithBody(request.out, kBodyTextForBadServerReply);
     }
   }
-  ATLOG("Shutting down FastCGI server instance.");
+  ALOG("Shutting down FastCGI server instance.");
   return 0;
 }
