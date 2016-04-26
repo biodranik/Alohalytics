@@ -113,6 +113,10 @@ int main(int argc, char * argv[]) {
     ALOG("  - SIGTERM gracefully shutdowns server daemon.");
     return -1;
   }
+
+  const string kStorageDirectory = argv[1];
+  if (!alohalytics::FileManager::IsDirectoryWritable(kStorageDirectory)) {
+    ALOG("ERROR: Directory", kStorageDirectory, "is not writable.");
     return -1;
   }
 
@@ -165,7 +169,7 @@ int main(int argc, char * argv[]) {
     }
   }
 
-  alohalytics::StatisticsReceiver receiver(argv[1]);
+  alohalytics::StatisticsReceiver receiver(kStorageDirectory);
   string gzipped_body;
   long long content_length;
   const char * remote_addr_str = nullptr;
