@@ -118,7 +118,7 @@ int main(int argc, char * argv[]) {
 
   const string kMonitoringURI = argv[2];
   if (kMonitoringURI.empty() || kMonitoringURI.front() != '/') {
-    ALOG("Given monitoring URI", kMonitoringURI, "shoud start with a slash.");
+    ALOG("ERROR: Given monitoring URI", kMonitoringURI, "shoud start with a slash.");
     return -1;
   }
 
@@ -232,7 +232,7 @@ int main(int argc, char * argv[]) {
                                        request_uri_str ? request_uri_str : "");
       Reply200OKWithBody(request.out, kBodyTextForGoodServerReply);
     } catch (const exception & ex) {
-      ALOG("ERROR: Exception was thrown:", ex.what(), remote_addr_str, request_uri_str, user_agent_str);
+      ALOG("WARNING: Exception was thrown:", ex.what(), remote_addr_str, request_uri_str, user_agent_str);
       // TODO(AlexZ): Log "bad" received body for investigation.
       Reply200OKWithBody(request.out, kBodyTextForBadServerReply);
     }
