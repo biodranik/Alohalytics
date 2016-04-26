@@ -64,7 +64,7 @@ class Logger {
     char buf[100] = "";
     const time_t now = time(nullptr);
     (void)::strftime(buf, sizeof(buf), "%d/%b/%Y:%H:%M:%S ", ::localtime(&now));
-    std::cout << buf << "Alohalytics: " << out_.str() << std::flush << std::endl;
+    std::cout << buf << "Alohalytics: " << out_.str() << std::endl;
 #endif
   }
 
