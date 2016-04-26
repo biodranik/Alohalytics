@@ -104,9 +104,15 @@ struct CoutToFileRedirector {
 int main(int argc, char * argv[]) {
 
   if (argc < 3) {
-    ALOG("Usage:", argv[0], "<directory to store received data> </special/uri/for/monitoring> [path to error log file]");
+    ALOG("Usage:", argv[0], "<directory to store received data> "
+                            "</special/uri/for/monitoring> "
+                            "[optional path to error log file]");
     ALOG("  - Monitoring URI always replies with the same body and content-type which was received.");
+    ALOG("  - Errors are logged to stdout if error log file has not been specified.");
     ALOG("  - SIGHUP reopens main data file and SIGUSR1 reopens debug log file for logrotate utility.");
+    ALOG("  - SIGTERM gracefully shutdowns server daemon.");
+    return -1;
+  }
     return -1;
   }
 
