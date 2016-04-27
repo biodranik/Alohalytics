@@ -94,7 +94,7 @@ struct CoutToFileRedirector {
     if (log_file->good()) {
       cout.rdbuf(log_file->rdbuf());
     } else {
-      ALOG("ERROR: Can't open log file", path, "for writing.");
+      ALOG("ERROR: Could not open log file", path, "for writing.");
     }
   }
   // Restore original cout streambuf.
@@ -107,7 +107,7 @@ int main(int argc, char * argv[]) {
     ALOG("Usage:", argv[0], "<directory to store received data> "
                             "</special/uri/for/monitoring> "
                             "[optional path to error log file]");
-    ALOG("  - Monitoring URI always replies with the same body and content-type which was received.");
+    ALOG("  - Monitoring URI always replies with the same body and content-type which has been received.");
     ALOG("  - Errors are logged to stdout if error log file has not been specified.");
     ALOG("  - SIGHUP reopens main data file and SIGUSR1 reopens debug log file for logrotate utility.");
     ALOG("  - SIGTERM gracefully shutdowns server daemon.");
@@ -143,11 +143,11 @@ int main(int argc, char * argv[]) {
   CoutToFileRedirector log_redirector(argc > 3 ? argv[3] : nullptr);
   // Correctly reopen data file on SIGHUP for logrotate.
   if (SIG_ERR == ::signal(SIGHUP, [](int) { gReceivedSIGHUP = SIGHUP; })) {
-    ALOG("WARNING: Can't set SIGHUP handler. Logrotate will not work correctly.");
+    ALOG("WARNING: Could not set SIGHUP handler. Logrotate will not work correctly.");
   }
   // Correctly reopen debug log file on SIGUSR1 for logrotate.
   if (SIG_ERR == ::signal(SIGUSR1, [](int) { gReceivedSIGUSR1 = SIGUSR1; })) {
-    ALOG("WARNING: Can't set SIGUSR1 handler. Logrotate will not work correctly.");
+    ALOG("WARNING: Could not set SIGUSR1 handler. Logrotate will not work correctly.");
   }
   // NOTE: On most systems, when we get a signal, FCGX_Accept_r blocks even with a FCGI_FAIL_ACCEPT_ON_INTR flag set
   // in the request. Looks like on these systems default signal function installs the signals with the SA_RESTART flag
@@ -165,7 +165,7 @@ int main(int argc, char * argv[]) {
     act.sa_handler = [](int) { FCGX_ShutdownPending(); };
     const int result = sigaction(signo, &act, nullptr);
     if (result != 0) {
-      ALOG("WARNING: Can't set", signo, "signal handler");
+      ALOG("WARNING: Could not set", signo, "signal handler");
     }
   }
 
@@ -213,7 +213,7 @@ int main(int argc, char * argv[]) {
       // TODO(AlexZ): Should we make a better check for Content-Length or basic exception handling would be enough?
       gzipped_body.resize(content_length);
       if (fcgi_istream(request.in).read(&gzipped_body[0], content_length).fail()) {
-        ALOG("WARNING: Request is ignored because it's body can't be read.", remote_addr_str, request_uri_str,
+        ALOG("WARNING: Request is ignored because it's body could not be read.", remote_addr_str, request_uri_str,
               user_agent_str);
         Reply200OKWithBody(request.out, kBodyTextForBadServerReply);
         continue;
