@@ -64,7 +64,7 @@ class Logger {
     char buf[100] = "";
     const time_t now = time(nullptr);
     (void)::strftime(buf, sizeof(buf), "%d/%b/%Y:%H:%M:%S ", ::localtime(&now));
-    std::cout << buf << "Alohalytics: " << out_.str() << std::flush << std::endl;
+    std::cout << buf << "Alohalytics: " << out_.str() << std::endl;
 #endif
   }
 
@@ -120,6 +120,5 @@ class Logger {
 
 #define ATRACE(...) alohalytics::Logger(__FILE__, __LINE__).Log(__VA_ARGS__)
 #define ALOG(...) alohalytics::Logger().Log(__VA_ARGS__)
-#define ATLOG(...) alohalytics::Logger().Log(__VA_ARGS__)
 
-#endif
+#endif  // #ifndef LOGGER_H
