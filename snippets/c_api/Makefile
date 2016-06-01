@@ -1,6 +1,6 @@
 .PHONY: all indent clean
 
-ALOHALYTICS_ROOT=../Alohalytics
+ALOHALYTICS_ROOT=../../Alohalytics
 
 C=gcc
 CPP=g++

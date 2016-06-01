@@ -5,6 +5,7 @@ import shutil
 import sys
 import traceback
 
+from pyaloha.event_factory import EventFactory
 from pyaloha.protocol import WorkerResults, str2date
 from pyaloha.worker import invoke_cmd_worker, load_plugin, setup_logs
 
@@ -12,8 +13,8 @@ from pyaloha.worker import invoke_cmd_worker, load_plugin, setup_logs
 class DataStreamWorker(object):
     __events__ = tuple()
 
-    def __init__(self, event_factory):
-        self._event_factory = event_factory
+    def __init__(self, event_factory=None):
+        self._event_factory = event_factory or EventFactory(custom_events=[])
 
     def process_unspecified(self, event):
         pass

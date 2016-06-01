@@ -24,8 +24,8 @@
 
 // This define is needed to preserve client's timestamps in events.
 #define ALOHALYTICS_SERVER
-#include "../Alohalytics/src/event_base.h"
-#include "../include/processor.h"
+#include "../../src/event_base.h"
+#include "../../../include/processor.h" // TODO: This is actually not from Alohalytics repo
 
 #include <algorithm>
 #include <iostream>
@@ -34,105 +34,147 @@
 
 #define DLLEXPORT extern "C"
 
-struct UserInfo {
+// Public struct used in Python
+struct UserInfo
+{
   char os_t;
   float lat;
   float lon;
   char raw_uid[32];
 };
 
-struct EventTime {
+// Public struct used in Python
+struct EventTime
+{
   uint64_t client_created;
   uint64_t server_upload;
 };
 
-void set_pairs(const AlohalyticsKeyPairsEvent * event, std::vector<const char *> & pairs) {
+typedef void (*callbackFunction)(char const *, EventTime const &, UserInfo const &, char const **, int);
+
+// Helper function that convert KeyPairs event into list of (key, value) for use in Python
+void SetPairs(AlohalyticsKeyPairsEvent const * event, std::vector<char const *> & pairs)
+{
   int i = 0;
-  for (const std::pair<std::string, std::string> & p : event->pairs) {
-    pairs[i++] = p.first.c_str();
-    pairs[i++] = p.second.c_str();
+  for (std::pair<std::string, std::string> const & kp : event->pairs)
+  {
+    pairs[i++] = kp.first.c_str();
+    pairs[i++] = kp.second.c_str();
   }
 }
 
-void set_geo(const alohalytics::Location location, UserInfo & user_info) {
-  if (location.HasLatLon()) {
-    user_info.lat = (float)location.latitude_deg_;
-    user_info.lon = (float)location.longitude_deg_;
+// Helper function for setting up geo coords
+void SetGeo(alohalytics::Location const kLocation, UserInfo & userInfo)
+{
+  if (kLocation.HasLatLon()) {
+    userInfo.lat = (float)kLocation.latitude_deg_;
+    userInfo.lon = (float)kLocation.longitude_deg_;
   }
 }
 
-std::string compress_uid(std::string uid) {
+/*
+Helper function for setting up os type as a num for use in Python
+NOTE: C char will convert into python string - so we do not want that
+*/
+void SetOSType(char osType, UserInfo& userInfo)
+{
+  switch (osType)
+  {
+    case 'A':
+    {
+      userInfo.os_t = 1;
+      break;
+    }
+    case 'I':
+    {
+      userInfo.os_t = 2;
+      break;
+    }
+  };
+}
+
+std::string CompressUID(std::string uid)
+{
   uid.erase(0, 2);
   // TODO: think about just using fixed positions instead of more general attempt with searching
   uid.erase(std::remove(uid.begin(), uid.end(), '-'), uid.end());
   return uid;
 }
 
-// We need a C interface, so prepare yourself for C-style structures in the params of
-// this function (called from a Python code with a ctypes wrapper) and
-// callback function (actual Python function - also a ctypes wrapper)
+/*
+This is public function used in Python as a main loop
+NOTE: We need a C interface, so prepare yourself for C-style structures in the params of
+this function (called from a Python code with a ctypes wrapper) and
+callback function (actual Python function - also a ctypes wrapper)
+*/
 
-DLLEXPORT void iterate(void (*callback)(const char *, const EventTime &, const UserInfo &, const char **, int),
-                       const char ** events,
-                       int events_num) {
-  std::set<std::string> process_keys;
-  for (int i = 0; i < events_num; i++) {
-    process_keys.insert(events[i]);
+DLLEXPORT void iterate(callbackFunction callback, char const ** kEventNames, int eventNamesNum)
+{
+  std::set<std::string> processKeys;
+  for (int i = 0; i < eventNamesNum; i++)
+  {
+    processKeys.insert(kEventNames[i]);
   }
 
-  const AlohalyticsIdServerEvent * previous = nullptr;
+  AlohalyticsIdServerEvent const * kPrevious = nullptr;
   alohalytics::Processor(
-      [&previous, callback, &process_keys](const AlohalyticsIdServerEvent * se, const AlohalyticsKeyEvent * e) {
+      [&kPrevious, callback, &processKeys](AlohalyticsIdServerEvent const * kIdEvent, AlohalyticsKeyEvent const * kEvent)
+      {
 
-        if (!process_keys.empty() && !process_keys.count(e->key)) {
+        if (!processKeys.empty() && !processKeys.count(kEvent->key))
+        {
           return;
         }
 
-        const EventTime event_time = {.client_created = e->timestamp, .server_upload = se->server_timestamp};
-        UserInfo user_info = {.os_t = 0, .lat = 0.0, .lon = 0.0};
-        switch (se->id[0]) {
-          case 'A': {
-            user_info.os_t = 1;
-            break;
-          }
-          case 'I': {
-            user_info.os_t = 2;
-            break;
-          }
+        EventTime const kEventTime = {
+          .client_created = kEvent->timestamp,
+          .server_upload = kIdEvent->server_timestamp
         };
 
-        std::memcpy(user_info.raw_uid, compress_uid(se->id).c_str(), 32);
+        UserInfo userInfo = {
+          .os_t = 0,
+          .lat = 0.0,
+          .lon = 0.0
+        };
 
-        const char * key = e->key.c_str();
+        SetOSType(kIdEvent->id[0], userInfo);
 
-        const AlohalyticsKeyValueEvent * kve = dynamic_cast<const AlohalyticsKeyValueEvent *>(e);
-        if (kve) {
-          const char * values[1] = {kve->value.c_str()};
-          callback(key, event_time, user_info, values, 1);
+        std::memcpy(userInfo.raw_uid, CompressUID(kIdEvent->id).c_str(), 32);
+
+        char const * kKey = kEvent->key.c_str();
+
+        AlohalyticsKeyValueEvent const * kve = dynamic_cast<AlohalyticsKeyValueEvent const *>(kEvent);
+        if (kve)
+        {
+          char const * kValues[1] = {kve->value.c_str()};
+          callback(kKey, kEventTime, userInfo, kValues, 1);
           return;
         }
 
-        const AlohalyticsKeyPairsEvent * kpe = dynamic_cast<const AlohalyticsKeyPairsEvent *>(e);
-        if (kpe) {
-          std::vector<const char *> pairs(kpe->pairs.size() * 2);
-          set_pairs(kpe, pairs);
-          callback(key, event_time, user_info, pairs.data(), pairs.size());
+        AlohalyticsKeyPairsEvent const * kpe = dynamic_cast<AlohalyticsKeyPairsEvent const *>(kEvent);
+        if (kpe)
+        {
+          std::vector<char const *> pairs(kpe->pairs.size() * 2);
+          SetPairs(kpe, pairs);
+          callback(kKey, kEventTime, userInfo, pairs.data(), pairs.size());
           return;
         }
 
-        const AlohalyticsKeyLocationEvent * kle = dynamic_cast<const AlohalyticsKeyLocationEvent *>(e);
-        if (kle) {
-          set_geo(kle->location, user_info);
-          callback(key, event_time, user_info, NULL, 0);
+        AlohalyticsKeyLocationEvent const * kle = dynamic_cast<AlohalyticsKeyLocationEvent const *>(kEvent);
+        if (kle)
+        {
+          SetGeo(kle->location, userInfo);
+          callback(kKey, kEventTime, userInfo, NULL, 0);
           return;
         }
 
-        const AlohalyticsKeyPairsLocationEvent * kple = dynamic_cast<const AlohalyticsKeyPairsLocationEvent *>(e);
-        if (kple) {
-          std::vector<const char *> pairs(kple->pairs.size() * 2);
-          set_pairs(kple, pairs);
-          set_geo(kple->location, user_info);
-          callback(key, event_time, user_info, pairs.data(), pairs.size());
+        AlohalyticsKeyPairsLocationEvent const * kple = dynamic_cast<AlohalyticsKeyPairsLocationEvent const *>(kEvent);
+        if (kple)
+        {
+          std::vector<char const *> pairs(kple->pairs.size() * 2);
+          SetPairs(kple, pairs);
+          SetGeo(kple->location, userInfo);
+          callback(kKey, kEventTime, userInfo, pairs.data(), pairs.size());
           return;
         }
       });
