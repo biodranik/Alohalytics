@@ -536,6 +536,7 @@ static BOOL gIsFirstSession = NO;
 }
 
 + (void)applicationWillTerminate:(NSNotification *)notification {
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
   Stats::Instance().LogEvent("$applicationWillTerminate");
 }
 #endif // TARGET_OS_IPHONE
