@@ -63,8 +63,8 @@ rm -rf %{buildroot}
 %attr(755,root,root) /etc/init.d/%{name}-server
 
 %changelog
-* Fri Apr 29 2016 Alexander Zolotarev <me@alex.bio> - 20160429.1800 More detailed error logging.
-* Mon Apr 25 2016 Alexander Zolotarev <me@alex.bio> - 20160425.1424
-* Tue Apr 19 2016 Alexander Zolotarev <me@alex.bio> - 20160419.1646
+* Fri Apr 29 2016 Alexander Borsuk <me@alex.bio> - 20160429.1800 More detailed error logging.
+* Mon Apr 25 2016 Alexander Borsuk <me@alex.bio> - 20160425.1424
+* Tue Apr 19 2016 Alexander Borsuk <me@alex.bio> - 20160419.1646
 * Fri Apr 15 2016 Aleksey Antropov <aleksey.antropov@corp.mail.ru> - 20160415.1031-1
 - Initial

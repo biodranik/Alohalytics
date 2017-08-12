@@ -8,7 +8,7 @@ Alohalytics statistics engine solves following problems:
 
 More features are coming soon!
 
-If you have any questions, please contact Alex Zolotarev <me@alex.bio> from Minsk, Belarus.
+If you have any questions, please contact Alexander Borsuk <me@alex.bio> from Minsk, Belarus.
 
 iOS
 ======
