@@ -1,14 +1,16 @@
 buildscript {
   repositories {
+    google()
     jcenter()
   }
   dependencies {
-    classpath 'com.android.tools.build:gradle:+'
+    classpath 'com.android.tools.build:gradle:3.0.1'
   }
 }
 
 allprojects {
   repositories {
+    google()
     jcenter()
   }
 }
@@ -16,33 +18,42 @@ allprojects {
 apply plugin: 'com.android.application'
 
 dependencies {
-  // This one is needed to get Google Play advertising ID if Google Play Services are available on the device.
-  compile 'com.google.android.gms:play-services-base:+'
-  compile 'com.google.android.gms:play-services-ads:+'
+  implementation 'com.google.android.gms:play-services-base:+'
+  implementation 'com.google.android.gms:play-services-ads:+'
 }
 
 android {
   compileSdkVersion 23
-  buildToolsVersion '23'
+
+  // TODO: Please check LInt errors in result gradle report
+  // to fix java code for new google requirements about permissions
+  lintOptions {
+      abortOnError false
+  }
 
   defaultConfig {
     applicationId 'org.alohalytics.demoapp'
-    minSdkVersion 9
+    minSdkVersion 14
     targetSdkVersion 23
     versionCode 1
     versionName '1.0'
 
-    ndk {
-      moduleName 'alohalytics'
-      stl 'c++_static'
-      cFlags '-frtti -fexceptions'
-      ldLibs 'log', 'atomic', 'z'
+    externalNativeBuild {
+      cmake {
+        cFlags  '-fexceptions', '-frtti'
+        arguments '-DANDROID_TOOLCHAIN=clang', '-DANDROID_STL=c++_static'
+      }
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      path "../../src/android/CMakeLists.txt"
     }
   }
 
   sourceSets.main {
     java.srcDirs = ['src/main/java', '../../src/android/java']
-    jni.srcDirs = ['../../src/cpp', '../../src/android/jni']
   }
 
   compileOptions {

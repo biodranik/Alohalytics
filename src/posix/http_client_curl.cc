@@ -22,9 +22,9 @@
  SOFTWARE.
  *******************************************************************************/
 
-#include "../http_client.h"
-#include "../file_manager.h"
-#include "../logger.h"
+#include "src/http_client.h"
+#include "src/file_manager.h"
+#include "src/logger.h"
 
 #include <array>
 #include <vector>

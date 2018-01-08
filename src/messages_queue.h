@@ -44,8 +44,8 @@ SOFTWARE.
 #include <string>              // string
 #include <thread>              // thread
 
-#include "file_manager.h"
-#include "logger.h"
+#include "src/file_manager.h"
+#include "src/logger.h"
 
 namespace alohalytics {
 

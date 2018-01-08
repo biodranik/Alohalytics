@@ -1,4 +1,5 @@
 .gradle
+.externalNativeBuild
 /local.properties
 /.idea
 .DS_Store

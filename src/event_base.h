@@ -37,7 +37,7 @@
 #include "cereal/include/types/string.hpp"
 #include "cereal/include/types/map.hpp"
 
-#include "location.h"
+#include "src/location.h"
 
 // Small helper, used for cereal smart-pointers polymorphic serialization.
 // TODO(AlexZ): Remove it later together with Cereal.

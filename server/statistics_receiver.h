@@ -25,9 +25,9 @@
 // This define is needed to preserve client's timestamps in events and to access
 // additional data fields when processing received data on a server side.
 #define ALOHALYTICS_SERVER
-#include "../src/event_base.h"
-#include "../src/gzip_wrapper.h"
-#include "../src/messages_queue.h"
+#include "src/event_base.h"
+#include "src/gzip_wrapper.h"
+#include "src/messages_queue.h"
 
 #include <sstream>
 #include <utility>
