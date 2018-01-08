@@ -31,17 +31,17 @@
 #include <cerrno>
 #include <cstdio>  // remove
 
-#include "../alohalytics.h"
-#include "../event_base.h"
-#include "../file_manager.h"
-#include "../gzip_wrapper.h"
-#include "../http_client.h"
-#include "../logger.h"
+#include "src/alohalytics.h"
+#include "src/event_base.h"
+#include "src/file_manager.h"
+#include "src/gzip_wrapper.h"
+#include "src/http_client.h"
+#include "src/logger.h"
 
 // TODO(AlexZ): Refactor out cereal library - it's too heavy overkill for us.
-#include "../cereal/include/archives/binary.hpp"
-#include "../cereal/include/types/string.hpp"
-#include "../cereal/include/types/map.hpp"
+#include "src/cereal/include/archives/binary.hpp"
+#include "src/cereal/include/types/string.hpp"
+#include "src/cereal/include/types/map.hpp"
 
 #define LOG_IF_DEBUG(...)                                  \
   if (debug_mode_) {                                       \

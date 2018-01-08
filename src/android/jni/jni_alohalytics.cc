@@ -28,9 +28,9 @@ SOFTWARE.
 #include <stdexcept>
 #include <string>
 
-#include "../../alohalytics.h"
-#include "../../http_client.h"
-#include "../../logger.h"
+#include "src/alohalytics.h"
+#include "src/http_client.h"
+#include "src/logger.h"
 
 using std::string;
 using std::unique_ptr;

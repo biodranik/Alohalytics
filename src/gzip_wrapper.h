@@ -29,7 +29,7 @@ SOFTWARE.
 #include <vector>
 #include <zlib.h>
 
-#include "logger.h"
+#include "src/logger.h"
 
 namespace alohalytics {
 

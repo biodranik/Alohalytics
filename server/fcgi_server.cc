@@ -54,9 +54,9 @@
 #include <fcgiapp.h>
 #include <fcgio.h>
 
-#include "../src/logger.h"
+#include "src/logger.h"
 
-#include "statistics_receiver.h"
+#include "server/statistics_receiver.h"
 
 using namespace std;
 

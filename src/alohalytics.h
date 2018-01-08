@@ -25,8 +25,8 @@
 #ifndef ALOHALYTICS_H
 #define ALOHALYTICS_H
 
-#include "location.h"
-#include "messages_queue.h"
+#include "src/location.h"
+#include "src/messages_queue.h"
 
 #include <string>
 #include <map>

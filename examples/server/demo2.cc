@@ -26,7 +26,7 @@
 
 // This define is needed to preserve client's timestamps in events.
 #define ALOHALYTICS_SERVER
-#include "../../src/event_base.h"
+#include "src/event_base.h"
 
 #include "processor.h"
 
