@@ -1,7 +1,7 @@
 .PHONY: run all indent clean
 
 CPP=g++
-CPPFLAGS=-std=c++11 -Wall -W -I${INCLUDES} -O3
+CPPFLAGS=-std=c++11 -Wall -W -I${INCLUDES_PARAMS} -O3
 LDFLAGS=-L${LIBS} -lz -pthread -lfcgi -lfcgi++
 MORE_SOURCES=../src/posix/file_manager_posix_impl.cc
 
@@ -11,7 +11,7 @@ BIN=$(SRC:%.cc=build/%)
 OBJ=build/file_manager_posix_impl.obj
 OS := $(shell uname)
 ifeq ($(OS),Darwin)
-  INCLUDES=/usr/local/Cellar/fcgi/2.4.0/include
+  INCLUDES=/usr/local/Cellar/fcgi/2.4.0/include ../
   LIBS=/usr/local/Cellar/fcgi/2.4.0/lib
 else
   ifeq ($(OS),Linux)
@@ -19,7 +19,8 @@ else
     LIBS=/usr/lib
   endif
 endif
-
+# Expand directories separated with spaces into a list of compiler parameters -Idir1 -Idir2 etc.
+INCLUDES_PARAMS=$(foreach d, $(INCLUDES), -I$d)
 
 all: build ${BIN}
 
