@@ -109,3 +109,11 @@ http {
 }
 
 ```
+
+
+Buildung the Server on Ubuntu
+=============================
+
+    apt install build-essential libfcgi-dev
+    cd server
+    make
